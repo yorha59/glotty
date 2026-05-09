@@ -1,0 +1,35 @@
+name: Glotty
+options:
+  bundleIdPrefix: com.ruojunye
+  deploymentTarget:
+    macOS: "26.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5"
+    SWIFT_STRICT_CONCURRENCY: minimal
+    MACOSX_DEPLOYMENT_TARGET: "26.0"
+    ARCHS: arm64
+    ONLY_ACTIVE_ARCH: YES
+
+targets:
+  Glotty:
+    type: application
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: Glotty
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ruojunye.glotty
+        GENERATE_INFOPLIST_FILE: YES
+        # Spike-only: false = Dock icon visible. Restore to YES once menu-bar-only flow is solid.
+        INFOPLIST_KEY_LSUIElement: NO
+        INFOPLIST_KEY_NSAccessibilityUsageDescription: "Glotty reads selected text from the focused application so it can be translated."
+        INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026"
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        DEVELOPMENT_TEAM: "47D8DFFZQ4"
