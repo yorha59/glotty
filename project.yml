@@ -33,3 +33,32 @@ targets:
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
         DEVELOPMENT_TEAM: "47D8DFFZQ4"
+
+  GlottyTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: Tests/GlottyTests
+    dependencies:
+      - target: Glotty
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.ruojunye.glotty.tests
+        GENERATE_INFOPLIST_FILE: YES
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Glotty.app/Contents/MacOS/Glotty"
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        DEVELOPMENT_TEAM: "47D8DFFZQ4"
+
+schemes:
+  Glotty:
+    build:
+      targets:
+        Glotty: all
+        GlottyTests: [test]
+    test:
+      targets:
+        - GlottyTests
+      gatherCoverageData: true

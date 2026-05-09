@@ -24,10 +24,7 @@ struct PopupView: View {
     }
 
     private var isSingleWord: Bool {
-        let trimmed = sourceText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return false }
-        if trimmed.contains(where: { $0.isWhitespace }) { return false }
-        return trimmed.count <= 32
+        LanguagePolicy.isSingleWord(sourceText)
     }
 
     private var sourcePronunciation: [PhoneticEntry] {
@@ -214,49 +211,21 @@ struct PopupView: View {
     }
 
     private func setupConfiguration() {
-        // Source: pinned setting wins; otherwise detect.
         let savedSource = UserDefaults.standard.string(forKey: "glotty.sourceLang")
         let detected: NLLanguage?
         if let savedSource, !savedSource.isEmpty {
             detected = NLLanguage(rawValue: savedSource)
         } else {
-            detected = detectSourceLanguage(sourceText)
+            detected = LanguagePolicy.detectSourceLanguage(sourceText)
         }
         detectedSource = detected
 
         let savedTarget = UserDefaults.standard.string(forKey: "glotty.targetLang")
-        // Empty string means "Auto" in Settings — fall back to the heuristic.
-        let target = (savedTarget?.isEmpty == false ? savedTarget! : preferredTarget(for: detected))
+        let target = (savedTarget?.isEmpty == false
+                      ? savedTarget!
+                      : LanguagePolicy.preferredTarget(for: detected))
         targetLang = target
         rebuildConfiguration()
-    }
-
-    /// Detect the source language with a bias toward the user's most-likely languages.
-    /// `NLLanguageRecognizer` is unreliable for single common words ("water" → Dutch),
-    /// so we hint it heavily and fall back to English for low-confidence ASCII input.
-    private func detectSourceLanguage(_ text: String) -> NLLanguage? {
-        let recognizer = NLLanguageRecognizer()
-
-        // Bias toward English + the user's locale language.
-        var hints: [NLLanguage: Double] = [.english: 1.0]
-        if let userCode = Locale.current.language.languageCode?.identifier, userCode != "en" {
-            hints[NLLanguage(rawValue: userCode)] = 1.0
-        }
-        recognizer.languageHints = hints
-        recognizer.processString(text)
-
-        guard let candidate = recognizer.dominantLanguage else { return nil }
-
-        // For ambiguous Latin-script input (single common word), fall back to English
-        // unless the recognizer is confident enough.
-        let hypotheses = recognizer.languageHypotheses(withMaximum: 1)
-        let confidence = hypotheses[candidate] ?? 0
-        let isAsciiLatin = text.unicodeScalars.allSatisfy { $0.isASCII }
-
-        if isAsciiLatin && confidence < 0.85 {
-            return .english
-        }
-        return candidate
     }
 
     private func changeTarget(to newLang: String) {
@@ -288,15 +257,6 @@ struct PopupView: View {
 
     private func localizedName(for identifier: String) -> String {
         Locale.current.localizedString(forIdentifier: identifier) ?? identifier
-    }
-
-    /// Default heuristic when user has no saved preference.
-    private func preferredTarget(for source: NLLanguage?) -> String {
-        let userLang = Locale.current.language.languageCode?.identifier ?? "en"
-        if source == .english {
-            return userLang == "en" ? "zh-Hans" : userLang
-        }
-        return "en"
     }
 
     private func translate(using session: TranslationSession) async {
@@ -347,13 +307,22 @@ enum Pronunciation {
         return result == text ? nil : result
     }
 
-    /// Parse the first `|…|` block out of the macOS Dictionary entry. Multiple comma-
-    /// separated variants are common in Oxford dictionaries — convention is `BrE, AmE`.
+    /// Look up the macOS Dictionary entry for `text` and parse out its IPA block.
+    /// The actual parsing is in `parseDictionaryDefinition` so it can be unit-tested
+    /// without hitting `DCSCopyTextDefinition` (which depends on the user's enabled
+    /// dictionaries and is awkward to mock).
     static func ipa(for text: String) -> [PhoneticEntry] {
         let cfText = text as CFString
         let range = CFRange(location: 0, length: CFStringGetLength(cfText))
         guard let unmanaged = DCSCopyTextDefinition(nil, cfText, range) else { return [] }
         let definition = unmanaged.takeRetainedValue() as String
+        return parseDictionaryDefinition(definition)
+    }
+
+    /// Parse the first `|…|` block out of a dictionary definition string.
+    /// Comma-separated variants are deduped (Unicode-normalized, whitespace-stripped)
+    /// and capped at two — Oxford convention is BrE first, AmE second.
+    static func parseDictionaryDefinition(_ definition: String) -> [PhoneticEntry] {
         guard let first = definition.firstIndex(of: "|") else { return [] }
         let afterFirst = definition.index(after: first)
         guard let second = definition[afterFirst...].firstIndex(of: "|") else { return [] }
@@ -363,12 +332,9 @@ enum Pronunciation {
         let raw = block
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            // Strip leading/trailing slashes some dicts already include.
             .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "/")) }
             .filter { !$0.isEmpty }
 
-        // Dedupe by normalized key (strip whitespace + Unicode-normalize) — same IPA
-        // can appear twice with invisible character differences in some dictionaries.
         var seen = Set<String>()
         let unique = raw.filter { variant in
             let key = variant
@@ -377,8 +343,6 @@ enum Pronunciation {
             return seen.insert(key).inserted
         }
 
-        // Show at most 2 — even when the dict lists more variants, anything past two
-        // doesn't fit the popup's compact layout.
         let capped = Array(unique.prefix(2))
 
         switch capped.count {
@@ -386,7 +350,6 @@ enum Pronunciation {
         case 1:
             return [PhoneticEntry(label: nil, value: "/\(capped[0])/", voiceLocale: nil)]
         default:
-            // Oxford convention: first = British, second = American.
             return [
                 PhoneticEntry(label: "BrE", value: "/\(capped[0])/", voiceLocale: "en-GB"),
                 PhoneticEntry(label: "AmE", value: "/\(capped[1])/", voiceLocale: "en-US"),
