@@ -7,10 +7,12 @@ struct SettingsView: View {
         TabView {
             TranslationSettingsTab()
                 .tabItem { Label("Translation", systemImage: "globe") }
+            DictionarySettingsTab()
+                .tabItem { Label("Dictionaries", systemImage: "books.vertical") }
             HotkeySettingsTab()
                 .tabItem { Label("Hotkey", systemImage: "keyboard") }
         }
-        .frame(width: 460, height: 320)
+        .frame(minWidth: 400, minHeight: 300)
     }
 }
 
@@ -180,6 +182,74 @@ private struct TranslationSettingsTab: View {
 
     private func localizedName(for identifier: String) -> String {
         Locale.current.localizedString(forIdentifier: identifier) ?? identifier
+    }
+}
+
+private struct DictionarySettingsTab: View {
+    @AppStorage("glotty.selectedDictionaryIDs") private var selectedDictionaryIDsData: Data = Data()
+    @State private var availableDictionaries: [DictionaryLookup.DictionaryInfo] = []
+    @State private var selectedIDs: Set<String> = []
+
+    var body: some View {
+        Form {
+            Section {
+                if availableDictionaries.isEmpty {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Loading dictionaries…")
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    ForEach(availableDictionaries) { dict in
+                        Toggle(isOn: Binding(
+                            get: { selectedIDs.contains(dict.id) },
+                            set: { isOn in
+                                if isOn {
+                                    selectedIDs.insert(dict.id)
+                                } else {
+                                    selectedIDs.remove(dict.id)
+                                }
+                                saveSelection()
+                            }
+                        )) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(dict.name)
+                                    .font(.body)
+                                Text(dict.id)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Text("Active dictionaries")
+            } footer: {
+                Text("Glotty queries only the checked dictionaries when looking up words. If none are selected, all enabled dictionaries are used.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .task {
+            availableDictionaries = DictionaryLookup.availableDictionaries()
+        }
+        .onAppear {
+            loadSelection()
+        }
+    }
+
+    private func loadSelection() {
+        if let ids = try? JSONDecoder().decode([String].self, from: selectedDictionaryIDsData) {
+            selectedIDs = Set(ids)
+        }
+    }
+
+    private func saveSelection() {
+        if let data = try? JSONEncoder().encode(Array(selectedIDs)) {
+            selectedDictionaryIDsData = data
+        }
     }
 }
 

@@ -185,10 +185,23 @@ struct DictionaryParserEdgeTests {
     }
 }
 
+@Suite("DictionaryLookup — sourceAndTarget filtering")
+struct SourceAndTargetFilteringTests {
+    @Test("Empty selectedIDs queries all dictionaries")
+    func emptySelectedIDs() {
+        let entries = DictionaryLookup.allEntries(for: "hello", selectedIDs: [])
+        #expect(entries.count >= 1)
+    }
+
+    @Test("Non-matching selectedIDs returns no entries")
+    func nonMatchingSelectedIDs() {
+        let entries = DictionaryLookup.allEntries(for: "hello", selectedIDs: ["com.fake.dictionary"])
+        #expect(entries.isEmpty)
+    }
+}
+
 @Suite("DictionaryLookup — diagnostic")
 struct DictionaryDiagnosticTests {
-    /// Dumps what `DCSCopyTextDefinition` actually returns. Always passes; check the
-    /// log output if the parser starts misbehaving on a new word.
     @Test("Dump raw entry for a chosen word")
     func dumpRaw() {
         for word in ["hello", "translation", "schedule"] {

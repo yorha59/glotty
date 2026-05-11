@@ -317,7 +317,8 @@ struct PopupView: View {
         targetLang = target
 
         if LanguagePolicy.isSingleWord(sourceText) {
-            let split = DictionaryLookup.sourceAndTarget(for: sourceText)
+            let selectedIDs = UserDefaults.standard.stringArray(forKey: "glotty.selectedDictionaryIDs") ?? []
+            let split = DictionaryLookup.sourceAndTarget(for: sourceText, selectedIDs: selectedIDs)
             sourceDictEntry = split.source
             targetDictEntry = split.target
             Self.dbg("dict — source=\(split.source?.parts.count ?? 0) parts, target=\(split.target?.parts.count ?? 0) parts")

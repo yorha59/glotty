@@ -92,14 +92,37 @@ enum DictionaryLookup {
         return parseEntry(definition)
     }
 
-    /// Query EVERY enabled macOS dictionary for `text` and return one entry per dict
-    /// that has the word. Used by the popup to split source-language definitions
-    /// (monolingual English) from target-language glosses (bilingual Chinese-English).
-    static func allEntries(for text: String) -> [DictionaryEntry] {
+        struct DictionaryInfo: Identifiable, Equatable {
+        let id: String
+        let name: String
+        let path: String
+    }
+
+    static func availableDictionaries() -> [DictionaryInfo] {
+        guard let getDicts = dynDCSGetActiveDictionaries,
+              let dictsUnmanaged = getDicts() else { return [] }
+        let dictsArray = dictsArray(from: dictsUnmanaged)
+
+        var infos: [DictionaryInfo] = []
+        for dict in dictsArray {
+            let desc = (dict as AnyObject).debugDescription ?? ""
+            guard let url = extractURL(from: desc),
+                  let lastComponent = url.pathComponents.last else { continue }
+            let rawName = lastComponent
+                .replacingOccurrences(of: ".dictionary", with: "")
+                .replacingOccurrences(of: "%20", with: " ")
+                .replacingOccurrences(of: "%27", with: "'")
+            let id = url.path
+            infos.append(DictionaryInfo(id: id, name: rawName, path: url.path))
+        }
+        return infos
+    }
+
+    static func allEntries(for text: String, selectedIDs: [String] = []) -> [DictionaryEntry] {
         guard let getDicts = dynDCSGetActiveDictionaries,
               let copyDef = dynDCSCopyTextDefinition,
               let dictsUnmanaged = getDicts() else { return [] }
-        let dictsArray = dictsUnmanaged.takeUnretainedValue() as? [CFTypeRef] ?? []
+        let dictsArray = dictsArray(from: dictsUnmanaged)
 
         let cfText = text as CFString
         let range = CFRange(location: 0, length: CFStringGetLength(cfText))
@@ -107,10 +130,17 @@ enum DictionaryLookup {
         var entries: [DictionaryEntry] = []
         var seenRaw = Set<String>()
 
+        let idSet = selectedIDs.isEmpty ? nil : Set(selectedIDs)
+
         for dict in dictsArray {
+            if let idSet {
+                let desc = (dict as AnyObject).debugDescription ?? ""
+                guard let url = extractURL(from: desc),
+                      idSet.contains(url.path) else { continue }
+            }
+
             guard let defUnmanaged = copyDef(dict, cfText, range) else { continue }
             let raw = defUnmanaged.takeRetainedValue() as String
-            // Dedupe — some dicts return identical text.
             guard seenRaw.insert(raw).inserted else { continue }
             let entry = parseEntry(raw)
             if entry.hasContent {
@@ -120,11 +150,20 @@ enum DictionaryLookup {
         return entries
     }
 
-    /// Bucket the per-dictionary entries into "source-language" (monolingual, e.g.
-    /// English-only) and "target-language" (bilingual, contains non-Latin glosses).
-    /// First entry in each bucket wins — most users have only one of each.
-    static func sourceAndTarget(for text: String) -> (source: DictionaryEntry?, target: DictionaryEntry?) {
-        let entries = allEntries(for: text)
+    private static func dictsArray(from unmanaged: Unmanaged<CFArray>) -> [CFTypeRef] {
+        unmanaged.takeUnretainedValue() as [CFTypeRef]
+    }
+
+    private static func extractURL(from description: String) -> URL? {
+        guard let range = description.range(of: "URL = ", options: .backwards),
+              let endRange = description.range(of: ".dictionary/", options: .backwards) else { return nil }
+        let urlString = String(description[range.upperBound..<endRange.upperBound])
+            .trimmingCharacters(in: CharacterSet(charactersIn: "}"))
+        return URL(string: urlString)
+    }
+
+    static func sourceAndTarget(for text: String, selectedIDs: [String] = []) -> (source: DictionaryEntry?, target: DictionaryEntry?) {
+        let entries = allEntries(for: text, selectedIDs: selectedIDs)
         let source = entries.first { !$0.hasBilingualContent }
         let target = entries.first { $0.hasBilingualContent }
         return (source, target)

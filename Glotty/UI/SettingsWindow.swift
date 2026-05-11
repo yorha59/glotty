@@ -19,9 +19,10 @@ final class SettingsWindowController {
         let host = NSHostingController(rootView: SettingsView())
         let w = NSWindow(contentViewController: host)
         w.title = "Glotty Settings"
-        w.styleMask = [.titled, .closable, .miniaturizable]
+        w.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         w.isReleasedWhenClosed = false
-        w.setContentSize(NSSize(width: 460, height: 320))
+        w.setContentSize(NSSize(width: 520, height: 420))
+        w.minSize = NSSize(width: 400, height: 300)
         w.center()
         w.collectionBehavior = [.moveToActiveSpace]
 
