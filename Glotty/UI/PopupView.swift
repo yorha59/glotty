@@ -14,6 +14,8 @@ struct PopupView: View {
     @State private var detectedSource: NLLanguage?
     @State private var targetLang: String = "en"
     @State private var availableLanguages: [Locale.Language] = []
+    @State private var sourceDictEntry: DictionaryEntry?
+    @State private var targetDictEntry: DictionaryEntry?
     @State private var elapsedMs: Int = 0
     private let startedAt = CFAbsoluteTimeGetCurrent()
 
@@ -31,22 +33,43 @@ struct PopupView: View {
         isSingleWord ? Pronunciation.pronounce(sourceText, language: detectedSource) : []
     }
 
-    private var translatedPronunciation: [PhoneticEntry] {
-        guard isSingleWord, !translated.isEmpty else { return [] }
-        let lang = NLLanguage(rawValue: targetLang)
-        return Pronunciation.pronounce(translated, language: lang)
-    }
+    // Translation phonetics removed per design — translation row stays single-line.
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sourceBlock
+        VStack(alignment: .leading, spacing: 8) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 6) {
+                    debugRegion("source row") { sourceBlock }
+                    debugRegion("source phonetics") {
+                        if sourcePronunciation.isEmpty {
+                            emptyPlaceholder
+                        } else {
+                            phoneticView(text: sourceText,
+                                         fallbackLanguage: detectedSource?.rawValue,
+                                         entries: sourcePronunciation)
+                        }
+                    }
+                    debugRegion("source dict") {
+                        if let src = sourceDictEntry, src.hasContent {
+                            dictionaryView(entry: src)
+                        } else {
+                            emptyPlaceholder
+                        }
+                    }
 
-            Divider()
+                    debugRegion("target dict") {
+                        if let tgt = targetDictEntry, tgt.hasContent {
+                            dictionaryView(entry: tgt)
+                        } else {
+                            emptyPlaceholder
+                        }
+                    }
+                    debugRegion("translation row") { translationBlock }
+                }
+            }
+            .scrollIndicators(.automatic)
 
-            translationBlock
-
-            Spacer(minLength: 0)
-
+            debugRegion("footer") {
             HStack(spacing: 6) {
                 Text(detectedSource?.rawValue ?? "auto")
                     .font(.caption2)
@@ -89,9 +112,11 @@ struct PopupView: View {
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
+            }
         }
         .padding(12)
-        .frame(width: 380, height: 200)
+        // Debug mode: bumped to fit all labeled regions even when most are empty.
+        .frame(width: 460, height: 520)
         .background(.regularMaterial)
         .onAppear { setupConfiguration() }
         .task { await loadAvailableLanguages() }
@@ -105,55 +130,62 @@ struct PopupView: View {
     }
 
     private var sourceBlock: some View {
-        HStack(alignment: .top, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(sourceText)
-                    .font(.system(.body))
-                    .textSelection(.enabled)
-                    .lineLimit(3)
-                phoneticView(text: sourceText,
-                             fallbackLanguage: detectedSource?.rawValue,
-                             entries: sourcePronunciation)
-            }
-            Spacer(minLength: 0)
-            // Top-level speak only when no per-row buttons exist (e.g. sentence input).
-            if sourcePronunciation.isEmpty {
-                speakButton(text: sourceText, language: detectedSource?.rawValue)
-            }
-            closeButton
+        Text(sourceText)
+            .font(.system(.body))
+            .textSelection(.enabled)
+            .lineLimit(3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Debug-mode wrapper: shows every region with a label tag so we can see
+    /// which ones are empty. Remove once layout is stable.
+    @ViewBuilder
+    private func debugRegion<Content: View>(_ name: String,
+                                            @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("[\(name)]")
+                .font(.system(.caption2, design: .monospaced))
+                .foregroundStyle(Color.purple.opacity(0.8))
+            content()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .strokeBorder(Color.purple.opacity(0.25),
+                                      style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
+                )
         }
     }
 
+    private var emptyPlaceholder: some View {
+        Text("(empty)")
+            .font(.caption)
+            .italic()
+            .foregroundStyle(.tertiary)
+    }
+
     private var translationBlock: some View {
-        HStack(alignment: .top, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                switch status {
-                case .working:
-                    HStack(spacing: 6) {
-                        ProgressView().controlSize(.small)
-                        Text("Translating…")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                    }
-                case .ready:
-                    Text(translated)
-                        .font(.system(.title3, design: .rounded))
-                        .textSelection(.enabled)
-                    phoneticView(text: translated,
-                                 fallbackLanguage: targetLang,
-                                 entries: translatedPronunciation)
-                case .failed(let message):
-                    Text(message)
-                        .font(.caption)
-                        .foregroundStyle(.red)
+        VStack(alignment: .leading, spacing: 2) {
+            switch status {
+            case .working:
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Translating…")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
-            }
-            Spacer(minLength: 0)
-            // Top-level speak only when no per-row buttons (sentences, etc.).
-            if case .ready = status, translatedPronunciation.isEmpty {
-                speakButton(text: translated, language: targetLang)
+            case .ready:
+                Text(translated)
+                    .font(.system(.title2, design: .rounded).weight(.medium))
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            case .failed(let message):
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.red)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -190,13 +222,71 @@ struct PopupView: View {
         }
     }
 
-    private var closeButton: some View {
-        Button(action: onClose) {
-            Image(systemName: "xmark.circle.fill")
-                .foregroundStyle(.tertiary)
+    @ViewBuilder
+    private func dictionaryView(entry: DictionaryEntry) -> some View {
+        // Cap to the first 2 POS sections and 2 senses each — keeps the popup tight.
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(Array(entry.parts.prefix(2).enumerated()), id: \.offset) { _, part in
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(part.label)
+                        .font(.system(.caption2, design: .rounded).italic())
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 56, alignment: .trailing)
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(part.definitions.prefix(2), id: \.self) { def in
+                            definitionRow(def)
+                        }
+                    }
+                }
+            }
         }
-        .buttonStyle(.plain)
-        .help("Close (Esc)")
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func definitionRow(_ def: Definition) -> some View {
+        let segments = splitDefinition(def.text)
+        return HStack(alignment: .firstTextBaseline, spacing: 4) {
+            if let n = def.number {
+                Text("\(n).")
+                    .font(.system(.caption2, design: .rounded).weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        if segment.isExample {
+                            Text("▸")
+                                .font(.system(.callout))
+                                .foregroundStyle(.tertiary)
+                        }
+                        Text(segment.text)
+                            .font(.system(.callout))
+                            .foregroundStyle(segment.isExample ? .secondary : .primary)
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Break a definition into renderable lines.
+    /// - `;` and `；` (full-width) split distinct glosses (each → its own line).
+    /// - `▸` separates a gloss from its example sentence (example marked separately
+    ///   so the row renders with a `▸` prefix and dimmer color).
+    private func splitDefinition(_ text: String) -> [(text: String, isExample: Bool)] {
+        var result: [(String, Bool)] = []
+        let glossSegments = text.split(whereSeparator: { $0 == ";" || $0 == "；" })
+        for gloss in glossSegments {
+            let trimmed = gloss.trimmingCharacters(in: .whitespaces)
+            let parts = trimmed.split(separator: "▸", omittingEmptySubsequences: false)
+            for (i, part) in parts.enumerated() {
+                let cleaned = part.trimmingCharacters(in: .whitespaces)
+                guard !cleaned.isEmpty else { continue }
+                result.append((cleaned, i > 0))
+            }
+        }
+        return result
     }
 
     private func speakButton(text: String, language: String?) -> some View {
@@ -225,6 +315,15 @@ struct PopupView: View {
                       ? savedTarget!
                       : LanguagePolicy.preferredTarget(for: detected))
         targetLang = target
+
+        if LanguagePolicy.isSingleWord(sourceText) {
+            let split = DictionaryLookup.sourceAndTarget(for: sourceText)
+            sourceDictEntry = split.source
+            targetDictEntry = split.target
+            Self.dbg("dict — source=\(split.source?.parts.count ?? 0) parts, target=\(split.target?.parts.count ?? 0) parts")
+        }
+
+        Self.dbg("setup — text='\(sourceText)' detected=\(detected?.rawValue ?? "nil") target=\(target)")
         rebuildConfiguration()
     }
 
@@ -260,13 +359,27 @@ struct PopupView: View {
     }
 
     private func translate(using session: TranslationSession) async {
+        Self.dbg("translate begin — text='\(sourceText)' target=\(targetLang)")
         do {
             let response = try await session.translate(sourceText)
             translated = response.targetText
             status = .ready
             elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
+            Self.dbg("translate ok — '\(sourceText)' → '\(response.targetText)' in \(elapsedMs)ms")
         } catch {
+            Self.dbg("translate FAIL — '\(sourceText)' err=\(error.localizedDescription)")
             status = .failed(error.localizedDescription)
+        }
+    }
+
+    private static func dbg(_ msg: String) {
+        let line = "[\(Date())] PopupView: \(msg)\n"
+        guard let data = line.data(using: .utf8) else { return }
+        let url = URL(fileURLWithPath: "/tmp/glotty-debug.log")
+        if let h = try? FileHandle(forWritingTo: url) {
+            h.seekToEndOfFile(); h.write(data); try? h.close()
+        } else {
+            try? data.write(to: url)
         }
     }
 }
@@ -320,15 +433,62 @@ enum Pronunciation {
     }
 
     /// Parse the first `|…|` block out of a dictionary definition string.
-    /// Comma-separated variants are deduped (Unicode-normalized, whitespace-stripped)
-    /// and capped at two — Oxford convention is BrE first, AmE second.
+    /// Two formats are supported:
+    ///   1. **Dialect-labeled**: `BrE x, y, AmE z, w` (Chinese-English bilingual dicts).
+    ///      Returns the FIRST IPA per dialect.
+    ///   2. **Comma-separated alternates**: `ˈʃɛdjuːl, ˈskɛdʒuːl` (Oxford-style).
+    ///      Treats first as BrE, second as AmE. Single-variant returns one unlabeled.
     static func parseDictionaryDefinition(_ definition: String) -> [PhoneticEntry] {
         guard let first = definition.firstIndex(of: "|") else { return [] }
         let afterFirst = definition.index(after: first)
         guard let second = definition[afterFirst...].firstIndex(of: "|") else { return [] }
 
-        let block = definition[afterFirst..<second]
+        let block = String(definition[afterFirst..<second])
             .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if block.range(of: #"\bBrE\b"#, options: .regularExpression) != nil ||
+           block.range(of: #"\bAmE\b"#, options: .regularExpression) != nil {
+            return parseDialectLabeledBlock(block)
+        }
+        return parseAlternatesBlock(block)
+    }
+
+    /// "BrE həˈləʊ, hɛˈləʊ, AmE həˈloʊ, hɛˈloʊ" → first BrE + first AmE.
+    static func parseDialectLabeledBlock(_ block: String) -> [PhoneticEntry] {
+        var bre: String?
+        var ame: String?
+        var current: String? // "BrE" | "AmE" | nil
+
+        for raw in block.split(separator: ",") {
+            var token = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            if token.hasPrefix("BrE ") {
+                current = "BrE"
+                token = String(token.dropFirst(4)).trimmingCharacters(in: .whitespacesAndNewlines)
+            } else if token.hasPrefix("AmE ") {
+                current = "AmE"
+                token = String(token.dropFirst(4)).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            token = token.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            guard !token.isEmpty else { continue }
+            switch current {
+            case "BrE" where bre == nil: bre = token
+            case "AmE" where ame == nil: ame = token
+            default: break
+            }
+        }
+
+        var entries: [PhoneticEntry] = []
+        if let bre {
+            entries.append(PhoneticEntry(label: "BrE", value: "/\(bre)/", voiceLocale: "en-GB"))
+        }
+        if let ame {
+            entries.append(PhoneticEntry(label: "AmE", value: "/\(ame)/", voiceLocale: "en-US"))
+        }
+        return entries
+    }
+
+    /// Oxford-style: `ˈʃɛdjuːl, ˈskɛdʒuːl` → BrE+AmE; single variant → unlabeled.
+    static func parseAlternatesBlock(_ block: String) -> [PhoneticEntry] {
         let raw = block
             .split(separator: ",")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
