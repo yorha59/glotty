@@ -65,6 +65,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         installHotkey()
         dbg("installHotkey done")
+
+        let aiStatus = AppleIntelligenceStatus.current()
+        dbg("AppleIntelligence: \(aiStatus.displayName)" + (aiStatus.fixInstructions.map { " — \($0)" } ?? ""))
+
         dbg("applicationDidFinishLaunching END")
     }
 
@@ -106,7 +110,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func testFire() {
         print("[Glotty] manual fire from menu")
-        handleFire()
+        handleFire(mode: .translate)
     }
 
     @objc private func openSettings() {
@@ -116,25 +120,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func installHotkey() {
         let hk = FnLeaderHotkey()
-        hk.onFire = { [weak self] in
-            self?.handleFire()
-        }
-        hk.onShowHUD = { [weak self] in
-            self?.hud.show()
-        }
-        hk.onHideHUD = { [weak self] in
-            self?.hud.hide()
-        }
+        hk.onFire = { [weak self] in self?.handleFire(mode: .translate) }
+        hk.onPolishFire = { [weak self] in self?.handleFire(mode: .polish) }
+        hk.onShowHUD = { [weak self] in self?.hud.show() }
+        hk.onHideHUD = { [weak self] in self?.hud.hide() }
         do {
             try hk.install()
             hotkey = hk
-            print("Glotty: Fn → T hotkey installed")
+            print("Glotty: Fn → T / Fn → R hotkey installed")
         } catch {
             print("Glotty: hotkey install failed: \(error). Input Monitoring permission likely denied.")
         }
     }
 
-    private func handleFire() {
+    private func handleFire(mode: PopupMode) {
         Task { @MainActor in
             let started = CFAbsoluteTimeGetCurrent()
             guard let text = await grabber.grab() else {
@@ -142,8 +141,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
             let elapsed = (CFAbsoluteTimeGetCurrent() - started) * 1000
-            print("Glotty: grabbed \(text.count) chars in \(String(format: "%.0f", elapsed))ms")
-            popup.show(sourceText: text)
+            print("Glotty: grabbed \(text.count) chars in \(String(format: "%.0f", elapsed))ms (mode=\(mode))")
+            popup.show(sourceText: text, mode: mode)
         }
     }
 }

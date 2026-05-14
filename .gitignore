@@ -3,6 +3,7 @@
 DerivedData/
 build/
 .build/
+*.profraw
 
 # Swift Package Manager
 .swiftpm/

@@ -6,7 +6,7 @@ import SwiftUI
 @MainActor
 final class HUDController {
     private var panel: NSPanel?
-    private static let size = NSSize(width: 320, height: 120)
+    private static let size = NSSize(width: 320, height: 150)
 
     func show() {
         let panel = ensurePanel()
@@ -67,6 +67,7 @@ private struct HUDView: View {
             }
             Divider().background(.white.opacity(0.15))
             commandRow(key: "T", label: "Translate selection")
+            commandRow(key: "R", label: "Polish to idiomatic")
             Text("Release Fn to cancel")
                 .font(.caption2)
                 .foregroundStyle(.white.opacity(0.45))

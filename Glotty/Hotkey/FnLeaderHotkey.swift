@@ -8,6 +8,7 @@ import AppKit
 /// - All other keys / timing: pass through untouched.
 final class FnLeaderHotkey {
     var onFire: (() -> Void)?
+    var onPolishFire: (() -> Void)?
     var onShowHUD: (() -> Void)?
     var onHideHUD: (() -> Void)?
 
@@ -20,6 +21,7 @@ final class FnLeaderHotkey {
     private let leaderWindow: CFTimeInterval = 0.6
     private let hudShowDelay: CFTimeInterval = 0.25
     private static let kVK_T: Int64 = 17
+    private static let kVK_R: Int64 = 15
 
     enum HotkeyError: Error {
         case eventTapCreateFailed
@@ -94,15 +96,21 @@ final class FnLeaderHotkey {
         if type == .keyDown {
             let keycode = event.getIntegerValueField(.keyboardEventKeycode)
             let withinWindow = (CFAbsoluteTimeGetCurrent() - fnDownAt) < leaderWindow
-            if keycode == FnLeaderHotkey.kVK_T {
-                FnLeaderHotkey.debug("T keyDown (fnPressed=\(wasFnPressed) withinWindow=\(withinWindow))")
-            }
-            if keycode == FnLeaderHotkey.kVK_T, wasFnPressed || withinWindow {
+            let active = wasFnPressed || withinWindow
+
+            if keycode == FnLeaderHotkey.kVK_T, active {
                 FnLeaderHotkey.debug("FIRE Fn→T")
                 cancelHUD()
                 let cb = onFire
                 DispatchQueue.main.async { cb?() }
-                return nil // consume the T so it doesn't leak into the focused app
+                return nil
+            }
+            if keycode == FnLeaderHotkey.kVK_R, active {
+                FnLeaderHotkey.debug("FIRE Fn→R")
+                cancelHUD()
+                let cb = onPolishFire
+                DispatchQueue.main.async { cb?() }
+                return nil
             }
         }
 

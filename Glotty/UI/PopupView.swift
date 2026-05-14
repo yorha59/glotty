@@ -4,13 +4,25 @@ import NaturalLanguage
 import AVFoundation
 import CoreServices
 
+/// Which Fn-leader command produced this popup. The view branches on this:
+/// `.translate` runs the standard Apple-Translation pipeline; `.polish` skips
+/// translation entirely and calls the selected LLM provider.
+enum PopupMode: Equatable {
+    case translate
+    case polish
+}
+
 struct PopupView: View {
     let sourceText: String
+    let mode: PopupMode
     let onClose: () -> Void
 
     @State private var translated: String = ""
     @State private var configuration: TranslationSession.Configuration?
     @State private var status: Status = .working
+    @State private var polishStatus: Status = .working
+    @State private var polishedText: String = ""
+    @State private var polishProviderName: String = ""
     @State private var detectedSource: NLLanguage?
     @State private var targetLang: String = "en"
     @State private var availableLanguages: [Locale.Language] = []
@@ -41,7 +53,7 @@ struct PopupView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     sourceBlock
 
-                    if !sourcePronunciation.isEmpty {
+                    if mode == .translate, !sourcePronunciation.isEmpty {
                         regionDivider
                         titledRegion("Phonetics") {
                             phoneticView(text: sourceText,
@@ -65,8 +77,15 @@ struct PopupView: View {
                     }
 
                     regionDivider
-                    titledRegion("Translation") {
-                        translationBlock
+                    switch mode {
+                    case .translate:
+                        titledRegion("Translation") {
+                            translationBlock
+                        }
+                    case .polish:
+                        titledRegion("Polished" + (polishProviderName.isEmpty ? "" : " · \(polishProviderName)")) {
+                            polishBlock
+                        }
                     }
                 }
             }
@@ -120,7 +139,11 @@ struct PopupView: View {
         .background(.regularMaterial)
         .onAppear { setupConfiguration() }
         .task { await loadAvailableLanguages() }
-        .translationTask(configuration) { session in
+        .task(id: mode == .polish ? "polish-\(sourceText)" : "") {
+            guard mode == .polish else { return }
+            await runPolish()
+        }
+        .translationTask(mode == .translate ? configuration : nil) { session in
             await translate(using: session)
         }
         .onKeyPress(.escape) {
@@ -175,6 +198,32 @@ struct PopupView: View {
                 Text(message)
                     .font(.caption)
                     .foregroundStyle(.red)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var polishBlock: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            switch polishStatus {
+            case .working:
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Polishing into \(localizedName(for: targetLang)) via \(polishProviderName.isEmpty ? "LLM" : polishProviderName)…")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            case .ready:
+                Text(polishedText)
+                    .font(.system(.title3, design: .rounded))
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            case .failed(let message):
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -300,18 +349,28 @@ struct PopupView: View {
 
     private func setupConfiguration() {
         let savedSource = UserDefaults.standard.string(forKey: "glotty.sourceLang")
+        let savedTarget = UserDefaults.standard.string(forKey: "glotty.targetLang")
         let detected: NLLanguage?
-        if let savedSource, !savedSource.isEmpty {
+        // Polish always re-detects: it needs to know what language you actually
+        // selected so it doesn't ask the LLM to "rewrite X in X" (a no-op).
+        if mode == .translate, let savedSource, !savedSource.isEmpty {
             detected = NLLanguage(rawValue: savedSource)
         } else {
             detected = LanguagePolicy.detectSourceLanguage(sourceText)
         }
         detectedSource = detected
 
-        let savedTarget = UserDefaults.standard.string(forKey: "glotty.targetLang")
-        let target = (savedTarget?.isEmpty == false
+        let target: String
+        switch mode {
+        case .translate:
+            target = (savedTarget?.isEmpty == false
                       ? savedTarget!
                       : LanguagePolicy.preferredTarget(for: detected))
+        case .polish:
+            // Polish output language: user pref → fallback to English (the most
+            // common "I want this in idiomatic <X>" case for our audience).
+            target = polishTargetLanguage()
+        }
         targetLang = target
 
         if LanguagePolicy.isSingleWord(sourceText) {
@@ -374,6 +433,34 @@ struct PopupView: View {
             Self.dbg("translate FAIL — '\(sourceText)' err=\(error.localizedDescription)")
             status = .failed(error.localizedDescription)
         }
+    }
+
+    private func runPolish() async {
+        guard let provider = LLMRegistry.current() else {
+            polishStatus = .failed("No LLM provider configured.")
+            return
+        }
+        let outputLanguage = polishTargetLanguage()
+        targetLang = outputLanguage
+        polishStatus = .working
+        polishedText = ""
+        polishProviderName = provider.displayName
+        Self.dbg("polish begin — text='\(sourceText)' target=\(outputLanguage) provider=\(provider.id)")
+        do {
+            let result = try await provider.polish(sourceText, targetLanguage: outputLanguage)
+            polishedText = result
+            polishStatus = .ready
+            elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
+            Self.dbg("polish ok — \(elapsedMs)ms")
+        } catch {
+            Self.dbg("polish FAIL — err=\(error.localizedDescription)")
+            polishStatus = .failed(error.localizedDescription)
+        }
+    }
+
+    private func polishTargetLanguage() -> String {
+        let savedPolish = UserDefaults.standard.string(forKey: "glotty.polishLang")
+        return (savedPolish?.isEmpty == false ? savedPolish! : "en")
     }
 
     private static func dbg(_ msg: String) {

@@ -9,10 +9,178 @@ struct SettingsView: View {
         Form {
             TranslationSettingsSection()
             DictionarySettingsSection()
+            LanguageModelSettingsSection()
             HotkeySettingsSection()
         }
         .formStyle(.grouped)
         .frame(minWidth: 520)
+    }
+}
+
+private struct LanguageModelSettingsSection: View {
+    @AppStorage("glotty.llmProvider") private var providerID: String = "zai"
+    @AppStorage("glotty.zai.endpoint") private var zaiEndpoint: String = ""
+    @AppStorage("glotty.zai.model") private var zaiModel: String = ""
+    @AppStorage("glotty.polishLang") private var polishLang: String = "en"
+    @State private var apiKey: String = ""
+    @State private var apiKeyPlaceholder: String = ""
+    @State private var testStatus: TestStatus = .idle
+
+    /// Common polish targets. Stays separate from the translate target picker —
+    /// polish is "rewrite into idiomatic X" and X is often the *opposite* of the
+    /// translate target (you read Chinese translations of English; you polish your
+    /// Chinese drafts into English).
+    private let polishLanguageOptions: [(id: String, name: String)] = [
+        ("en", "English"),
+        ("zh-Hans", "Chinese (Simplified)"),
+        ("zh-Hant", "Chinese (Traditional)"),
+        ("ja", "Japanese"),
+        ("ko", "Korean"),
+        ("fr", "French"),
+        ("de", "German"),
+        ("es", "Spanish"),
+    ]
+
+    enum TestStatus: Equatable {
+        case idle
+        case running
+        case ok(String)
+        case failed(String)
+    }
+
+    var body: some View {
+        Section {
+            Picker("Provider", selection: $providerID) {
+                ForEach(LLMRegistry.all, id: \.id) { provider in
+                    Text(provider.displayName).tag(provider.id)
+                }
+            }
+            .pickerStyle(.menu)
+            .onChange(of: providerID) { _, _ in loadKey() }
+
+            Picker("Polish output language", selection: $polishLang) {
+                ForEach(polishLanguageOptions, id: \.id) { option in
+                    Text(option.name).tag(option.id)
+                }
+            }
+            .pickerStyle(.menu)
+
+            if providerID == "zai" {
+                zaiFields
+            }
+        } header: {
+            Text("Language Model")
+        } footer: {
+            Text("Polishes your draft into native-sounding text in the chosen output language (not necessarily the same as Translation's target). Keys are stored in macOS Keychain.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .onAppear { loadKey() }
+    }
+
+    @ViewBuilder
+    private var zaiFields: some View {
+        HStack {
+            SecureField("API key", text: $apiKey, prompt: Text(apiKeyPlaceholder.isEmpty ? "Paste your Z.AI API key" : apiKeyPlaceholder))
+            Button("Save") { saveKey() }
+                .disabled(apiKey.isEmpty)
+            if !apiKeyPlaceholder.isEmpty {
+                Button("Clear", role: .destructive) { clearKey() }
+            }
+        }
+
+        TextField("Endpoint",
+                  text: $zaiEndpoint,
+                  prompt: Text(ZAIProvider.defaultEndpoint))
+            .textContentType(.URL)
+
+        Picker("Model", selection: zaiModelBinding) {
+            ForEach(ZAIProvider.supportedModels) { option in
+                Text(option.displayName).tag(option.id)
+            }
+        }
+        .pickerStyle(.menu)
+
+        if let summary = ZAIProvider.model(for: zaiModelBinding.wrappedValue)?.summary {
+            Text(summary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+
+        HStack {
+            Button("Test connection") { Task { await test() } }
+                .disabled(testStatus == .running)
+            switch testStatus {
+            case .idle:
+                EmptyView()
+            case .running:
+                ProgressView().controlSize(.small)
+            case .ok(let result):
+                Label(result, systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .lineLimit(1)
+            case .failed(let msg):
+                Label(msg, systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+                    .lineLimit(2)
+                    .textSelection(.enabled)
+            }
+        }
+    }
+
+    /// Picker binding that treats empty AppStorage as "use the default model".
+    /// When the user picks one, we always write the concrete id (no empty state).
+    private var zaiModelBinding: Binding<String> {
+        Binding(
+            get: { zaiModel.isEmpty ? ZAIProvider.defaultModel : zaiModel },
+            set: { zaiModel = $0 }
+        )
+    }
+
+    private func loadKey() {
+        guard providerID == "zai" else {
+            apiKey = ""
+            apiKeyPlaceholder = ""
+            return
+        }
+        if let existing = Keychain.read(account: ZAIProvider.keychainAccount), !existing.isEmpty {
+            apiKey = ""
+            apiKeyPlaceholder = "Saved (\(existing.prefix(4))…\(existing.suffix(4)))"
+        } else {
+            apiKey = ""
+            apiKeyPlaceholder = ""
+        }
+    }
+
+    private func saveKey() {
+        let trimmed = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if Keychain.write(trimmed, account: ZAIProvider.keychainAccount) {
+            apiKey = ""
+            apiKeyPlaceholder = "Saved (\(trimmed.prefix(4))…\(trimmed.suffix(4)))"
+            testStatus = .idle
+        } else {
+            testStatus = .failed("Failed to write to Keychain.")
+        }
+    }
+
+    private func clearKey() {
+        Keychain.delete(account: ZAIProvider.keychainAccount)
+        apiKey = ""
+        apiKeyPlaceholder = ""
+        testStatus = .idle
+    }
+
+    private func test() async {
+        testStatus = .running
+        do {
+            let provider = ZAIProvider()
+            let result = try await provider.polish("hello world", targetLanguage: "en")
+            testStatus = .ok("OK · \(result.prefix(40))\(result.count > 40 ? "…" : "")")
+        } catch {
+            testStatus = .failed(error.localizedDescription)
+        }
     }
 }
 
@@ -23,6 +191,7 @@ private struct TranslationSettingsSection: View {
     @State private var packStatus: PackStatus = .unknown
     @State private var downloadConfig: TranslationSession.Configuration?
     @State private var lastError: String?
+    @State private var aiStatus: AppleIntelligenceStatus = .unknown("checking…")
 
     enum PackStatus {
         case unknown
@@ -71,6 +240,10 @@ private struct TranslationSettingsSection: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            Section("Apple Intelligence") {
+                appleIntelligenceStatusRow
+            }
         }
         .task { await loadAvailableLanguages() }
         .task(id: "\(sourceLang)|\(targetLang)") {
@@ -78,6 +251,28 @@ private struct TranslationSettingsSection: View {
         }
         .translationTask(downloadConfig) { session in
             await runDownload(using: session)
+        }
+        .onAppear { aiStatus = AppleIntelligenceStatus.current() }
+    }
+
+    @ViewBuilder
+    private var appleIntelligenceStatusRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: aiStatus == .available
+                  ? "checkmark.circle.fill"
+                  : "exclamationmark.triangle.fill")
+                .foregroundStyle(aiStatus == .available ? .green : .orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(aiStatus.displayName)
+                if let fix = aiStatus.fixInstructions {
+                    Text(fix)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            Button("Recheck") { aiStatus = AppleIntelligenceStatus.current() }
+                .controlSize(.small)
         }
     }
 
@@ -1068,10 +1263,11 @@ private struct HotkeySettingsSection: View {
         Section {
             LabeledContent("Leader key", value: "Fn")
             LabeledContent("Translate", value: "Fn → T")
+            LabeledContent("Polish to idiomatic", value: "Fn → R")
         } header: {
             Text("Hotkey")
         } footer: {
-            Text("Hotkey customization will arrive after the spike. For now the leader is fixed to Fn and the translate command is T.")
+            Text("Hotkey customization will arrive after the spike. For now the leader is fixed to Fn; T translates, R polishes the selection.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

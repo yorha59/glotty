@@ -6,11 +6,12 @@ final class PopupController {
     private var panel: NSPanel?
     private static let size = NSSize(width: 380, height: 200)
 
-    func show(sourceText: String) {
+    func show(sourceText: String, mode: PopupMode = .translate) {
         let panel = ensurePanel()
 
         let host = NSHostingView(rootView: PopupView(
             sourceText: sourceText,
+            mode: mode,
             onClose: { [weak self] in self?.dismiss() }
         ))
         host.frame = NSRect(origin: .zero, size: PopupController.size)
