@@ -14,8 +14,8 @@ struct PopupView: View {
     @State private var detectedSource: NLLanguage?
     @State private var targetLang: String = "en"
     @State private var availableLanguages: [Locale.Language] = []
-    @State private var sourceDictEntry: DictionaryEntry?
-    @State private var targetDictEntry: DictionaryEntry?
+    @State private var sourceDictResult: DictionaryLookup.SourcedEntry?
+    @State private var targetDictResult: DictionaryLookup.SourcedEntry?
     @State private var elapsedMs: Int = 0
     private let startedAt = CFAbsoluteTimeGetCurrent()
 
@@ -38,38 +38,40 @@ struct PopupView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 6) {
-                    debugRegion("source row") { sourceBlock }
-                    debugRegion("source phonetics") {
-                        if sourcePronunciation.isEmpty {
-                            emptyPlaceholder
-                        } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    sourceBlock
+
+                    if !sourcePronunciation.isEmpty {
+                        regionDivider
+                        titledRegion("Phonetics") {
                             phoneticView(text: sourceText,
                                          fallbackLanguage: detectedSource?.rawValue,
                                          entries: sourcePronunciation)
                         }
                     }
-                    debugRegion("source dict") {
-                        if let src = sourceDictEntry, src.hasContent {
-                            dictionaryView(entry: src)
-                        } else {
-                            emptyPlaceholder
+
+                    if let src = sourceDictResult, src.entry.hasContent {
+                        regionDivider
+                        titledRegion("Source language explanation") {
+                            dictionaryView(result: src)
                         }
                     }
 
-                    debugRegion("target dict") {
-                        if let tgt = targetDictEntry, tgt.hasContent {
-                            dictionaryView(entry: tgt)
-                        } else {
-                            emptyPlaceholder
+                    if let tgt = targetDictResult, tgt.entry.hasContent {
+                        regionDivider
+                        titledRegion("Bilingual dictionary") {
+                            dictionaryView(result: tgt)
                         }
                     }
-                    debugRegion("translation row") { translationBlock }
+
+                    regionDivider
+                    titledRegion("Translation") {
+                        translationBlock
+                    }
                 }
             }
             .scrollIndicators(.automatic)
 
-            debugRegion("footer") {
             HStack(spacing: 6) {
                 Text(detectedSource?.rawValue ?? "auto")
                     .font(.caption2)
@@ -112,10 +114,8 @@ struct PopupView: View {
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
-            }
         }
         .padding(12)
-        // Debug mode: bumped to fit all labeled regions even when most are empty.
         .frame(width: 460, height: 520)
         .background(.regularMaterial)
         .onAppear { setupConfiguration() }
@@ -129,39 +129,31 @@ struct PopupView: View {
         }
     }
 
+    private var regionDivider: some View {
+        Divider()
+            .overlay(.tertiary.opacity(0.35))
+    }
+
+    private func titledRegion<Content: View>(_ title: String,
+                                             @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.tertiary)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private var sourceBlock: some View {
         Text(sourceText)
-            .font(.system(.body))
+            .font(.system(isSingleWord ? .largeTitle : .title2, design: .rounded).weight(.bold))
+            .foregroundStyle(.primary)
             .textSelection(.enabled)
-            .lineLimit(3)
+            .lineLimit(isSingleWord ? 2 : 4)
+            .minimumScaleFactor(0.82)
             .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// Debug-mode wrapper: shows every region with a label tag so we can see
-    /// which ones are empty. Remove once layout is stable.
-    @ViewBuilder
-    private func debugRegion<Content: View>(_ name: String,
-                                            @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("[\(name)]")
-                .font(.system(.caption2, design: .monospaced))
-                .foregroundStyle(Color.purple.opacity(0.8))
-            content()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .strokeBorder(Color.purple.opacity(0.25),
-                                      style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
-                )
-        }
-    }
-
-    private var emptyPlaceholder: some View {
-        Text("(empty)")
-            .font(.caption)
-            .italic()
-            .foregroundStyle(.tertiary)
+            .padding(.bottom, 4)
     }
 
     private var translationBlock: some View {
@@ -223,10 +215,16 @@ struct PopupView: View {
     }
 
     @ViewBuilder
-    private func dictionaryView(entry: DictionaryEntry) -> some View {
+    private func dictionaryView(result: DictionaryLookup.SourcedEntry) -> some View {
         // Cap to the first 2 POS sections and 2 senses each — keeps the popup tight.
         VStack(alignment: .leading, spacing: 4) {
-            ForEach(Array(entry.parts.prefix(2).enumerated()), id: \.offset) { _, part in
+            Text(result.dictionary.name)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+
+            ForEach(Array(result.entry.parts.prefix(2).enumerated()), id: \.offset) { _, part in
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(part.label)
                         .font(.system(.caption2, design: .rounded).italic())
@@ -317,11 +315,16 @@ struct PopupView: View {
         targetLang = target
 
         if LanguagePolicy.isSingleWord(sourceText) {
-            let selectedIDs = UserDefaults.standard.stringArray(forKey: "glotty.selectedDictionaryIDs") ?? []
-            let split = DictionaryLookup.sourceAndTarget(for: sourceText, selectedIDs: selectedIDs)
-            sourceDictEntry = split.source
-            targetDictEntry = split.target
-            Self.dbg("dict — source=\(split.source?.parts.count ?? 0) parts, target=\(split.target?.parts.count ?? 0) parts")
+            let selectedIDs = DictionarySelection.selectedIDs(
+                sourcePreference: savedSource ?? "",
+                targetPreference: savedTarget ?? "",
+                detectedSource: detected,
+                availableDictionaries: DictionaryLookup.availableDictionaries()
+            )
+            let split = DictionaryLookup.sourceAndTargetSourced(for: sourceText, selectedIDs: selectedIDs)
+            sourceDictResult = split.source
+            targetDictResult = split.target
+            Self.dbg("dict — source=\(split.source?.dictionary.name ?? "nil") target=\(split.target?.dictionary.name ?? "nil")")
         }
 
         Self.dbg("setup — text='\(sourceText)' detected=\(detected?.rawValue ?? "nil") target=\(target)")

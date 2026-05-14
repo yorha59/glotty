@@ -1,6 +1,7 @@
 import Foundation
 import CoreServices
 import Darwin
+import NaturalLanguage
 
 // `DCSGetActiveDictionaries` is exported from CoreServices but not declared in any
 // public Swift overlay. We bind it via `dlsym` so we can enumerate the user's enabled
@@ -92,80 +93,118 @@ enum DictionaryLookup {
         return parseEntry(definition)
     }
 
-        struct DictionaryInfo: Identifiable, Equatable {
+    struct DictionaryInfo: Identifiable, Equatable {
         let id: String
         let name: String
         let path: String
     }
 
+    struct SourcedEntry: Equatable {
+        let dictionary: DictionaryInfo
+        let entry: DictionaryEntry
+    }
+
     static func availableDictionaries() -> [DictionaryInfo] {
         guard let getDicts = dynDCSGetActiveDictionaries,
               let dictsUnmanaged = getDicts() else { return [] }
-        let dictsArray = dictsArray(from: dictsUnmanaged)
+        let dictsArray = retainArray(from: dictsUnmanaged)
 
         var infos: [DictionaryInfo] = []
         for dict in dictsArray {
             let desc = (dict as AnyObject).debugDescription ?? ""
-            guard let url = extractURL(from: desc),
-                  let lastComponent = url.pathComponents.last else { continue }
-            let rawName = lastComponent
-                .replacingOccurrences(of: ".dictionary", with: "")
-                .replacingOccurrences(of: "%20", with: " ")
-                .replacingOccurrences(of: "%27", with: "'")
-            let id = url.path
-            infos.append(DictionaryInfo(id: id, name: rawName, path: url.path))
+            guard let info = dictionaryInfo(from: desc) else { continue }
+            infos.append(info)
         }
         return infos
     }
 
     static func allEntries(for text: String, selectedIDs: [String] = []) -> [DictionaryEntry] {
+        allSourcedEntries(for: text, selectedIDs: selectedIDs).map(\.entry)
+    }
+
+    static func allSourcedEntries(for text: String, selectedIDs: [String] = []) -> [SourcedEntry] {
         guard let getDicts = dynDCSGetActiveDictionaries,
               let copyDef = dynDCSCopyTextDefinition,
               let dictsUnmanaged = getDicts() else { return [] }
-        let dictsArray = dictsArray(from: dictsUnmanaged)
+        let dictsArray = retainArray(from: dictsUnmanaged)
 
         let cfText = text as CFString
         let range = CFRange(location: 0, length: CFStringGetLength(cfText))
 
-        var entries: [DictionaryEntry] = []
+        var activeDictionaries: [(dict: CFTypeRef, info: DictionaryInfo)] = []
+        for dict in dictsArray {
+            let desc = (dict as AnyObject).debugDescription ?? ""
+            guard let info = dictionaryInfo(from: desc) else { continue }
+            activeDictionaries.append((dict, info))
+        }
+
+        let orderedDictionaries: [(dict: CFTypeRef, info: DictionaryInfo)]
+        if selectedIDs.isEmpty {
+            orderedDictionaries = activeDictionaries
+        } else {
+            let byID = Dictionary(uniqueKeysWithValues: activeDictionaries.map { ($0.info.id, $0) })
+            orderedDictionaries = selectedIDs.compactMap { byID[$0] }
+        }
+
+        var entries: [SourcedEntry] = []
         var seenRaw = Set<String>()
 
-        let idSet = selectedIDs.isEmpty ? nil : Set(selectedIDs)
-
-        for dict in dictsArray {
-            if let idSet {
-                let desc = (dict as AnyObject).debugDescription ?? ""
-                guard let url = extractURL(from: desc),
-                      idSet.contains(url.path) else { continue }
-            }
-
-            guard let defUnmanaged = copyDef(dict, cfText, range) else { continue }
+        for item in orderedDictionaries {
+            guard let defUnmanaged = copyDef(item.dict, cfText, range) else { continue }
             let raw = defUnmanaged.takeRetainedValue() as String
             guard seenRaw.insert(raw).inserted else { continue }
             let entry = parseEntry(raw)
             if entry.hasContent {
-                entries.append(entry)
+                entries.append(SourcedEntry(dictionary: item.info, entry: entry))
             }
         }
         return entries
     }
 
-    private static func dictsArray(from unmanaged: Unmanaged<CFArray>) -> [CFTypeRef] {
+    private static func retainArray(from unmanaged: Unmanaged<CFArray>) -> [CFTypeRef] {
         unmanaged.takeUnretainedValue() as [CFTypeRef]
     }
 
-    private static func extractURL(from description: String) -> URL? {
-        guard let range = description.range(of: "URL = ", options: .backwards),
-              let endRange = description.range(of: ".dictionary/", options: .backwards) else { return nil }
-        let urlString = String(description[range.upperBound..<endRange.upperBound])
+    private static func dictionaryInfo(from description: String) -> DictionaryInfo? {
+        guard let range = description.range(of: "URL = ", options: .backwards) else { return nil }
+        let rawReference = String(description[range.upperBound...])
             .trimmingCharacters(in: CharacterSet(charactersIn: "}"))
-        return URL(string: urlString)
+
+        if let url = URL(string: rawReference),
+           url.isFileURL,
+           url.pathExtension == "dictionary" || url.pathExtension == "wikipediadictionary" {
+            return dictionaryInfo(for: url)
+        }
+
+        let name = rawReference
+            .removingPercentEncoding?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            ?? rawReference.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return nil }
+        return DictionaryInfo(id: name, name: name, path: name)
+    }
+
+    private static func dictionaryInfo(for url: URL) -> DictionaryInfo {
+        let rawName = url.pathComponents.last?
+            .replacingOccurrences(of: ".dictionary", with: "")
+            .replacingOccurrences(of: "%20", with: " ")
+            .replacingOccurrences(of: "%27", with: "'")
+            ?? url.lastPathComponent
+        return DictionaryInfo(id: url.path, name: rawName, path: url.path)
     }
 
     static func sourceAndTarget(for text: String, selectedIDs: [String] = []) -> (source: DictionaryEntry?, target: DictionaryEntry?) {
-        let entries = allEntries(for: text, selectedIDs: selectedIDs)
-        let source = entries.first { !$0.hasBilingualContent }
-        let target = entries.first { $0.hasBilingualContent }
+        let sourced = sourceAndTargetSourced(for: text, selectedIDs: selectedIDs)
+        let source = sourced.source?.entry
+        let target = sourced.target?.entry
+        return (source, target)
+    }
+
+    static func sourceAndTargetSourced(for text: String,
+                                       selectedIDs: [String] = []) -> (source: SourcedEntry?, target: SourcedEntry?) {
+        let entries = allSourcedEntries(for: text, selectedIDs: selectedIDs)
+        let source = entries.first { !$0.entry.hasBilingualContent }
+        let target = entries.first { $0.entry.hasBilingualContent }
         return (source, target)
     }
 
@@ -385,5 +424,181 @@ enum DictionaryLookup {
             }
         }
         return nil
+    }
+}
+
+enum DictionarySelection {
+    enum DictionaryKind {
+        case bilingual
+        case monolingual
+
+        var label: String {
+            switch self {
+            case .bilingual: return "Bilingual"
+            case .monolingual: return "Monolingual"
+            }
+        }
+    }
+
+    private struct StoredSelections: Codable {
+        var byPair: [String: [String]]
+    }
+
+    private static let defaultsKey = "glotty.dictionarySelectionsByPair"
+    private static let noDictionarySelectedID = "__glotty_no_dictionary_selected__"
+
+    static func dictionaryKind(for dict: DictionaryLookup.DictionaryInfo) -> DictionaryKind {
+        let lowered = "\(dict.name) \(dict.path)".lowercased()
+        if lowered.contains("bilingual") || lowered.contains("translation") {
+            return .bilingual
+        }
+
+        let languageTerms = [
+            "arabic", "chinese", "dutch", "english", "french", "german", "hindi",
+            "italian", "japanese", "korean", "portuguese", "russian", "spanish",
+            "thai", "vietnamese",
+        ]
+        let hits = languageTerms.filter { lowered.contains($0) }
+        return hits.count >= 2 ? .bilingual : .monolingual
+    }
+
+    static func effectiveLanguages(sourcePreference: String,
+                                   targetPreference: String,
+                                   detectedSource: NLLanguage? = nil) -> (source: String, target: String) {
+        let source = sourcePreference.isEmpty
+            ? (detectedSource?.rawValue ?? "en")
+            : sourcePreference
+        let target = targetPreference.isEmpty
+            ? LanguagePolicy.preferredTarget(for: NLLanguage(rawValue: source))
+            : targetPreference
+        return (normalizedLanguageCode(source), normalizedLanguageCode(target))
+    }
+
+    static func selectedIDs(sourcePreference: String,
+                            targetPreference: String,
+                            detectedSource: NLLanguage? = nil,
+                            availableDictionaries: [DictionaryLookup.DictionaryInfo]) -> [String] {
+        let pair = effectiveLanguages(
+            sourcePreference: sourcePreference,
+            targetPreference: targetPreference,
+            detectedSource: detectedSource
+        )
+        if let configured = configuredIDs(source: pair.source, target: pair.target) {
+            return configured.isEmpty ? [noDictionarySelectedID] : configured
+        }
+        return matchingDictionaries(
+            source: pair.source,
+            target: pair.target,
+            dictionaries: availableDictionaries
+        ).map(\.id)
+    }
+
+    static func orderedDictionaries(source: String,
+                                    target: String,
+                                    dictionaries: [DictionaryLookup.DictionaryInfo]) -> [DictionaryLookup.DictionaryInfo] {
+        let matching = matchingDictionaries(source: source, target: target, dictionaries: dictionaries)
+        guard let configured = configuredIDs(source: source, target: target) else {
+            return matching
+        }
+
+        let byID = Dictionary(uniqueKeysWithValues: matching.map { ($0.id, $0) })
+        var ordered = configured.compactMap { byID[$0] }
+        let configuredSet = Set(configured)
+        ordered.append(contentsOf: matching.filter { !configuredSet.contains($0.id) })
+        return ordered
+    }
+
+    static func configuredIDs(source: String, target: String) -> [String]? {
+        let selections = storedSelections()
+        return selections.byPair[pairKey(source: source, target: target)]
+    }
+
+    static func saveSelectedIDs(_ ids: [String], source: String, target: String) {
+        var selections = storedSelections()
+        selections.byPair[pairKey(source: source, target: target)] = ids
+        saveSelections(selections)
+    }
+
+    static func resetSelection(source: String, target: String) {
+        var selections = storedSelections()
+        selections.byPair.removeValue(forKey: pairKey(source: source, target: target))
+        saveSelections(selections)
+    }
+
+    static func matchingDictionaries(source: String,
+                                     target: String,
+                                     dictionaries: [DictionaryLookup.DictionaryInfo]) -> [DictionaryLookup.DictionaryInfo] {
+        let filters = dictionaryLanguageFilters(source: source, target: target)
+        guard !filters.isEmpty else { return dictionaries }
+        return dictionaries.filter { dict in
+            let haystack = "\(dict.name) \(dict.path)".lowercased()
+            switch dictionaryKind(for: dict) {
+            case .bilingual:
+                return filters.count >= 2 && filters.allSatisfy { matches(filter: $0, in: haystack) }
+            case .monolingual:
+                return filters.contains { matches(filter: $0, in: haystack) }
+            }
+        }
+    }
+
+    static func pairKey(source: String, target: String) -> String {
+        "\(normalizedLanguageCode(source))|\(normalizedLanguageCode(target))"
+    }
+
+    private static func dictionaryLanguageFilters(source: String, target: String) -> [[String]] {
+        let ids = [source, target]
+        var seen = Set<String>()
+        return ids.compactMap { id in
+            let normalized = normalizedLanguageCode(id)
+            guard seen.insert(normalized).inserted else { return nil }
+            return languageKeywords(for: normalized)
+        }
+    }
+
+    private static func matches(filter: [String], in haystack: String) -> Bool {
+        filter.contains { haystack.contains($0) }
+    }
+
+    private static func normalizedLanguageCode(_ identifier: String) -> String {
+        Locale.Language(identifier: identifier).languageCode?.identifier ?? identifier
+    }
+
+    private static func languageKeywords(for languageCode: String) -> [String] {
+        switch languageCode {
+        case "ar": return ["arabic"]
+        case "de": return ["german"]
+        case "en": return ["english", "american", "british", "oxford"]
+        case "es": return ["spanish"]
+        case "fr": return ["french"]
+        case "hi": return ["hindi"]
+        case "it": return ["italian"]
+        case "ja": return ["japanese"]
+        case "ko": return ["korean"]
+        case "nl": return ["dutch"]
+        case "pt": return ["portuguese"]
+        case "ru": return ["russian"]
+        case "th": return ["thai"]
+        case "vi": return ["vietnamese"]
+        case "yue": return ["cantonese", "chinese"]
+        case "zh": return ["chinese", "mandarin", "cantonese", "simplified", "traditional"]
+        default:
+            if let name = Locale(identifier: "en_US").localizedString(forLanguageCode: languageCode)?.lowercased() {
+                return [name]
+            }
+            return [languageCode.lowercased()]
+        }
+    }
+
+    private static func storedSelections() -> StoredSelections {
+        guard let data = UserDefaults.standard.data(forKey: defaultsKey),
+              let selections = try? JSONDecoder().decode(StoredSelections.self, from: data) else {
+            return StoredSelections(byPair: [:])
+        }
+        return selections
+    }
+
+    private static func saveSelections(_ selections: StoredSelections) {
+        guard let data = try? JSONEncoder().encode(selections) else { return }
+        UserDefaults.standard.set(data, forKey: defaultsKey)
     }
 }

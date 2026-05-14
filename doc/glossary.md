@@ -104,11 +104,11 @@ can talk about them precisely.
 │ │ BrE  /ˈʃɛdjuːl/   🔊                        │ │   ← per-dialect row
 │ │ AmE  /ˈskɛdʒuːl/  🔊                        │ │
 │ └─────────────────────────────────────────────┘ │
-│ ┌─ source dict (monolingual src lang) ────────┐ │
+│ ┌─ source language explanation ──────────────┐ │
 │ │   noun  1. a plan of work to be done        │ │   ← POS + English defs
 │ │   verb  1. arrange for something to happen  │ │
 │ └─────────────────────────────────────────────┘ │
-│ ┌─ target dict (bilingual gloss) ─────────────┐ │
+│ ┌─ bilingual dictionary ─────────────────────┐ │
 │ │   noun  1. 时间表                            │ │   ← POS + Chinese gloss
 │ │           日程                               │ │      (each ;-separated gloss
 │ │   verb  1. 安排                              │ │       on its own line)
@@ -126,14 +126,80 @@ can talk about them precisely.
 | --- | --- | --- | --- |
 | 1 | **Source row** | The word/phrase you selected. | Always visible. No buttons — Esc closes the popup. |
 | 2 | **Source phonetics** | Pronunciation of the source word — IPA for English, pinyin for Chinese, romaji for Japanese. Each row has its own 🔊 (BrE → British voice, AmE → American voice). | Only for single words. |
-| 3 | **Source dict** | The monolingual same-language dictionary entry. For English source, this is the New Oxford American or similar. POS + numbered English definitions. | Hidden when no monolingual source-language dict matches. |
-| 4 | **Target dict** | The bilingual dictionary entry (e.g. Oxford Chinese-English). POS labels in the source language, gloss in the target language. Each `;`-separated gloss within a sense renders on its own line. | Hidden when no bilingual dict has the word. |
+| 3 | **Source language explanation** | The highest-priority monolingual same-language dictionary entry. For English source, this is usually New Oxford American or similar. POS + numbered English definitions. | Hidden when no selected monolingual source-language dict matches. The block is tagged with the source dictionary name. |
+| 4 | **Bilingual dictionary** | The highest-priority bilingual dictionary entry (e.g. Oxford Chinese-English). POS labels in the source language, gloss in the target language. Each `;`-separated gloss within a sense renders on its own line. | Hidden when no selected bilingual dict has the word. The block is tagged with the source dictionary name. |
 | 5 | **Translation row** | The translated text, larger font. No speak button — bare result. | Always visible. |
 | 6 | **Footer** | `source → target` indicator, target-language switcher (per-popup override), timing, Esc hint. | Always visible. |
 | 7 | **Speak buttons** | 🔊 next to each phonetic row — pronounces with the dialect-matching voice. | Only on phonetics rows. |
 
 ### Behavior rules
-- **Two dict blocks**: source dict (source-language definitions) sits above the target dict (target-language gloss). They come from different macOS dictionaries; either can be missing depending on what the word exists in.
+- **Two dictionary blocks**: source language explanation sits above bilingual dictionary. They come from different macOS dictionaries; either can be missing depending on what the word exists in.
 - **Single-word vs sentence**: phonetics and dict blocks only appear for single words. Sentences just show source row → translation row → footer.
 - **Per-popup target override**: the language picker in the footer changes the target *for this popup only*. Settings → Translation owns the persistent default.
-- **Multi-dict lookup**: queries every enabled macOS dictionary via `DCSGetActiveDictionaries`. Entries with non-Latin content go to the target dict block; entries that are pure Latin go to the source dict block.
+- **Priority dictionary lookup**: queries selected macOS dictionaries via `DCSGetActiveDictionaries` in Settings top-to-bottom order. The first monolingual match fills source language explanation; the first bilingual match fills bilingual dictionary. Entries with non-Latin content go to the bilingual dictionary block; entries that are pure Latin go to the source language explanation block.
+
+---
+
+## Settings page
+
+This is the preferences window opened from the menu-bar globe → **Settings…**.
+For now it is one compact page, grouped into sections.
+
+```
+┌─ Glotty Settings ──────────────────────────────┐
+│ Translation                                     │
+│ ┌─ Language defaults ────────────────────────┐ │
+│ │ Default source language   [Auto detect ▾]  │ │
+│ │ Default target language   [Auto based ▾]   │ │
+│ │ Pack action row           Download / ...   │ │
+│ └────────────────────────────────────────────┘ │
+│ ┌─ Backend ──────────────────────────────────┐ │
+│ │ Translation engine       Apple Translation │ │
+│ │ Other engines are post-spike work.         │ │
+│ └────────────────────────────────────────────┘ │
+│                                                 │
+│ Dictionary library                              │
+│ ┌────────────────────────────────────────────┐ │
+│ │ [Install Dictionary]                       │ │
+│ └────────────────────────────────────────────┘ │
+│                                                 │
+│ Installed dictionaries                          │
+│ ┌────────────────────────────────────────────┐ │
+│ │ Bilingual dictionaries                     │ │
+│ │ Oxford Chinese-English              [on] ≡ │ │
+│ │ Monolingual dictionaries                   │ │
+│ │ New Oxford American                 [on] ≡ │ │
+│ └────────────────────────────────────────────┘ │
+│                                                 │
+│ Hotkey                                          │
+│ ┌─ Current bindings ─────────────────────────┐ │
+│ │ Leader key      Fn                         │ │
+│ │ Translate       Fn → T                     │ │
+│ └────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────┘
+```
+
+| Region | Name | What it controls | Notes |
+| --- | --- | --- | --- |
+| 1 | **Translation section** | Persistent language defaults and translation backend. | This is where the popup gets its saved source/target preferences. |
+| 2 | **Default source language** | The language Glotty assumes selected text starts in. | `Auto detect` is the normal setting; pin it only if you mostly translate from one language. |
+| 3 | **Default target language** | The persistent translation destination. | `Auto (based on source)` means English source goes to the user locale, and non-English source goes to English. |
+| 4 | **Pack action row** | A problem/action row for Apple Translation language packs. | Hidden when everything is installed. Shows download, downloading, unsupported, or an error when action is needed. |
+| 5 | **Download button** | Starts Apple's language-pack download flow for the selected pair. | Appears only when a default target is selected and the pack is missing. |
+| 6 | **Backend section** | The active translation engine. | Today this is fixed to Apple Translation (on-device). DeepL, Google, Claude, and GPT are planned after the spike. |
+| 7 | **Dictionary library section** | Opens the Install Dictionary dialog. | The dialog lists dictionaries that match the current Translation source/target languages and are not already installed. |
+| 8 | **Installed dictionaries section** | The macOS dictionaries Glotty can query for the selected default language pair. | Checked dictionaries are used by the popup. Auto source is treated as English for this display. |
+| 9 | **Dictionary list** | Enabled dictionaries that match Settings → Translation defaults and search text. | Split into Bilingual dictionaries and Monolingual dictionaries areas. Each row has the dictionary title, a right-side toggle switch, and a three-bar drag handle for priority. |
+| 10 | **Hotkey section** | Shows the current keyboard command model. | Customization is not implemented yet. |
+| 11 | **Leader key** | The wake key for command mode. | Fixed to Fn for now. |
+| 12 | **Translate binding** | The command that translates the current selection. | Fixed to Fn → T for now. |
+
+### Behavior rules
+- **Settings are persistent**: Translation choices are stored in `UserDefaults` and survive relaunch.
+- **Popup override vs saved default**: the popup footer target picker changes only the current popup; Settings → Translation changes the default for future popups.
+- **Source Auto detect**: with source set to Auto, the popup runs `NLLanguageRecognizer` on selected text every time.
+- **Pack checking**: when source is Auto, Settings checks English ↔ target as the representative Apple Translation pair. The row stays hidden when the pair is already installed.
+- **Dictionary library**: Install Dictionary opens a dialog filtered to new dictionary sources for the current Translation source/target languages. Installed dictionaries stay in the Installed dictionaries section below.
+- **Dictionary lookup**: Glotty uses checked macOS dictionaries for the selected default language pair. The popup queries them in Settings top-to-bottom priority order.
+- **Dictionary filtering/grouping**: Settings filters and labels dictionaries by installed dictionary name/path. This is a display hint; popup source/target classification still comes from actual lookup content.
+- **Hotkey display only**: the Hotkey tab documents the current binding; rebinding is planned but not part of the current spike.
