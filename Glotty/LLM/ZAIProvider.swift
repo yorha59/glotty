@@ -64,13 +64,13 @@ struct ZAIProvider: LLMProvider {
         Keychain.read(account: Self.keychainAccount)?.isEmpty == false
     }
 
-    func polish(_ text: String, targetLanguage: String) async throws -> String {
+    func polish(_ text: String, mode: PolishMode) async throws -> PolishResult {
         guard let apiKey = Keychain.read(account: Self.keychainAccount),
               !apiKey.isEmpty else {
             throw LLMError.missingAPIKey(providerName: displayName)
         }
 
-        let prompt = PolishPrompt.build(text: text, targetLanguage: targetLanguage)
+        let prompt = PolishPrompt.build(text: text, mode: mode)
         // GLM-5.1 is a reasoning model that, by default, spends its token budget on
         // internal `reasoning_content` before producing the answer. Polish is a quick
         // task that doesn't need that — disable thinking so we get the rewrite directly.
@@ -122,6 +122,6 @@ struct ZAIProvider: LLMProvider {
 
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw LLMError.emptyResponse }
-        return trimmed
+        return PolishResult.parse(trimmed)
     }
 }

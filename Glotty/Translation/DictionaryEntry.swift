@@ -97,6 +97,24 @@ enum DictionaryLookup {
         let id: String
         let name: String
         let path: String
+        /// Authoritative kind from the macOS asset catalog, if known. nil = the
+        /// classifier should fall back to language-count or keyword heuristics.
+        let metadataKind: DictionarySelection.DictionaryKind?
+        /// Language codes the dict indexes (e.g. ["en"], ["en", "zh-Hans"]).
+        /// Empty if metadata wasn't found.
+        let metadataLanguages: [String]
+
+        init(id: String,
+             name: String,
+             path: String,
+             metadataKind: DictionarySelection.DictionaryKind? = nil,
+             metadataLanguages: [String] = []) {
+            self.id = id
+            self.name = name
+            self.path = path
+            self.metadataKind = metadataKind
+            self.metadataLanguages = metadataLanguages
+        }
     }
 
     struct SourcedEntry: Equatable {
@@ -113,9 +131,26 @@ enum DictionaryLookup {
         for dict in dictsArray {
             let desc = (dict as AnyObject).debugDescription ?? ""
             guard let info = dictionaryInfo(from: desc) else { continue }
-            infos.append(info)
+            infos.append(enriched(info))
         }
+        // Kick off catalog load for next time if not yet populated. Subsequent
+        // calls to availableDictionaries() will return enriched results once the
+        // background walk completes.
+        DictionaryCatalog.loadIfNeeded()
         return infos
+    }
+
+    /// Attach metadata from the asset catalog if available — turns a bare
+    /// `(id, name, path)` into one that knows its kind + languages.
+    private static func enriched(_ info: DictionaryInfo) -> DictionaryInfo {
+        guard let meta = DictionaryCatalog.metadata(for: info) else { return info }
+        return DictionaryInfo(
+            id: info.id,
+            name: info.name,
+            path: info.path,
+            metadataKind: meta.kind,
+            metadataLanguages: meta.languages
+        )
     }
 
     static func allEntries(for text: String, selectedIDs: [String] = []) -> [DictionaryEntry] {
@@ -440,19 +475,79 @@ enum DictionarySelection {
         }
     }
 
-    private struct StoredSelections: Codable {
-        var byPair: [String: [String]]
+    /// Per-pair selection: one ordered priority list per dictionary kind. Splitting
+    /// these means the popup's "Source language" region picks from `monolingual` and
+    /// the "Bilingual" region picks from `bilingual` — neither can poach the other's
+    /// slot, and each kind keeps its own user-defined priority.
+    private struct PerKindIDs: Codable, Equatable {
+        var monolingual: [String]
+        var bilingual: [String]
+
+        init(monolingual: [String] = [], bilingual: [String] = []) {
+            self.monolingual = monolingual
+            self.bilingual = bilingual
+        }
     }
 
-    private static let defaultsKey = "glotty.dictionarySelectionsByPair"
+    private struct StoredSelections: Codable {
+        var byPair: [String: PerKindIDs]
+
+        init(byPair: [String: PerKindIDs] = [:]) {
+            self.byPair = byPair
+        }
+    }
+
+    private static let defaultsKey = "glotty.dictionarySelectionsByPairAndKind"
+    /// Legacy unified-list key. Read once for migration; the new key takes over after
+    /// the first save in the new format.
+    private static let legacyDefaultsKey = "glotty.dictionarySelectionsByPair"
     private static let noDictionarySelectedID = "__glotty_no_dictionary_selected__"
 
+    /// User-set kind overrides, keyed by dict ID. Beats every other signal — if
+    /// the user said "this is bilingual", that's final.
+    private static let kindOverridesKey = "glotty.dictionaryKindOverrides"
+
+    static func kindOverride(for dictID: String) -> DictionaryKind? {
+        guard let map = UserDefaults.standard.dictionary(forKey: kindOverridesKey) as? [String: String],
+              let raw = map[dictID] else { return nil }
+        switch raw {
+        case "monolingual": return .monolingual
+        case "bilingual":   return .bilingual
+        default:            return nil
+        }
+    }
+
+    static func setKindOverride(_ kind: DictionaryKind?, for dictID: String) {
+        var map = (UserDefaults.standard.dictionary(forKey: kindOverridesKey) as? [String: String]) ?? [:]
+        switch kind {
+        case .some(.monolingual): map[dictID] = "monolingual"
+        case .some(.bilingual):   map[dictID] = "bilingual"
+        case .none:               map.removeValue(forKey: dictID)
+        }
+        UserDefaults.standard.set(map, forKey: kindOverridesKey)
+    }
+
+    /// Classify a dict, in this priority order:
+    ///   1. User override (Settings → Dictionaries per-dict menu)
+    ///   2. Asset-catalog metadata (`DictionaryType` from Apple's manifest)
+    ///   3. Language-count heuristic (2+ indexed languages → bilingual)
+    ///   4. Keyword heuristic on the dict name (legacy fallback)
     static func dictionaryKind(for dict: DictionaryLookup.DictionaryInfo) -> DictionaryKind {
+        if let override = kindOverride(for: dict.id) { return override }
+        if let metaKind = dict.metadataKind { return metaKind }
+        if dict.metadataLanguages.count >= 2 { return .bilingual }
+        if dict.metadataLanguages.count == 1 { return .monolingual }
+        return keywordHeuristicKind(for: dict)
+    }
+
+    /// Last-resort keyword heuristic — only used when no metadata is available
+    /// (rare; only third-party dicts without proper manifests). Hardcoded to
+    /// English keywords; the metadata-first path covers everything else.
+    private static func keywordHeuristicKind(for dict: DictionaryLookup.DictionaryInfo) -> DictionaryKind {
         let lowered = "\(dict.name) \(dict.path)".lowercased()
         if lowered.contains("bilingual") || lowered.contains("translation") {
             return .bilingual
         }
-
         let languageTerms = [
             "arabic", "chinese", "dutch", "english", "french", "german", "hindi",
             "italian", "japanese", "korean", "portuguese", "russian", "spanish",
@@ -474,7 +569,10 @@ enum DictionarySelection {
         return (normalizedLanguageCode(source), normalizedLanguageCode(target))
     }
 
-    static func selectedIDs(sourcePreference: String,
+    /// IDs for a specific kind (monolingual or bilingual), in the user's configured
+    /// priority order. Falls back to auto-detected dicts of that kind if no override.
+    static func selectedIDs(kind: DictionaryKind,
+                            sourcePreference: String,
                             targetPreference: String,
                             detectedSource: NLLanguage? = nil,
                             availableDictionaries: [DictionaryLookup.DictionaryInfo]) -> [String] {
@@ -483,21 +581,28 @@ enum DictionarySelection {
             targetPreference: targetPreference,
             detectedSource: detectedSource
         )
-        if let configured = configuredIDs(source: pair.source, target: pair.target) {
+        if let configured = configuredIDs(kind: kind, source: pair.source, target: pair.target) {
             return configured.isEmpty ? [noDictionarySelectedID] : configured
         }
+        // No user config yet — default to all language-matching dicts of this kind.
         return matchingDictionaries(
             source: pair.source,
             target: pair.target,
             dictionaries: availableDictionaries
-        ).map(\.id)
+        )
+        .filter { dictionaryKind(for: $0) == kind }
+        .map(\.id)
     }
 
-    static func orderedDictionaries(source: String,
+    /// Ordered list of dicts of a given kind, applying the user's saved priority
+    /// over the language-matching set. Dicts not in the saved order are appended.
+    static func orderedDictionaries(kind: DictionaryKind,
+                                    source: String,
                                     target: String,
                                     dictionaries: [DictionaryLookup.DictionaryInfo]) -> [DictionaryLookup.DictionaryInfo] {
         let matching = matchingDictionaries(source: source, target: target, dictionaries: dictionaries)
-        guard let configured = configuredIDs(source: source, target: target) else {
+            .filter { dictionaryKind(for: $0) == kind }
+        guard let configured = configuredIDs(kind: kind, source: source, target: target) else {
             return matching
         }
 
@@ -508,20 +613,44 @@ enum DictionarySelection {
         return ordered
     }
 
-    static func configuredIDs(source: String, target: String) -> [String]? {
+    static func configuredIDs(kind: DictionaryKind, source: String, target: String) -> [String]? {
         let selections = storedSelections()
-        return selections.byPair[pairKey(source: source, target: target)]
+        let key = pairKey(source: source, target: target)
+        let pair = selections.byPair[key]
+        switch kind {
+        case .monolingual: return pair?.monolingual
+        case .bilingual:   return pair?.bilingual
+        }
     }
 
-    static func saveSelectedIDs(_ ids: [String], source: String, target: String) {
+    static func saveSelectedIDs(_ ids: [String],
+                                kind: DictionaryKind,
+                                source: String,
+                                target: String) {
         var selections = storedSelections()
-        selections.byPair[pairKey(source: source, target: target)] = ids
+        let key = pairKey(source: source, target: target)
+        var pair = selections.byPair[key] ?? PerKindIDs()
+        switch kind {
+        case .monolingual: pair.monolingual = ids
+        case .bilingual:   pair.bilingual = ids
+        }
+        selections.byPair[key] = pair
         saveSelections(selections)
     }
 
-    static func resetSelection(source: String, target: String) {
+    static func resetSelection(kind: DictionaryKind, source: String, target: String) {
         var selections = storedSelections()
-        selections.byPair.removeValue(forKey: pairKey(source: source, target: target))
+        let key = pairKey(source: source, target: target)
+        guard var pair = selections.byPair[key] else { return }
+        switch kind {
+        case .monolingual: pair.monolingual = []
+        case .bilingual:   pair.bilingual = []
+        }
+        if pair.monolingual.isEmpty && pair.bilingual.isEmpty {
+            selections.byPair.removeValue(forKey: key)
+        } else {
+            selections.byPair[key] = pair
+        }
         saveSelections(selections)
     }
 

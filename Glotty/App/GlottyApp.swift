@@ -69,6 +69,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let aiStatus = AppleIntelligenceStatus.current()
         dbg("AppleIntelligence: \(aiStatus.displayName)" + (aiStatus.fixInstructions.map { " — \($0)" } ?? ""))
 
+        // Warm the dictionary metadata cache so the very first Fn → T popup gets
+        // proper kind classification (not the fallback keyword heuristic).
+        DictionaryCatalog.loadIfNeeded {
+            dbg("DictionaryCatalog: metadata cache loaded")
+        }
+
         dbg("applicationDidFinishLaunching END")
     }
 
@@ -93,24 +99,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
-        let test = NSMenuItem(title: "Test: simulate Fn → T",
-                              action: #selector(testFire),
-                              keyEquivalent: "t")
-        test.target = self
-        menu.addItem(test)
-
-        menu.addItem(.separator())
-
         menu.addItem(NSMenuItem(title: "Quit Glotty",
                                 action: #selector(NSApplication.terminate(_:)),
                                 keyEquivalent: "q"))
         statusItem.menu = menu
         print("[Glotty] status item created")
-    }
-
-    @objc private func testFire() {
-        print("[Glotty] manual fire from menu")
-        handleFire(mode: .translate)
     }
 
     @objc private func openSettings() {

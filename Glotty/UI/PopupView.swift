@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import Translation
 import NaturalLanguage
 import AVFoundation
@@ -20,14 +21,19 @@ struct PopupView: View {
     @State private var translated: String = ""
     @State private var configuration: TranslationSession.Configuration?
     @State private var status: Status = .working
+    @State private var backTranslated: String = ""
+    @State private var backConfiguration: TranslationSession.Configuration?
     @State private var polishStatus: Status = .working
-    @State private var polishedText: String = ""
+    @State private var polishResult: PolishResult = .empty
     @State private var polishProviderName: String = ""
+    @State private var copiedVariantIndex: Int? = nil
     @State private var detectedSource: NLLanguage?
     @State private var targetLang: String = "en"
     @State private var availableLanguages: [Locale.Language] = []
-    @State private var sourceDictResult: DictionaryLookup.SourcedEntry?
-    @State private var targetDictResult: DictionaryLookup.SourcedEntry?
+    /// All dict entries that returned content, in the user's configured priority
+    /// order (Settings → Dictionaries). Each rendered as its own region so the
+    /// priority list is visible end-to-end, not just the first source + first target.
+    @State private var dictResults: [DictionaryLookup.SourcedEntry] = []
     @State private var elapsedMs: Int = 0
     private let startedAt = CFAbsoluteTimeGetCurrent()
 
@@ -43,6 +49,25 @@ struct PopupView: View {
 
     private var sourcePronunciation: [PhoneticEntry] {
         isSingleWord ? Pronunciation.pronounce(sourceText, language: detectedSource) : []
+    }
+
+    /// First monolingual (source-language) dict in priority order that returned
+    /// content. Classification uses `DictionarySelection.dictionaryKind` (name-based)
+    /// not the script-content heuristic — that was misclassifying monolingual English
+    /// dicts whose entries happened to contain IPA or typographic glyphs outside the
+    /// Latin Unicode ranges.
+    private var monolingualDictResult: DictionaryLookup.SourcedEntry? {
+        dictResults.first {
+            $0.entry.hasContent
+                && DictionarySelection.dictionaryKind(for: $0.dictionary) == .monolingual
+        }
+    }
+
+    private var bilingualDictResult: DictionaryLookup.SourcedEntry? {
+        dictResults.first {
+            $0.entry.hasContent
+                && DictionarySelection.dictionaryKind(for: $0.dictionary) == .bilingual
+        }
     }
 
     // Translation phonetics removed per design — translation row stays single-line.
@@ -62,17 +87,17 @@ struct PopupView: View {
                         }
                     }
 
-                    if let src = sourceDictResult, src.entry.hasContent {
+                    if let mono = monolingualDictResult {
                         regionDivider
                         titledRegion("Source language explanation") {
-                            dictionaryView(result: src)
+                            dictionaryView(result: mono)
                         }
                     }
 
-                    if let tgt = targetDictResult, tgt.entry.hasContent {
+                    if let bi = bilingualDictResult {
                         regionDivider
                         titledRegion("Bilingual dictionary") {
-                            dictionaryView(result: tgt)
+                            dictionaryView(result: bi)
                         }
                     }
 
@@ -135,7 +160,11 @@ struct PopupView: View {
             }
         }
         .padding(12)
-        .frame(width: 460, height: 520)
+        // Fill whatever size the NSPanel set by PopupController hands us. We can't
+        // use NSHostingController's `.preferredContentSize` here because the body
+        // contains a ScrollView, and ScrollView's unbounded intrinsic size crashes
+        // the auto-layout pass during measurement.
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.regularMaterial)
         .onAppear { setupConfiguration() }
         .task { await loadAvailableLanguages() }
@@ -145,6 +174,9 @@ struct PopupView: View {
         }
         .translationTask(mode == .translate ? configuration : nil) { session in
             await translate(using: session)
+        }
+        .translationTask(mode == .translate ? backConfiguration : nil) { session in
+            await backTranslate(using: session)
         }
         .onKeyPress(.escape) {
             onClose()
@@ -180,7 +212,7 @@ struct PopupView: View {
     }
 
     private var translationBlock: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 4) {
             switch status {
             case .working:
                 HStack(spacing: 6) {
@@ -194,6 +226,19 @@ struct PopupView: View {
                     .font(.system(.title2, design: .rounded).weight(.medium))
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
+                if !backTranslated.isEmpty {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text("↩")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                        Text(backTranslated)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .help("Back-translation — what the translation means in the source language")
+                }
             case .failed(let message):
                 Text(message)
                     .font(.caption)
@@ -204,7 +249,7 @@ struct PopupView: View {
     }
 
     private var polishBlock: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 10) {
             switch polishStatus {
             case .working:
                 HStack(spacing: 6) {
@@ -214,10 +259,12 @@ struct PopupView: View {
                         .foregroundStyle(.secondary)
                 }
             case .ready:
-                Text(polishedText)
-                    .font(.system(.title3, design: .rounded))
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
+                if !polishResult.issues.isEmpty {
+                    polishIssuesSection
+                }
+                if !polishResult.variants.isEmpty {
+                    polishVariantsSection
+                }
             case .failed(let message):
                 Text(message)
                     .font(.caption)
@@ -227,6 +274,104 @@ struct PopupView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var polishIssuesSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Issues")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.tertiary)
+            ForEach(Array(polishResult.issues.enumerated()), id: \.offset) { _, issue in
+                VStack(alignment: .leading, spacing: 1) {
+                    if let original = issue.original, !original.isEmpty {
+                        Text("“\(original)”")
+                            .font(.callout)
+                            .foregroundStyle(Color.orange)
+                            .textSelection(.enabled)
+                    }
+                    Text(issue.explanation)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private var polishVariantsSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if !polishResult.issues.isEmpty {
+                Text("Polished — click any to copy")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            } else {
+                Text("Click any to copy")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            ForEach(Array(polishResult.variants.enumerated()), id: \.offset) { idx, variant in
+                variantRow(index: idx, variant: variant)
+            }
+        }
+    }
+
+    private func variantRow(index idx: Int, variant: PolishVariant) -> some View {
+        let copied = copiedVariantIndex == idx
+        return HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Group {
+                if copied {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                } else {
+                    Text("\(idx + 1).")
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .font(.caption.weight(.semibold))
+            .frame(width: 18, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(variant.text)
+                    .font(.system(idx == 0 ? .title3 : .body, design: .rounded)
+                        .weight(idx == 0 ? .medium : .regular))
+                    .fixedSize(horizontal: false, vertical: true)
+                if let back = variant.backTranslation, !back.isEmpty {
+                    Text(back)
+                        .font(.system(.callout, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 4)
+        .padding(.horizontal, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(copied ? Color.green.opacity(0.10) : Color.clear)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture { copyVariant(variant.text, index: idx) }
+        .onHover { hovering in
+            if hovering { NSCursor.pointingHand.set() }
+            else { NSCursor.arrow.set() }
+        }
+        .help("Click to copy the polished version (native-language translation shown below for reference)")
+        .animation(.easeOut(duration: 0.15), value: copied)
+    }
+
+    private func copyVariant(_ text: String, index: Int) {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(text, forType: .string)
+        Self.dbg("copied variant #\(index + 1) (\(text.count) chars)")
+        copiedVariantIndex = index
+        // Auto-clear after a short delay so the green confirmation fades away.
+        let target = index
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+            if copiedVariantIndex == target { copiedVariantIndex = nil }
+        }
     }
 
     @ViewBuilder
@@ -263,7 +408,6 @@ struct PopupView: View {
         }
     }
 
-    @ViewBuilder
     private func dictionaryView(result: DictionaryLookup.SourcedEntry) -> some View {
         // Cap to the first 2 POS sections and 2 senses each — keeps the popup tight.
         VStack(alignment: .leading, spacing: 4) {
@@ -374,16 +518,29 @@ struct PopupView: View {
         targetLang = target
 
         if LanguagePolicy.isSingleWord(sourceText) {
-            let selectedIDs = DictionarySelection.selectedIDs(
+            let available = DictionaryLookup.availableDictionaries()
+            // Two independent priority-ordered lookups — one per dict kind. The popup
+            // shows the first hit from each list in its own region; this prevents a
+            // bilingual dict from crowding out the source-language slot or vice versa.
+            let monoIDs = DictionarySelection.selectedIDs(
+                kind: .monolingual,
                 sourcePreference: savedSource ?? "",
                 targetPreference: savedTarget ?? "",
                 detectedSource: detected,
-                availableDictionaries: DictionaryLookup.availableDictionaries()
+                availableDictionaries: available
             )
-            let split = DictionaryLookup.sourceAndTargetSourced(for: sourceText, selectedIDs: selectedIDs)
-            sourceDictResult = split.source
-            targetDictResult = split.target
-            Self.dbg("dict — source=\(split.source?.dictionary.name ?? "nil") target=\(split.target?.dictionary.name ?? "nil")")
+            let biIDs = DictionarySelection.selectedIDs(
+                kind: .bilingual,
+                sourcePreference: savedSource ?? "",
+                targetPreference: savedTarget ?? "",
+                detectedSource: detected,
+                availableDictionaries: available
+            )
+            let monoResults = DictionaryLookup.allSourcedEntries(for: sourceText, selectedIDs: monoIDs)
+            let biResults   = DictionaryLookup.allSourcedEntries(for: sourceText, selectedIDs: biIDs)
+            dictResults = monoResults + biResults
+            Self.dbg("dict — mono=[\(monoResults.map(\.dictionary.name).joined(separator: ", "))] " +
+                     "bi=[\(biResults.map(\.dictionary.name).joined(separator: ", "))]")
         }
 
         Self.dbg("setup — text='\(sourceText)' detected=\(detected?.rawValue ?? "nil") target=\(target)")
@@ -399,6 +556,8 @@ struct PopupView: View {
 
     private func rebuildConfiguration() {
         translated = ""
+        backTranslated = ""
+        backConfiguration = nil
         status = .working
         configuration = TranslationSession.Configuration(
             source: detectedSource.map { Locale.Language(identifier: $0.rawValue) },
@@ -429,9 +588,38 @@ struct PopupView: View {
             status = .ready
             elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
             Self.dbg("translate ok — '\(sourceText)' → '\(response.targetText)' in \(elapsedMs)ms")
+
+            // Bilateral: kick off a back-translation (target → source) so the user
+            // can see what the translation "means" in their source language and
+            // verify the round-trip preserved their intent. Skip when source and
+            // target match (identity round-trip).
+            if let sourceLang = detectedSource?.rawValue,
+               sourceLang != targetLang,
+               !response.targetText.isEmpty {
+                backTranslated = ""
+                backConfiguration = TranslationSession.Configuration(
+                    source: Locale.Language(identifier: targetLang),
+                    target: Locale.Language(identifier: sourceLang)
+                )
+            }
         } catch {
             Self.dbg("translate FAIL — '\(sourceText)' err=\(error.localizedDescription)")
             status = .failed(error.localizedDescription)
+        }
+    }
+
+    private func backTranslate(using session: TranslationSession) async {
+        let textToReverse = translated
+        guard !textToReverse.isEmpty else { return }
+        Self.dbg("back-translate begin — '\(textToReverse)' target=\(detectedSource?.rawValue ?? "?")")
+        do {
+            let response = try await session.translate(textToReverse)
+            backTranslated = response.targetText
+            Self.dbg("back-translate ok — '\(textToReverse)' → '\(response.targetText)'")
+        } catch {
+            // Don't fail the whole popup — bilateral is best-effort, the forward
+            // translation has already succeeded by this point.
+            Self.dbg("back-translate FAIL — err=\(error.localizedDescription)")
         }
     }
 
@@ -443,19 +631,40 @@ struct PopupView: View {
         let outputLanguage = polishTargetLanguage()
         targetLang = outputLanguage
         polishStatus = .working
-        polishedText = ""
+        polishResult = .empty
         polishProviderName = provider.displayName
-        Self.dbg("polish begin — text='\(sourceText)' target=\(outputLanguage) provider=\(provider.id)")
+
+        // Mode = proofread when source language ≈ output language (e.g. en source +
+        // en target → "fix my English"); otherwise = variants (cross-language).
+        let detectedRoot = detectedSource?.rawValue.split(separator: "-").first.map(String.init)
+        let outputRoot = outputLanguage.split(separator: "-").first.map(String.init)
+        let native = userNativeLanguage()
+        // Skip back-translation when native == output (would be a no-op).
+        let nativeForPrompt: String? = (native == outputLanguage) ? nil : native
+        let mode: PolishMode = (detectedRoot != nil && detectedRoot == outputRoot)
+            ? .proofreadAndPolish(target: outputLanguage, nativeLanguage: nativeForPrompt)
+            : .variants(target: outputLanguage, nativeLanguage: nativeForPrompt)
+
+        Self.dbg("polish begin — text='\(sourceText)' target=\(outputLanguage) native=\(nativeForPrompt ?? "(none)") provider=\(provider.id) mode=\(mode)")
         do {
-            let result = try await provider.polish(sourceText, targetLanguage: outputLanguage)
-            polishedText = result
+            let result = try await provider.polish(sourceText, mode: mode)
+            polishResult = result
             polishStatus = .ready
             elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
-            Self.dbg("polish ok — \(elapsedMs)ms")
+            Self.dbg("polish ok — variants=\(result.variants.count) issues=\(result.issues.count) in \(elapsedMs)ms")
         } catch {
             Self.dbg("polish FAIL — err=\(error.localizedDescription)")
             polishStatus = .failed(error.localizedDescription)
         }
+    }
+
+    /// User's saved native language (from the Profile tab). Empty defaults to the
+    /// system locale, falling back to English.
+    private func userNativeLanguage() -> String {
+        let raw = UserDefaults.standard.string(forKey: "glotty.user.nativeLanguage")?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let raw, !raw.isEmpty { return raw }
+        return Locale.current.language.languageCode?.identifier ?? "en"
     }
 
     private func polishTargetLanguage() -> String {

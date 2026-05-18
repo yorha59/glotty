@@ -4,27 +4,50 @@ import SwiftUI
 @MainActor
 final class PopupController {
     private var panel: NSPanel?
-    private static let size = NSSize(width: 380, height: 200)
+    private static let translateSize = NSSize(width: 460, height: 520)
+
+    /// Polish output is intrinsically larger (multi-variant + issues list) — default
+    /// to ~70% of the visible screen height so it doesn't scroll on first glance.
+    /// User can resize from there.
+    private static func polishSize(on screen: NSRect) -> NSSize {
+        let w = min(720, max(560, screen.width * 0.40))
+        let h = min(900, max(640, screen.height * 0.70))
+        return NSSize(width: w, height: h)
+    }
 
     func show(sourceText: String, mode: PopupMode = .translate) {
-        let panel = ensurePanel()
+        let mouse = NSEvent.mouseLocation
+        let screenFrame = (NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main)?.visibleFrame
+            ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+
+        let size: NSSize
+        switch mode {
+        case .translate: size = Self.translateSize
+        case .polish:    size = Self.polishSize(on: screenFrame)
+        }
+
+        // Polish is user-resizable; translate is fixed-ish. We use NSHostingView (not
+        // NSHostingController) because the popup body contains a ScrollView, and
+        // `.preferredContentSize` on a hosting controller around an unbounded-intrinsic
+        // ScrollView crashes the auto-layout pass.
+        let resizable = mode == .polish
+        let panel = ensurePanel(resizable: resizable)
 
         let host = NSHostingView(rootView: PopupView(
             sourceText: sourceText,
             mode: mode,
             onClose: { [weak self] in self?.dismiss() }
         ))
-        host.frame = NSRect(origin: .zero, size: PopupController.size)
+        host.frame = NSRect(origin: .zero, size: size)
         panel.contentView = host
-        panel.setContentSize(PopupController.size)
+        panel.setContentSize(size)
+        if resizable {
+            panel.minSize = NSSize(width: 420, height: 480)
+        }
 
-        // Place near the cursor, clamped on-screen
-        let mouse = NSEvent.mouseLocation
-        let screenFrame = (NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main)?.visibleFrame
-            ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let originX = min(max(mouse.x, screenFrame.minX),
-                          screenFrame.maxX - PopupController.size.width)
-        let originY = max(mouse.y - PopupController.size.height - 8, screenFrame.minY)
+                          screenFrame.maxX - size.width)
+        let originY = max(mouse.y - size.height - 8, screenFrame.minY)
         panel.setFrameOrigin(NSPoint(x: originX, y: originY))
 
         panel.orderFrontRegardless()
@@ -34,11 +57,20 @@ final class PopupController {
         panel?.orderOut(nil)
     }
 
-    private func ensurePanel() -> NSPanel {
-        if let panel { return panel }
+    /// Panel is rebuilt when resizability changes (style mask is fixed at construction).
+    private func ensurePanel(resizable: Bool) -> NSPanel {
+        let currentlyResizable = panel?.styleMask.contains(.resizable) ?? false
+        if let existing = panel, currentlyResizable == resizable {
+            return existing
+        }
+        panel?.orderOut(nil)
+        var mask: NSWindow.StyleMask = [
+            .nonactivatingPanel, .titled, .closable, .fullSizeContentView,
+        ]
+        if resizable { mask.insert(.resizable) }
         let p = NSPanel(
-            contentRect: NSRect(origin: .zero, size: PopupController.size),
-            styleMask: [.nonactivatingPanel, .titled, .closable, .fullSizeContentView],
+            contentRect: NSRect(origin: .zero, size: NSSize(width: 460, height: 520)),
+            styleMask: mask,
             backing: .buffered,
             defer: false
         )

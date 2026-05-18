@@ -20,8 +20,6 @@ final class FnLeaderHotkey {
     private var hudVisible = false
     private let leaderWindow: CFTimeInterval = 0.6
     private let hudShowDelay: CFTimeInterval = 0.25
-    private static let kVK_T: Int64 = 17
-    private static let kVK_R: Int64 = 15
 
     enum HotkeyError: Error {
         case eventTapCreateFailed
@@ -80,16 +78,17 @@ final class FnLeaderHotkey {
         }
 
         if type == .flagsChanged {
-            let fnNow = event.flags.contains(.maskSecondaryFn)
-            if fnNow && !wasFnPressed {
+            let leader = Keycode.currentLeader()
+            let leaderNow = leader.isActive(in: event.flags)
+            if leaderNow && !wasFnPressed {
                 fnDownAt = CFAbsoluteTimeGetCurrent()
-                FnLeaderHotkey.debug("Fn DOWN")
+                FnLeaderHotkey.debug("\(leader.label) DOWN")
                 scheduleHUDShow()
-            } else if !fnNow && wasFnPressed {
-                FnLeaderHotkey.debug("Fn UP")
+            } else if !leaderNow && wasFnPressed {
+                FnLeaderHotkey.debug("\(leader.label) UP")
                 cancelHUD()
             }
-            wasFnPressed = fnNow
+            wasFnPressed = leaderNow
             return Unmanaged.passUnretained(event)
         }
 
@@ -98,15 +97,20 @@ final class FnLeaderHotkey {
             let withinWindow = (CFAbsoluteTimeGetCurrent() - fnDownAt) < leaderWindow
             let active = wasFnPressed || withinWindow
 
-            if keycode == FnLeaderHotkey.kVK_T, active {
-                FnLeaderHotkey.debug("FIRE Fn→T")
+            // Read user-rebindable keycodes per-event. UserDefaults lookups are
+            // microsecond-cheap and let the user change bindings without restart.
+            let translateKey = Int64(Keycode.currentTranslate())
+            let polishKey = Int64(Keycode.currentPolish())
+
+            if keycode == translateKey, active {
+                FnLeaderHotkey.debug("FIRE Fn→translate (key \(keycode))")
                 cancelHUD()
                 let cb = onFire
                 DispatchQueue.main.async { cb?() }
                 return nil
             }
-            if keycode == FnLeaderHotkey.kVK_R, active {
-                FnLeaderHotkey.debug("FIRE Fn→R")
+            if keycode == polishKey, active, polishKey != translateKey {
+                FnLeaderHotkey.debug("FIRE Fn→polish (key \(keycode))")
                 cancelHUD()
                 let cb = onPolishFire
                 DispatchQueue.main.async { cb?() }

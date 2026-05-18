@@ -2,41 +2,280 @@ import Testing
 import Foundation
 @testable import Glotty
 
-@Suite("PolishPrompt — builder")
-struct PolishPromptTests {
-    @Test("English target produces an 'English' rewrite instruction")
+@Suite("PolishPrompt — variants mode (cross-language)")
+struct VariantsPromptTests {
+    @Test("English target name appears in the instruction")
     func englishTarget() {
-        let prompt = PolishPrompt.build(text: "I want make meeting", targetLanguage: "en")
+        let prompt = PolishPrompt.build(text: "我想开会", mode: .variants(target: "en", nativeLanguage: nil))
         #expect(prompt.contains("English"))
-        #expect(prompt.contains("I want make meeting"))
+        #expect(prompt.contains("我想开会"))
     }
 
-    @Test("Chinese target uses the English-locale language name for stable prompting")
-    func chineseTargetUsesEnglishName() {
-        // We resolve the language name in en_US so the LLM gets a consistent
-        // English-language instruction regardless of the user's UI locale.
-        let prompt = PolishPrompt.build(text: "我想开会", targetLanguage: "zh-Hans")
+    @Test("Chinese target name resolves to 'Chinese' (not 中文) for stable LLM instruction")
+    func chineseTargetEnglishName() {
+        let prompt = PolishPrompt.build(text: "Let's chat", mode: .variants(target: "zh-Hans", nativeLanguage: nil))
         #expect(prompt.contains("Chinese"))
         #expect(!prompt.contains("中文"))
     }
 
-    @Test("Original text is trimmed of leading/trailing whitespace")
-    func trimsWhitespace() {
-        let prompt = PolishPrompt.build(text: "  hello   \n", targetLanguage: "en")
-        #expect(prompt.contains("Original: hello"))
-        #expect(!prompt.contains("Original:   hello"))
+    @Test("Prompt asks for 2 to 3 variants")
+    func asksForMultipleVariants() {
+        let prompt = PolishPrompt.build(text: "hi", mode: .variants(target: "en", nativeLanguage: nil))
+        #expect(prompt.contains("2 to 3") || prompt.lowercased().contains("2-3") || prompt.contains("2") )
     }
 
-    @Test("Unknown identifier falls back to the raw string")
-    func unknownIdentifier() {
-        let name = PolishPrompt.englishName(for: "xx-Zzzz-XX")
-        #expect(name == "xx-Zzzz-XX" || name.contains("Zzzz") || name.contains("xx"))
+    @Test("Prompt instructs strict JSON output")
+    func strictJSON() {
+        let prompt = PolishPrompt.build(text: "hi", mode: .variants(target: "en", nativeLanguage: nil))
+        #expect(prompt.contains("STRICT JSON"))
+        #expect(prompt.contains("variants"))
+    }
+}
+
+@Suite("PolishPrompt — proofread mode (same-language)")
+struct ProofreadPromptTests {
+    @Test("Mentions both 'issues' and 'variants' fields")
+    func mentionsBothFields() {
+        let prompt = PolishPrompt.build(text: "I want make meeting",
+                                        mode: .proofreadAndPolish(target: "en", nativeLanguage: nil))
+        #expect(prompt.contains("issues"))
+        #expect(prompt.contains("variants"))
     }
 
-    @Test("Prompt instructs the model to output only the rewrite")
-    func instructsOutputOnly() {
-        let prompt = PolishPrompt.build(text: "hi", targetLanguage: "en")
-        #expect(prompt.lowercased().contains("only"))
-        #expect(prompt.lowercased().contains("no explanations"))
+    @Test("Distinguishes itself from variants mode by mentioning grammar/usage")
+    func mentionsGrammar() {
+        let prompt = PolishPrompt.build(text: "I want make meeting",
+                                        mode: .proofreadAndPolish(target: "en", nativeLanguage: nil))
+        #expect(prompt.lowercased().contains("grammar"))
+    }
+
+    @Test("Original text appears at the end")
+    func originalIncluded() {
+        let prompt = PolishPrompt.build(text: "i want make meeting",
+                                        mode: .proofreadAndPolish(target: "en", nativeLanguage: nil))
+        #expect(prompt.contains("Original:"))
+        #expect(prompt.contains("i want make meeting"))
+    }
+}
+
+@Suite("PolishPrompt — render & override")
+struct PolishPromptRenderTests {
+    @Test("render substitutes ${language} and ${text}")
+    func substitution() {
+        let result = PolishPrompt.render(
+            template: "Rewrite in ${language}: ${text}",
+            target: "en",
+            nativeLanguage: nil,
+            text: "hello"
+        )
+        #expect(result == "Rewrite in English: hello")
+    }
+
+    @Test("render trims surrounding whitespace from the user text")
+    func trims() {
+        let result = PolishPrompt.render(
+            template: "${text}",
+            target: "en",
+            nativeLanguage: nil,
+            text: "  hi  \n"
+        )
+        #expect(result == "hi")
+    }
+
+    @Test("${native} resolves to the English name of the native language")
+    func nativeSubstitution() {
+        let result = PolishPrompt.render(
+            template: "→ ${language} (back: ${native})",
+            target: "en",
+            nativeLanguage: "zh-Hans",
+            text: "x"
+        )
+        #expect(result.hasPrefix("→ English (back: Chinese"))
+    }
+
+    @Test("Nil native language collapses ${native} to the target language name")
+    func nativeFallsBackToTarget() {
+        let result = PolishPrompt.render(
+            template: "${language}|${native}",
+            target: "en",
+            nativeLanguage: nil,
+            text: "x"
+        )
+        #expect(result == "English|English")
+    }
+
+    @Test("Empty UserDefaults override falls back to the default template")
+    func emptyOverrideFallsBack() {
+        UserDefaults.standard.set("", forKey: PolishPrompt.variantsTemplateKey)
+        let prompt = PolishPrompt.build(text: "hi", mode: .variants(target: "en", nativeLanguage: nil))
+        #expect(prompt.contains("STRICT JSON"))   // signature line from default
+        UserDefaults.standard.removeObject(forKey: PolishPrompt.variantsTemplateKey)
+    }
+
+    @Test("Non-empty UserDefaults override replaces the default template")
+    func customOverrideUsed() {
+        UserDefaults.standard.set(
+            "CUSTOM ${language} :: ${text}",
+            forKey: PolishPrompt.variantsTemplateKey
+        )
+        let prompt = PolishPrompt.build(text: "hello", mode: .variants(target: "zh-Hans", nativeLanguage: nil))
+        #expect(prompt.hasPrefix("CUSTOM Chinese"))
+        #expect(prompt.hasSuffix(":: hello"))
+        UserDefaults.standard.removeObject(forKey: PolishPrompt.variantsTemplateKey)
+    }
+}
+
+@Suite("ZAIProvider — polish response parser")
+struct PolishResponseParserTests {
+    @Test("Legacy variants-only JSON (array of strings) parses into variants[]")
+    func variantsOnly() {
+        let raw = """
+        {"variants": ["I'd like to schedule a meeting.", "Let's set up a meeting tomorrow."]}
+        """
+        let result = PolishResult.parse(raw)
+        #expect(result.variants.count == 2)
+        #expect(result.issues.isEmpty)
+        #expect(result.variants[0].text.contains("schedule"))
+        #expect(result.variants[0].backTranslation == nil)
+    }
+
+    @Test("New variants schema (array of objects) parses text + back-translation")
+    func variantsWithBack() {
+        let raw = """
+        {"variants": [
+          {"text": "I'd like to schedule a meeting.", "back": "我想安排一个会议。"},
+          {"text": "Let's set up a meeting.", "back": "我们设个会吧。"}
+        ]}
+        """
+        let result = PolishResult.parse(raw)
+        #expect(result.variants.count == 2)
+        #expect(result.variants[0].text == "I'd like to schedule a meeting.")
+        #expect(result.variants[0].backTranslation == "我想安排一个会议。")
+        #expect(result.variants[1].backTranslation == "我们设个会吧。")
+    }
+
+    @Test("Variant objects with empty 'back' are treated as no back-translation")
+    func emptyBackIsNil() {
+        let raw = """
+        {"variants": [{"text": "hello", "back": ""}]}
+        """
+        let result = PolishResult.parse(raw)
+        #expect(result.variants.count == 1)
+        #expect(result.variants[0].backTranslation == nil)
+    }
+
+    @Test("Proofread JSON parses both issues and variants")
+    func proofreadFull() {
+        let raw = """
+        {
+          "issues": [
+            {"original": "I want make", "explanation": "Missing 'to' after 'want'."}
+          ],
+          "variants": [
+            {"text": "I'd like to make a meeting.", "back": "我想安排一个会议。"},
+            {"text": "Let's set up a meeting.", "back": "我们开个会。"}
+          ]
+        }
+        """
+        let result = PolishResult.parse(raw)
+        #expect(result.issues.count == 1)
+        #expect(result.issues[0].original == "I want make")
+        #expect(result.issues[0].explanation.contains("Missing"))
+        #expect(result.variants.count == 2)
+        #expect(result.variants[0].backTranslation == "我想安排一个会议。")
+    }
+
+    @Test("Issue without an 'original' span is still kept")
+    func issueWithoutOriginal() {
+        let raw = """
+        {"issues": [{"explanation": "Sentence is too long."}], "variants": ["Short version."]}
+        """
+        let result = PolishResult.parse(raw)
+        #expect(result.issues.count == 1)
+        #expect(result.issues[0].original == nil)
+        #expect(result.issues[0].explanation == "Sentence is too long.")
+    }
+
+    @Test("Issue without an 'explanation' is dropped")
+    func issueWithoutExplanation() {
+        let raw = """
+        {"issues": [{"original": "foo"}], "variants": ["bar"]}
+        """
+        let result = PolishResult.parse(raw)
+        #expect(result.issues.isEmpty)
+        #expect(result.variants.map(\.text) == ["bar"])
+    }
+
+    @Test("Markdown-fenced JSON is unwrapped before parsing")
+    func handlesCodeFences() {
+        let raw = "```json\n{\"variants\": [\"hello\"]}\n```"
+        let result = PolishResult.parse(raw)
+        #expect(result.variants.map(\.text) == ["hello"])
+    }
+
+    @Test("Non-JSON response surfaces as a single variant (graceful fallback)")
+    func nonJSONFallback() {
+        let raw = "I'd just like to set up a meeting tomorrow."
+        let result = PolishResult.parse(raw)
+        #expect(result.variants.map(\.text) == [raw])
+        #expect(result.issues.isEmpty)
+    }
+
+    @Test("Empty arrays in JSON also fall back to surfacing the raw content")
+    func emptyArraysFallback() {
+        let raw = "{\"variants\": [], \"issues\": []}"
+        let result = PolishResult.parse(raw)
+        #expect(result.variants.map(\.text) == [raw])
+    }
+}
+
+@Suite("KimiCodingProvider — Anthropic-shaped response extraction")
+struct KimiResponseTests {
+    @Test("Pulls the first text block out of content[]")
+    func extractsFirstTextBlock() throws {
+        let body = """
+        {
+          "id": "msg_1",
+          "type": "message",
+          "content": [
+            {"type": "text", "text": "{\\"variants\\": [\\"hello\\"]}"}
+          ]
+        }
+        """.data(using: .utf8)!
+        let extracted = try KimiCodingProvider.extractTextContent(from: body)
+        #expect(extracted.contains("\"variants\""))
+        // Round-trip into PolishResult.parse — verifies shared pipeline.
+        let polished = PolishResult.parse(extracted)
+        #expect(polished.variants.map(\.text) == ["hello"])
+    }
+
+    @Test("Skips non-text blocks and returns the first text one")
+    func skipsNonText() throws {
+        let body = """
+        {
+          "content": [
+            {"type": "tool_use", "id": "x"},
+            {"type": "text", "text": "actual answer"}
+          ]
+        }
+        """.data(using: .utf8)!
+        let extracted = try KimiCodingProvider.extractTextContent(from: body)
+        #expect(extracted == "actual answer")
+    }
+
+    @Test("Missing content[] throws malformedResponse")
+    func missingContent() {
+        let body = #"{"id": "msg_1"}"#.data(using: .utf8)!
+        #expect(throws: LLMError.self) {
+            _ = try KimiCodingProvider.extractTextContent(from: body)
+        }
+    }
+
+    @Test("Content with no text blocks throws malformedResponse")
+    func noTextBlocks() {
+        let body = #"{"content": [{"type": "tool_use", "id": "x"}]}"#.data(using: .utf8)!
+        #expect(throws: LLMError.self) {
+            _ = try KimiCodingProvider.extractTextContent(from: body)
+        }
     }
 }

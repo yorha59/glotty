@@ -4,16 +4,64 @@ import UniformTypeIdentifiers
 import AppKit
 
 /// Standard macOS preferences pane. Opens via ⌘, or the menu-bar "Settings…" item.
+/// Split into four tabs — each groups together everything related to one feature
+/// area (Translation, Dictionaries, Polish, Hotkey).
 struct SettingsView: View {
     var body: some View {
+        TabView {
+            userProfileTab
+                .tabItem { Text("Profile") }
+            translationTab
+                .tabItem { Text("Translation") }
+            dictionariesTab
+                .tabItem { Text("Dictionaries") }
+            languageModelTab
+                .tabItem { Text("Language Model") }
+            polishTab
+                .tabItem { Text("Polish") }
+            hotkeyTab
+                .tabItem { Text("Hotkey") }
+        }
+        // Forms with TextEditors and long lists have unbounded intrinsic size, which
+        // crashes the auto-layout pass under `.preferredContentSize`. Use a sensible
+        // minimum and let the window owner pick the initial size + remain resizable.
+        .frame(minWidth: 560, minHeight: 460)
+    }
+
+    private var userProfileTab: some View {
+        Form { UserProfileSection() }
+            .formStyle(.grouped)
+    }
+
+    private var translationTab: some View {
+        Form { TranslationSettingsSection() }
+            .formStyle(.grouped)
+    }
+
+    private var dictionariesTab: some View {
+        Form { DictionarySettingsSection() }
+            .formStyle(.grouped)
+    }
+
+    /// LLM-engine config: which provider, API key, endpoint, model.
+    private var languageModelTab: some View {
+        Form { LanguageModelSettingsSection() }
+            .formStyle(.grouped)
+    }
+
+    /// Polish behavior: output language + prompt templates. Uses whatever engine is
+    /// selected in the Language Model tab.
+    private var polishTab: some View {
         Form {
-            TranslationSettingsSection()
-            DictionarySettingsSection()
-            LanguageModelSettingsSection()
-            HotkeySettingsSection()
+            PolishOutputLanguageSection()
+            PolishPromptsSection()
         }
         .formStyle(.grouped)
-        .frame(minWidth: 520)
+    }
+
+    private var hotkeyTab: some View {
+        Form { HotkeySettingsSection() }
+            .formStyle(.grouped)
     }
 }
 
@@ -21,25 +69,11 @@ private struct LanguageModelSettingsSection: View {
     @AppStorage("glotty.llmProvider") private var providerID: String = "zai"
     @AppStorage("glotty.zai.endpoint") private var zaiEndpoint: String = ""
     @AppStorage("glotty.zai.model") private var zaiModel: String = ""
-    @AppStorage("glotty.polishLang") private var polishLang: String = "en"
+    @AppStorage("glotty.kimi.endpoint") private var kimiEndpoint: String = ""
+    @AppStorage("glotty.kimi.model") private var kimiModel: String = ""
     @State private var apiKey: String = ""
     @State private var apiKeyPlaceholder: String = ""
     @State private var testStatus: TestStatus = .idle
-
-    /// Common polish targets. Stays separate from the translate target picker —
-    /// polish is "rewrite into idiomatic X" and X is often the *opposite* of the
-    /// translate target (you read Chinese translations of English; you polish your
-    /// Chinese drafts into English).
-    private let polishLanguageOptions: [(id: String, name: String)] = [
-        ("en", "English"),
-        ("zh-Hans", "Chinese (Simplified)"),
-        ("zh-Hant", "Chinese (Traditional)"),
-        ("ja", "Japanese"),
-        ("ko", "Korean"),
-        ("fr", "French"),
-        ("de", "German"),
-        ("es", "Spanish"),
-    ]
 
     enum TestStatus: Equatable {
         case idle
@@ -58,20 +92,15 @@ private struct LanguageModelSettingsSection: View {
             .pickerStyle(.menu)
             .onChange(of: providerID) { _, _ in loadKey() }
 
-            Picker("Polish output language", selection: $polishLang) {
-                ForEach(polishLanguageOptions, id: \.id) { option in
-                    Text(option.name).tag(option.id)
-                }
-            }
-            .pickerStyle(.menu)
-
-            if providerID == "zai" {
-                zaiFields
+            switch providerID {
+            case "zai":           zaiFields
+            case "kimi-coding":   kimiFields
+            default:              EmptyView()
             }
         } header: {
             Text("Language Model")
         } footer: {
-            Text("Polishes your draft into native-sounding text in the chosen output language (not necessarily the same as Translation's target). Keys are stored in macOS Keychain.")
+            Text("The engine that powers Fn → R polish. API keys are stored in macOS Keychain. Polish output language and prompt templates live in the Polish tab.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -108,6 +137,62 @@ private struct LanguageModelSettingsSection: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
 
+        testRow
+    }
+
+    /// Picker binding that treats empty AppStorage as "use the default model".
+    /// When the user picks one, we always write the concrete id (no empty state).
+    private var zaiModelBinding: Binding<String> {
+        Binding(
+            get: { zaiModel.isEmpty ? ZAIProvider.defaultModel : zaiModel },
+            set: { zaiModel = $0 }
+        )
+    }
+
+    private var kimiModelBinding: Binding<String> {
+        Binding(
+            get: { kimiModel.isEmpty ? KimiCodingProvider.defaultModel : kimiModel },
+            set: { kimiModel = $0 }
+        )
+    }
+
+    @ViewBuilder
+    private var kimiFields: some View {
+        HStack {
+            SecureField("API key", text: $apiKey, prompt: Text(apiKeyPlaceholder.isEmpty ? "Paste your Kimi API key" : apiKeyPlaceholder))
+            Button("Save") { saveKey() }
+                .disabled(apiKey.isEmpty)
+            if !apiKeyPlaceholder.isEmpty {
+                Button("Clear", role: .destructive) { clearKey() }
+            }
+        }
+
+        TextField("Endpoint",
+                  text: $kimiEndpoint,
+                  prompt: Text(KimiCodingProvider.defaultEndpoint))
+            .textContentType(.URL)
+
+        Picker("Model", selection: kimiModelBinding) {
+            ForEach(KimiCodingProvider.supportedModels) { option in
+                Text(option.displayName).tag(option.id)
+            }
+        }
+        .pickerStyle(.menu)
+
+        if let summary = KimiCodingProvider.model(for: kimiModelBinding.wrappedValue)?.summary {
+            Text(summary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+
+        testRow
+    }
+
+    /// Test button + status — shared across providers; uses whichever is currently
+    /// selected via `LLMRegistry.current()`.
+    @ViewBuilder
+    private var testRow: some View {
         HStack {
             Button("Test connection") { Task { await test() } }
                 .disabled(testStatus == .running)
@@ -129,34 +214,36 @@ private struct LanguageModelSettingsSection: View {
         }
     }
 
-    /// Picker binding that treats empty AppStorage as "use the default model".
-    /// When the user picks one, we always write the concrete id (no empty state).
-    private var zaiModelBinding: Binding<String> {
-        Binding(
-            get: { zaiModel.isEmpty ? ZAIProvider.defaultModel : zaiModel },
-            set: { zaiModel = $0 }
-        )
+    /// Which Keychain account holds the active provider's key. Returns nil for
+    /// providers that don't need a key (Apple Foundation, when we add it).
+    private var currentKeychainAccount: String? {
+        switch providerID {
+        case "zai":         return ZAIProvider.keychainAccount
+        case "kimi-coding": return KimiCodingProvider.keychainAccount
+        default:            return nil
+        }
     }
 
     private func loadKey() {
-        guard providerID == "zai" else {
+        guard let account = currentKeychainAccount else {
             apiKey = ""
             apiKeyPlaceholder = ""
             return
         }
-        if let existing = Keychain.read(account: ZAIProvider.keychainAccount), !existing.isEmpty {
-            apiKey = ""
+        apiKey = ""
+        if let existing = Keychain.read(account: account), !existing.isEmpty {
             apiKeyPlaceholder = "Saved (\(existing.prefix(4))…\(existing.suffix(4)))"
         } else {
-            apiKey = ""
             apiKeyPlaceholder = ""
         }
+        testStatus = .idle
     }
 
     private func saveKey() {
+        guard let account = currentKeychainAccount else { return }
         let trimmed = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        if Keychain.write(trimmed, account: ZAIProvider.keychainAccount) {
+        if Keychain.write(trimmed, account: account) {
             apiKey = ""
             apiKeyPlaceholder = "Saved (\(trimmed.prefix(4))…\(trimmed.suffix(4)))"
             testStatus = .idle
@@ -166,7 +253,8 @@ private struct LanguageModelSettingsSection: View {
     }
 
     private func clearKey() {
-        Keychain.delete(account: ZAIProvider.keychainAccount)
+        guard let account = currentKeychainAccount else { return }
+        Keychain.delete(account: account)
         apiKey = ""
         apiKeyPlaceholder = ""
         testStatus = .idle
@@ -174,13 +262,72 @@ private struct LanguageModelSettingsSection: View {
 
     private func test() async {
         testStatus = .running
+        guard let provider = LLMRegistry.current() else {
+            testStatus = .failed("No provider selected.")
+            return
+        }
         do {
-            let provider = ZAIProvider()
-            let result = try await provider.polish("hello world", targetLanguage: "en")
-            testStatus = .ok("OK · \(result.prefix(40))\(result.count > 40 ? "…" : "")")
+            let result = try await provider.polish("hello world",
+                                                   mode: .variants(target: "en", nativeLanguage: nil))
+            let preview = result.variants.first?.text ?? "(no variants)"
+            testStatus = .ok("OK · \(preview.prefix(40))\(preview.count > 40 ? "…" : "")")
         } catch {
             testStatus = .failed(error.localizedDescription)
         }
+    }
+}
+
+private struct UserProfileSection: View {
+    @AppStorage("glotty.user.nativeLanguage") private var nativeLang: String = ""
+
+    /// Common native-language choices. Stored as a Locale identifier so other
+    /// features can read it as a `Locale.Language` later.
+    private let options: [(id: String, name: String)] = [
+        ("en", "English"),
+        ("zh-Hans", "Chinese (Simplified)"),
+        ("zh-Hant", "Chinese (Traditional)"),
+        ("ja", "Japanese"),
+        ("ko", "Korean"),
+        ("fr", "French"),
+        ("de", "German"),
+        ("es", "Spanish"),
+        ("it", "Italian"),
+        ("pt", "Portuguese"),
+        ("ru", "Russian"),
+        ("ar", "Arabic"),
+        ("hi", "Hindi"),
+        ("vi", "Vietnamese"),
+        ("th", "Thai"),
+    ]
+
+    /// Picker binding: empty stored value means "use the system locale". The default
+    /// shown in the picker becomes the user's macOS locale on first launch.
+    private var selection: Binding<String> {
+        Binding(
+            get: { nativeLang.isEmpty ? systemLocaleCode() : nativeLang },
+            set: { nativeLang = $0 }
+        )
+    }
+
+    var body: some View {
+        Section {
+            Picker("Native language", selection: selection) {
+                ForEach(options, id: \.id) { option in
+                    Text(option.name).tag(option.id)
+                }
+            }
+            .pickerStyle(.menu)
+        } header: {
+            Text("Profile")
+        } footer: {
+            Text("Your native language. Used to guide auto-detected source / target choices and to bias translation behavior toward what you're likely reading or writing.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func systemLocaleCode() -> String {
+        Locale.current.language.languageCode?.identifier ?? "en"
     }
 }
 
@@ -405,6 +552,8 @@ private struct DictionarySettingsSection: View {
     @State private var showingInstallDictionaryDialog = false
     @State private var dictionaryImportStatus: String?
     @State private var downloadedDictionaryPathsByName: [String: String] = [:]
+    @State private var isCatalogLoading = false
+    @State private var isDownloadedPathLoading = false
     private let maxDictionaryListHeight: CGFloat = 180
 
     private var effectivePair: (source: String, target: String) {
@@ -545,12 +694,15 @@ private struct DictionarySettingsSection: View {
 
     private func loadDictionaries() {
         removeInvalidAssetDictionaryReferences()
+        startDownloadedPathLoadIfNeeded()
         let downloadedPaths = downloadedDictionaryPaths()
         downloadedDictionaryPathsByName = downloadedPaths
         let dicts = DictionaryLookup.availableDictionaries()
-        availableDictionaries = dictionariesMergedWithActivePreferences(
-            dicts,
-            downloadedPathsByName: downloadedPaths
+        availableDictionaries = dedupedInstalledDictionaries(
+            dictionariesMergedWithActivePreferences(
+                dicts,
+                downloadedPathsByName: downloadedPaths
+            )
         )
         refreshSelectedDictionaries()
     }
@@ -591,7 +743,32 @@ private struct DictionarySettingsSection: View {
             knownNames.insert(normalizedName)
         }
 
-        return merged
+        return dedupedInstalledDictionaries(merged)
+    }
+
+    private func dedupedInstalledDictionaries(_ dictionaries: [DictionaryLookup.DictionaryInfo]) -> [DictionaryLookup.DictionaryInfo] {
+        var result: [DictionaryLookup.DictionaryInfo] = []
+        var seenKeys = Set<String>()
+
+        for dict in dictionaries {
+            let key = installedDictionaryDedupeKey(dict)
+            guard seenKeys.insert(key).inserted else { continue }
+            result.append(dict)
+        }
+        return result
+    }
+
+    private func installedDictionaryDedupeKey(_ dict: DictionaryLookup.DictionaryInfo) -> String {
+        if let catalog = catalogItem(for: dict), let identifier = catalog.dictionaryIdentifier, !identifier.isEmpty {
+            return "identifier:\(identifier)"
+        }
+
+        let normalizedName = normalizedDictionaryName(dict.name)
+        if !normalizedName.isEmpty {
+            return "name:\(normalizedName)"
+        }
+
+        return "path:\(normalizedDictionaryName(dict.path))"
     }
 
     private func removeInvalidAssetDictionaryReferences() {
@@ -662,6 +839,9 @@ private struct DictionarySettingsSection: View {
     }
 
     private func loadLibraryDictionaries() {
+        startCatalogLoadIfNeeded()
+        startDownloadedPathLoadIfNeeded()
+
         let references = CFPreferencesCopyAppValue(
             "last available dictionaries" as CFString,
             "com.apple.Dictionary" as CFString
@@ -682,7 +862,54 @@ private struct DictionarySettingsSection: View {
         }
     }
 
+    /// Cache of the AssetsV2 catalog scan. The catalog doesn't change at runtime so
+    /// one walk per process is enough; subsequent tab switches read this instantly.
+    /// `nonisolated(unsafe)` is acceptable here because the cache is process-local,
+    /// immutable after assignment, and a duplicate background scan is harmless.
+    nonisolated(unsafe) private static var cachedCatalogItems: [DictionaryLibraryItem]?
+    nonisolated(unsafe) private static var cachedDownloadedDictionaryPaths: [String: String]?
+
+    private func startCatalogLoadIfNeeded() {
+        guard Self.cachedCatalogItems == nil, !isCatalogLoading else { return }
+        isCatalogLoading = true
+
+        Task {
+            let items = await Task.detached(priority: .utility) {
+                Self.computeMobileAssetCatalogItems()
+            }.value
+            Self.cachedCatalogItems = items
+            isCatalogLoading = false
+            loadLibraryDictionaries()
+            loadDictionaries()
+        }
+    }
+
+    private func startDownloadedPathLoadIfNeeded() {
+        guard Self.cachedDownloadedDictionaryPaths == nil, !isDownloadedPathLoading else { return }
+        isDownloadedPathLoading = true
+
+        Task {
+            let paths = await Task.detached(priority: .utility) {
+                Self.computeDownloadedDictionaryPaths(includeAssetV2: true)
+            }.value
+            Self.cachedDownloadedDictionaryPaths = paths
+            isDownloadedPathLoading = false
+            loadLibraryDictionaries()
+            loadDictionaries()
+        }
+    }
+
+    /// Cache-aware accessor for the catalog. Returns immediately if loaded; otherwise
+    /// returns an empty list while `startCatalogLoadIfNeeded()` performs the expensive
+    /// recursive scan off the main thread.
     private func mobileAssetCatalogDictionaryItems() -> [DictionaryLibraryItem] {
+        Self.cachedCatalogItems ?? []
+    }
+
+    /// The actual catalog walk. Marked nonisolated so it can run via `Task.detached`
+    /// (off the main thread) — walking `/System/Library/AssetsV2` recursively is
+    /// expensive enough to noticeably lag tab switches.
+    nonisolated private static func computeMobileAssetCatalogItems() -> [DictionaryLibraryItem] {
         let root = "/System/Library/AssetsV2"
         let manager = FileManager.default
         guard let enumerator = manager.enumerator(atPath: root) else { return [] }
@@ -875,7 +1102,7 @@ private struct DictionarySettingsSection: View {
             knownNames.insert(normalizedName)
         }
 
-        availableDictionaries = merged
+        availableDictionaries = dedupedInstalledDictionaries(merged)
         refreshSelectedDictionaries()
     }
 
@@ -890,9 +1117,11 @@ private struct DictionarySettingsSection: View {
     }
 
     private func normalizedDictionaryName(_ name: String) -> String {
-        name.lowercased()
+        let decoded = name.removingPercentEncoding ?? name
+        return decoded.lowercased()
             .replacingOccurrences(of: ".dictionary", with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ".wikipediadictionary", with: "")
+            .filter { $0.isLetter || $0.isNumber }
     }
 
     private func installReference(for dict: DictionaryLibraryItem) -> String {
@@ -915,11 +1144,23 @@ private struct DictionarySettingsSection: View {
     }
 
     private func downloadedDictionaryPaths() -> [String: String] {
-        let roots = [
-            "/System/Library/AssetsV2",
+        if let cached = Self.cachedDownloadedDictionaryPaths {
+            return cached
+        }
+        // Avoid scanning /System/Library/AssetsV2 on the main thread. The local
+        // dictionary folders are small; the full AssetsV2 walk runs in the background.
+        return Self.computeDownloadedDictionaryPaths(includeAssetV2: false)
+    }
+
+    nonisolated private static func computeDownloadedDictionaryPaths(includeAssetV2: Bool) -> [String: String] {
+        var roots = [
             "/Library/Dictionaries",
             NSHomeDirectory() + "/Library/Dictionaries",
         ]
+        if includeAssetV2 {
+            roots.insert("/System/Library/AssetsV2", at: 0)
+        }
+
         var pathsByName: [String: String] = [:]
         let manager = FileManager.default
 
@@ -931,12 +1172,20 @@ private struct DictionarySettingsSection: View {
                 let name = URL(fileURLWithPath: fullPath).lastPathComponent
                     .replacingOccurrences(of: ".dictionary", with: "")
                     .replacingOccurrences(of: ".wikipediadictionary", with: "")
-                pathsByName[normalizedDictionaryName(name)] = fullPath
+                pathsByName[Self.normalizedDictionaryNameForCache(name)] = fullPath
                 enumerator.skipDescendants()
             }
         }
 
         return pathsByName
+    }
+
+    nonisolated private static func normalizedDictionaryNameForCache(_ name: String) -> String {
+        let decoded = name.removingPercentEncoding ?? name
+        return decoded.lowercased()
+            .replacingOccurrences(of: ".dictionary", with: "")
+            .replacingOccurrences(of: ".wikipediadictionary", with: "")
+            .filter { $0.isLetter || $0.isNumber }
     }
 
     @ViewBuilder
@@ -1136,6 +1385,8 @@ private struct DictionarySettingsSection: View {
 
             Spacer(minLength: 8)
 
+            kindOverrideMenu(for: dict)
+
             HStack(spacing: 10) {
                 Toggle("", isOn: Binding(
                     get: { selectedIDSet.contains(dict.id) },
@@ -1162,6 +1413,69 @@ private struct DictionarySettingsSection: View {
                 save: saveSelection
             )
         )
+    }
+
+    /// Per-dict kind override menu. Shows the effective kind (with a hint when it
+    /// was inferred); user can force it to Monolingual / Bilingual or reset to Auto.
+    private func kindOverrideMenu(for dict: DictionaryLookup.DictionaryInfo) -> some View {
+        let override = DictionarySelection.kindOverride(for: dict.id)
+        let effective = DictionarySelection.dictionaryKind(for: dict)
+        let label: String = {
+            switch (override, effective) {
+            case (.some(.monolingual), _): return "Mono ✓"
+            case (.some(.bilingual), _):   return "Bi ✓"
+            case (nil, .monolingual):      return "Mono"
+            case (nil, .bilingual):        return "Bi"
+            }
+        }()
+        let color: Color = override != nil ? Color.accentColor : .secondary
+
+        return Menu {
+            Button {
+                DictionarySelection.setKindOverride(nil, for: dict.id)
+                refreshSelectedDictionaries()
+                saveSelection()
+            } label: {
+                if override == nil {
+                    Label("Auto (\(effective == .monolingual ? "Mono" : "Bi"))",
+                          systemImage: "checkmark")
+                } else {
+                    Text("Auto (\(effective == .monolingual ? "Mono" : "Bi"))")
+                }
+            }
+            Button {
+                DictionarySelection.setKindOverride(.monolingual, for: dict.id)
+                refreshSelectedDictionaries()
+                saveSelection()
+            } label: {
+                if override == .monolingual {
+                    Label("Monolingual", systemImage: "checkmark")
+                } else {
+                    Text("Monolingual")
+                }
+            }
+            Button {
+                DictionarySelection.setKindOverride(.bilingual, for: dict.id)
+                refreshSelectedDictionaries()
+                saveSelection()
+            } label: {
+                if override == .bilingual {
+                    Label("Bilingual", systemImage: "checkmark")
+                } else {
+                    Text("Bilingual")
+                }
+            }
+        } label: {
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(color)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(override != nil
+              ? "Kind manually overridden — click to change or reset to Auto."
+              : "Kind auto-detected. Click to override.")
     }
 
     private func priorityHandle(for dict: DictionaryLookup.DictionaryInfo) -> some View {
@@ -1217,15 +1531,33 @@ private struct DictionarySettingsSection: View {
 
     private func refreshSelectedDictionaries() {
         let pair = effectivePair
-        let ordered = DictionarySelection.orderedDictionaries(
+        // Two separate priority lists per pair (monolingual + bilingual). Merge them
+        // into one flat `orderedDictionaryIDs` for the UI; on save we partition back
+        // by kind. Within each visual section users still drag freely.
+        let monoOrdered = DictionarySelection.orderedDictionaries(
+            kind: .monolingual,
             source: pair.source,
             target: pair.target,
             dictionaries: availableDictionaries
         )
-        orderedDictionaryIDs = ordered.map(\.id)
-        if let configured = DictionarySelection.configuredIDs(source: pair.source, target: pair.target) {
+        let biOrdered = DictionarySelection.orderedDictionaries(
+            kind: .bilingual,
+            source: pair.source,
+            target: pair.target,
+            dictionaries: availableDictionaries
+        )
+        orderedDictionaryIDs = monoOrdered.map(\.id) + biOrdered.map(\.id)
+
+        let monoConfigured = DictionarySelection.configuredIDs(
+            kind: .monolingual, source: pair.source, target: pair.target
+        )
+        let biConfigured = DictionarySelection.configuredIDs(
+            kind: .bilingual, source: pair.source, target: pair.target
+        )
+        if monoConfigured != nil || biConfigured != nil {
             let visibleSet = Set(orderedDictionaryIDs)
-            selectedDictionaryIDs = configured.filter { visibleSet.contains($0) }
+            let selected = (monoConfigured ?? []) + (biConfigured ?? [])
+            selectedDictionaryIDs = selected.filter { visibleSet.contains($0) }
         } else {
             selectedDictionaryIDs = orderedDictionaryIDs
         }
@@ -1242,15 +1574,40 @@ private struct DictionarySettingsSection: View {
 
     private func resetSelection() {
         let pair = effectivePair
-        DictionarySelection.resetSelection(source: pair.source, target: pair.target)
+        DictionarySelection.resetSelection(
+            kind: .monolingual, source: pair.source, target: pair.target
+        )
+        DictionarySelection.resetSelection(
+            kind: .bilingual, source: pair.source, target: pair.target
+        )
         orderedDictionaryIDs = visibleDictionaries.map(\.id)
         selectedDictionaryIDs = orderedDictionaryIDs
     }
 
     private func saveSelection() {
         let pair = effectivePair
-        let orderedIDs = orderedDictionaryIDs.filter { selectedIDSet.contains($0) }
-        DictionarySelection.saveSelectedIDs(orderedIDs, source: pair.source, target: pair.target)
+        var dictByID: [String: DictionaryLookup.DictionaryInfo] = [:]
+        for dict in availableDictionaries where dictByID[dict.id] == nil {
+            dictByID[dict.id] = dict
+        }
+        let orderedSelected = orderedDictionaryIDs.filter { selectedIDSet.contains($0) }
+        // Partition the user's flat ordered list back into per-kind ordered lists;
+        // each kind's relative order is preserved.
+        var mono: [String] = []
+        var bi: [String] = []
+        for id in orderedSelected {
+            guard let dict = dictByID[id] else { continue }
+            switch DictionarySelection.dictionaryKind(for: dict) {
+            case .monolingual: mono.append(id)
+            case .bilingual:   bi.append(id)
+            }
+        }
+        DictionarySelection.saveSelectedIDs(
+            mono, kind: .monolingual, source: pair.source, target: pair.target
+        )
+        DictionarySelection.saveSelectedIDs(
+            bi, kind: .bilingual, source: pair.source, target: pair.target
+        )
     }
 
     private func localizedName(for identifier: String) -> String {
@@ -1258,18 +1615,285 @@ private struct DictionarySettingsSection: View {
     }
 }
 
-private struct HotkeySettingsSection: View {
+private struct PolishOutputLanguageSection: View {
+    @AppStorage("glotty.polishLang") private var polishLang: String = "en"
+
+    /// Common polish targets. Polish is "rewrite into idiomatic X" — X is often the
+    /// *opposite* of the translate target (you read Chinese translations of English;
+    /// you polish your Chinese drafts into English).
+    private let polishLanguageOptions: [(id: String, name: String)] = [
+        ("en", "English"),
+        ("zh-Hans", "Chinese (Simplified)"),
+        ("zh-Hant", "Chinese (Traditional)"),
+        ("ja", "Japanese"),
+        ("ko", "Korean"),
+        ("fr", "French"),
+        ("de", "German"),
+        ("es", "Spanish"),
+    ]
+
     var body: some View {
         Section {
-            LabeledContent("Leader key", value: "Fn")
-            LabeledContent("Translate", value: "Fn → T")
-            LabeledContent("Polish to idiomatic", value: "Fn → R")
-        } header: {
-            Text("Hotkey")
+            Picker("Polish output language", selection: $polishLang) {
+                ForEach(polishLanguageOptions, id: \.id) { option in
+                    Text(option.name).tag(option.id)
+                }
+            }
+            .pickerStyle(.menu)
         } footer: {
-            Text("Hotkey customization will arrive after the spike. For now the leader is fixed to Fn; T translates, R polishes the selection.")
+            Text("The language Fn → R rewrites your selection into. Not the same as Translation's target.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+    }
+}
+
+private struct PolishPromptsSection: View {
+    @AppStorage(PolishPrompt.variantsTemplateKey) private var variantsOverride: String = ""
+    @AppStorage(PolishPrompt.proofreadTemplateKey) private var proofreadOverride: String = ""
+
+    var body: some View {
+        Section {
+            promptEditor(
+                title: "Variants (cross-language)",
+                description: "Used when the selection's language differs from the polish output language. Asks the LLM for 2-3 idiomatic translations.",
+                override: $variantsOverride,
+                defaultTemplate: PolishPrompt.defaultVariantsTemplate
+            )
+            Divider()
+            promptEditor(
+                title: "Proofread (same-language)",
+                description: "Used when the selection and output share a language. Asks the LLM for grammar issues plus polished rewrites.",
+                override: $proofreadOverride,
+                defaultTemplate: PolishPrompt.defaultProofreadTemplate
+            )
+        } header: {
+            Text("Polish Prompts")
+        } footer: {
+            Text("Placeholders: `${language}` is replaced with the target language name (e.g. English, Chinese); `${text}` is replaced with your selection. Leave a prompt blank to use the built-in default.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private func promptEditor(title: String,
+                              description: String,
+                              override: Binding<String>,
+                              defaultTemplate: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title).font(.callout.weight(.medium))
+                Spacer()
+                if !override.wrappedValue.isEmpty {
+                    Text("custom").font(.caption2).foregroundStyle(.orange)
+                }
+                Button("Reset") { override.wrappedValue = "" }
+                    .controlSize(.small)
+                    .disabled(override.wrappedValue.isEmpty)
+            }
+            Text(description)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            TextEditor(text: editorBinding(override: override, default: defaultTemplate))
+                .font(.system(.caption, design: .monospaced))
+                .frame(minHeight: 140, maxHeight: 220)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .strokeBorder(Color.gray.opacity(0.25), lineWidth: 0.5)
+                )
+        }
+    }
+
+    /// Editor binding pattern: show the default template when no override exists, but
+    /// only write to AppStorage when the user actually changes the text. If they edit
+    /// back to the default verbatim, we clear the override too (so future default
+    /// updates take effect).
+    private func editorBinding(override: Binding<String>, default defaultTemplate: String) -> Binding<String> {
+        Binding(
+            get: { override.wrappedValue.isEmpty ? defaultTemplate : override.wrappedValue },
+            set: { new in
+                override.wrappedValue = (new == defaultTemplate) ? "" : new
+            }
+        )
+    }
+}
+
+private struct HotkeySettingsSection: View {
+    @AppStorage(Keycode.translateDefaultsKey) private var translateKey: Int = Keycode.defaultTranslate
+    @AppStorage(Keycode.polishDefaultsKey)    private var polishKey:    Int = Keycode.defaultPolish
+    @AppStorage(Keycode.leaderDefaultsKey)    private var leaderRaw:    String = Keycode.defaultLeader.rawValue
+
+    private var leaderBinding: Binding<LeaderKey> {
+        Binding(
+            get: { LeaderKey(rawValue: leaderRaw) ?? Keycode.defaultLeader },
+            set: { leaderRaw = $0.rawValue }
+        )
+    }
+
+    var body: some View {
+        Section {
+            LeaderRecorderRow(leader: leaderBinding,
+                              defaultLeader: Keycode.defaultLeader)
+
+            KeyRecorderRow(
+                title: "Translate",
+                prefix: "\(leaderBinding.wrappedValue.label) →",
+                keycode: $translateKey,
+                defaultKeycode: Keycode.defaultTranslate
+            )
+
+            KeyRecorderRow(
+                title: "Polish to idiomatic",
+                prefix: "\(leaderBinding.wrappedValue.label) →",
+                keycode: $polishKey,
+                defaultKeycode: Keycode.defaultPolish
+            )
+
+            if translateKey == polishKey {
+                Label("Translate and Polish are bound to the same key — polish won't fire.",
+                      systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+        } header: {
+            Text("Hotkey")
+        } footer: {
+            Text("Press **Record**, then tap the key you want as the second step of the hotkey. **Esc** during recording cancels. **Reset** restores the default.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// Row for picking the leader (modifier-only). Two modes: dropdown (instant pick)
+/// or "Record" (capture the next modifier press). Either way writes the same
+/// `LeaderKey` value into `glotty.hotkey.leader`.
+private struct LeaderRecorderRow: View {
+    @Binding var leader: LeaderKey
+    let defaultLeader: LeaderKey
+
+    @State private var isRecording = false
+    @State private var monitor: Any?
+    @State private var baselineFlags: NSEvent.ModifierFlags = []
+
+    var body: some View {
+        LabeledContent("Leader key") {
+            HStack(spacing: 8) {
+                if isRecording {
+                    Text("Press a modifier…")
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                } else {
+                    Picker("", selection: $leader) {
+                        ForEach(LeaderKey.allCases) { key in
+                            Text(key.label).tag(key)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                }
+
+                Button(isRecording ? "Cancel" : "Record") {
+                    isRecording ? stopRecording(save: nil) : startRecording()
+                }
+                .buttonStyle(.bordered)
+
+                Button("Reset") { leader = defaultLeader }
+                    .buttonStyle(.bordered)
+                    .disabled(leader == defaultLeader)
+            }
+        }
+        .onDisappear { stopRecording(save: nil) }
+    }
+
+    private func startRecording() {
+        isRecording = true
+        baselineFlags = NSEvent.modifierFlags
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged, .keyDown]) { event in
+            // Esc cancels.
+            if event.type == .keyDown, event.keyCode == 53 {
+                stopRecording(save: nil)
+                return nil
+            }
+            // Find which modifier just became active.
+            if event.type == .flagsChanged,
+               let key = LeaderKey.newlyPressed(before: baselineFlags,
+                                                after: event.modifierFlags) {
+                stopRecording(save: key)
+                return nil
+            }
+            return event
+        }
+    }
+
+    private func stopRecording(save: LeaderKey?) {
+        if let m = monitor {
+            NSEvent.removeMonitor(m)
+            monitor = nil
+        }
+        isRecording = false
+        if let save { leader = save }
+    }
+}
+
+/// A single row showing the bound key + Record / Reset buttons. Captures the next
+/// `.keyDown` via `NSEvent.addLocalMonitorForEvents` while in recording mode, which
+/// fires only while the Settings window is frontmost.
+private struct KeyRecorderRow: View {
+    let title: String
+    let prefix: String
+    @Binding var keycode: Int
+    let defaultKeycode: Int
+
+    @State private var isRecording = false
+    @State private var monitor: Any?
+
+    var body: some View {
+        LabeledContent(title) {
+            HStack(spacing: 8) {
+                Text("\(prefix) \(displayLabel)")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(isRecording ? .secondary : .primary)
+
+                Button(isRecording ? "Press a key…" : "Record") {
+                    isRecording ? stopRecording(saveKeycode: nil) : startRecording()
+                }
+                .buttonStyle(.bordered)
+
+                Button("Reset") { keycode = defaultKeycode }
+                    .buttonStyle(.bordered)
+                    .disabled(keycode == defaultKeycode)
+            }
+        }
+        .onDisappear { stopRecording(saveKeycode: nil) }
+    }
+
+    private var displayLabel: String {
+        isRecording ? "—" : Keycode.label(for: keycode)
+    }
+
+    private func startRecording() {
+        isRecording = true
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            let code = Int(event.keyCode)
+            // Escape cancels recording without saving.
+            if code == 53 {
+                stopRecording(saveKeycode: nil)
+            } else {
+                stopRecording(saveKeycode: code)
+            }
+            return nil   // consume the event so it doesn't reach the Settings UI
+        }
+    }
+
+    private func stopRecording(saveKeycode: Int?) {
+        if let m = monitor {
+            NSEvent.removeMonitor(m)
+            monitor = nil
+        }
+        isRecording = false
+        if let saveKeycode { keycode = saveKeycode }
     }
 }

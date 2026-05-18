@@ -61,14 +61,16 @@ private struct HUDView: View {
                     .font(.system(.headline, design: .rounded))
                     .foregroundStyle(.white)
                 Spacer()
-                Text("Fn held")
+                Text("\(Keycode.currentLeader().label) held")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.55))
             }
             Divider().background(.white.opacity(0.15))
-            commandRow(key: "T", label: "Translate selection")
-            commandRow(key: "R", label: "Polish to idiomatic")
-            Text("Release Fn to cancel")
+            commandRow(key: Keycode.label(for: Keycode.currentTranslate()),
+                       label: "Translate selection")
+            commandRow(key: Keycode.label(for: Keycode.currentPolish()),
+                       label: "Polish to idiomatic")
+            Text("Release \(Keycode.currentLeader().label) to cancel")
                 .font(.caption2)
                 .foregroundStyle(.white.opacity(0.45))
         }

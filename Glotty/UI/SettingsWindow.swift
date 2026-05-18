@@ -7,8 +7,8 @@ import SwiftUI
 @MainActor
 final class SettingsWindowController {
     private var window: NSWindow?
-    private let preferredContentWidth: CGFloat = 560
-    private let minimumContentSize = NSSize(width: 520, height: 420)
+    private let preferredContentWidth: CGFloat = 600
+    private let minimumContentSize = NSSize(width: 520, height: 460)
 
     func show() {
         if let window {
@@ -19,12 +19,16 @@ final class SettingsWindowController {
         }
 
         let host = NSHostingController(rootView: SettingsView())
+        // NOTE: `host.sizingOptions = .preferredContentSize` crashes when SwiftUI
+        // content has unbounded intrinsic size (Forms with TextEditors, long
+        // scrolling lists). We pick a sensible initial content size instead and
+        // keep the window resizable so the user can adjust.
         let w = NSWindow(contentViewController: host)
         w.title = "Glotty Settings"
         w.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         w.isReleasedWhenClosed = false
-        w.setContentSize(initialContentSize(for: host))
-        w.minSize = minimumWindowSize(for: w)
+        w.setContentSize(initialContentSize())
+        w.contentMinSize = minimumContentSize
         w.center()
         w.collectionBehavior = [.moveToActiveSpace]
 
@@ -34,20 +38,9 @@ final class SettingsWindowController {
         w.orderFrontRegardless()
     }
 
-    private func initialContentSize(for host: NSHostingController<SettingsView>) -> NSSize {
+    private func initialContentSize() -> NSSize {
         let screenHeight = NSScreen.main?.visibleFrame.height ?? 900
-        let maxContentHeight = max(minimumContentSize.height, screenHeight - 96)
-        let proposed = NSSize(width: preferredContentWidth, height: maxContentHeight)
-        let fitting = host.sizeThatFits(in: proposed)
-
-        return NSSize(
-            width: max(minimumContentSize.width, preferredContentWidth),
-            height: min(max(fitting.height, minimumContentSize.height), maxContentHeight)
-        )
-    }
-
-    private func minimumWindowSize(for window: NSWindow) -> NSSize {
-        let frame = window.frameRect(forContentRect: NSRect(origin: .zero, size: minimumContentSize))
-        return frame.size
+        let height = min(720, max(minimumContentSize.height, screenHeight - 120))
+        return NSSize(width: preferredContentWidth, height: height)
     }
 }
