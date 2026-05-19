@@ -3,12 +3,16 @@ import Foundation
 /// Tiny utility for displaying macOS virtual keycodes as labels.
 /// Used by the Settings → Hotkey recorder UI.
 enum Keycode {
-    /// Defaults for Glotty's two leader-key commands.
+    /// Defaults for Glotty's leader-key commands.
+    /// T = Translate (decode: foreign → native). E = Express (encode: native → target).
+    /// P = Polish (renamed from R for a tighter T/E/P mnemonic).
     static let defaultTranslate = 17  // T
-    static let defaultPolish    = 15  // R
+    static let defaultExpress   = 14  // E
+    static let defaultPolish    = 35  // P
 
     /// User-defaults keys that override the defaults above.
     static let translateDefaultsKey = "glotty.hotkey.translate"
+    static let expressDefaultsKey   = "glotty.hotkey.express"
     static let polishDefaultsKey    = "glotty.hotkey.polish"
     static let leaderDefaultsKey    = "glotty.hotkey.leader"
 
@@ -49,6 +53,12 @@ enum Keycode {
     static func currentTranslate() -> Int {
         let stored = UserDefaults.standard.object(forKey: translateDefaultsKey) as? Int
         return stored ?? defaultTranslate
+    }
+
+    /// Read the active express keycode (defaults override or hardcoded default).
+    static func currentExpress() -> Int {
+        let stored = UserDefaults.standard.object(forKey: expressDefaultsKey) as? Int
+        return stored ?? defaultExpress
     }
 
     /// Read the active polish keycode (defaults override or hardcoded default).

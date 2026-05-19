@@ -5,13 +5,24 @@ import NaturalLanguage
 /// Nothing in here touches Apple's Translation framework or any global state — it's all
 /// inputs in, decision out.
 enum LanguagePolicy {
-    /// Heuristic: a single word for phonetic-display purposes is non-empty trimmed text
-    /// with no internal whitespace and at most 32 chars.
+    /// Heuristic: a single word for phonetic-display purposes is non-empty trimmed
+    /// text, at most 32 chars, that `NLTokenizer` segments into exactly one word.
+    /// Whitespace alone isn't a reliable signal because CJK sentences have no
+    /// spaces — using the system word tokenizer correctly identifies `翻译` as one
+    /// word and `四肢被绳子绑在椅子上` as multiple.
     static func isSingleWord(_ text: String) -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
-        if trimmed.contains(where: { $0.isWhitespace }) { return false }
-        return trimmed.count <= 32
+        if trimmed.count > 32 { return false }
+
+        let tokenizer = NLTokenizer(unit: .word)
+        tokenizer.string = trimmed
+        var wordCount = 0
+        tokenizer.enumerateTokens(in: trimmed.startIndex..<trimmed.endIndex) { _, _ in
+            wordCount += 1
+            return wordCount <= 1   // bail as soon as we know there are 2+ words
+        }
+        return wordCount == 1
     }
 
     /// Default target when the user has no saved preference. English source → user's

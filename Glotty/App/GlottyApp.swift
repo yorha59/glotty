@@ -114,13 +114,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func installHotkey() {
         let hk = FnLeaderHotkey()
         hk.onFire = { [weak self] in self?.handleFire(mode: .translate) }
+        hk.onExpressFire = { [weak self] in self?.handleFire(mode: .express) }
         hk.onPolishFire = { [weak self] in self?.handleFire(mode: .polish) }
         hk.onShowHUD = { [weak self] in self?.hud.show() }
         hk.onHideHUD = { [weak self] in self?.hud.hide() }
         do {
             try hk.install()
             hotkey = hk
-            print("Glotty: Fn → T / Fn → R hotkey installed")
+            print("Glotty: Fn → T / Fn → E / Fn → P hotkey installed")
         } catch {
             print("Glotty: hotkey install failed: \(error). Input Monitoring permission likely denied.")
         }

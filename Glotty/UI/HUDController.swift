@@ -6,7 +6,8 @@ import SwiftUI
 @MainActor
 final class HUDController {
     private var panel: NSPanel?
-    private static let size = NSSize(width: 320, height: 150)
+    /// Height grew from 150 → 178 to accommodate the third command row (Express).
+    private static let size = NSSize(width: 320, height: 178)
 
     func show() {
         let panel = ensurePanel()
@@ -51,6 +52,9 @@ final class HUDController {
     }
 }
 
+/// Translucent dark HUD — uses `.ultraThinMaterial` so it adapts to the desktop
+/// behind it in both light and dark modes (matches the previous design after a
+/// brief Figma-styled detour).
 private struct HUDView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -68,6 +72,8 @@ private struct HUDView: View {
             Divider().background(.white.opacity(0.15))
             commandRow(key: Keycode.label(for: Keycode.currentTranslate()),
                        label: "Translate selection")
+            commandRow(key: Keycode.label(for: Keycode.currentExpress()),
+                       label: "Express into target")
             commandRow(key: Keycode.label(for: Keycode.currentPolish()),
                        label: "Polish to idiomatic")
             Text("Release \(Keycode.currentLeader().label) to cancel")

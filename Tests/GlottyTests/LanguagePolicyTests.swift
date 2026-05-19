@@ -25,6 +25,42 @@ struct IsSingleWordTests {
         #expect(LanguagePolicy.isSingleWord("翻译") == true)
     }
 
+    @Test("A CJK sentence without whitespace is NOT a single word")
+    func cjkSentenceIsMultipleWords() {
+        // Previously the no-whitespace shortcut treated this as a single word —
+        // CJK sentences have no spaces. Use NLTokenizer instead.
+        #expect(LanguagePolicy.isSingleWord("你好世界今天天气") == false)
+    }
+
+    @Test("A CJK phrase with punctuation is not a single word")
+    func cjkPhraseWithComma() {
+        #expect(LanguagePolicy.isSingleWord("你好，世界") == false)
+    }
+}
+
+@Suite("PopupView.flattenWhitespace")
+struct FlattenWhitespaceTests {
+    @Test("Newlines collapse to single spaces")
+    func newlinesCollapse() {
+        #expect(PopupView.flattenWhitespace("hello\nworld") == "hello world")
+        #expect(PopupView.flattenWhitespace("hello\r\nworld") == "hello world")
+    }
+
+    @Test("Multiple whitespace runs become one space")
+    func multipleSpacesCollapse() {
+        #expect(PopupView.flattenWhitespace("hello   world\n\nagain") == "hello world again")
+    }
+
+    @Test("Leading and trailing whitespace are dropped")
+    func trimsEdges() {
+        #expect(PopupView.flattenWhitespace("  hello world  \n") == "hello world")
+    }
+
+    @Test("Single-line input passes through unchanged")
+    func passesThrough() {
+        #expect(PopupView.flattenWhitespace("hello world") == "hello world")
+    }
+
     @Test("Two words separated by space are not a single word")
     func twoWords() {
         #expect(LanguagePolicy.isSingleWord("hello world") == false)

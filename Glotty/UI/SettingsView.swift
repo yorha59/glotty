@@ -1721,6 +1721,7 @@ private struct PolishPromptsSection: View {
 
 private struct HotkeySettingsSection: View {
     @AppStorage(Keycode.translateDefaultsKey) private var translateKey: Int = Keycode.defaultTranslate
+    @AppStorage(Keycode.expressDefaultsKey)   private var expressKey:   Int = Keycode.defaultExpress
     @AppStorage(Keycode.polishDefaultsKey)    private var polishKey:    Int = Keycode.defaultPolish
     @AppStorage(Keycode.leaderDefaultsKey)    private var leaderRaw:    String = Keycode.defaultLeader.rawValue
 
@@ -1731,16 +1732,28 @@ private struct HotkeySettingsSection: View {
         )
     }
 
+    private var hasCollision: Bool {
+        let codes = [translateKey, expressKey, polishKey]
+        return Set(codes).count < codes.count
+    }
+
     var body: some View {
         Section {
             LeaderRecorderRow(leader: leaderBinding,
                               defaultLeader: Keycode.defaultLeader)
 
             KeyRecorderRow(
-                title: "Translate",
+                title: "Translate (target → native)",
                 prefix: "\(leaderBinding.wrappedValue.label) →",
                 keycode: $translateKey,
                 defaultKeycode: Keycode.defaultTranslate
+            )
+
+            KeyRecorderRow(
+                title: "Express (native → target)",
+                prefix: "\(leaderBinding.wrappedValue.label) →",
+                keycode: $expressKey,
+                defaultKeycode: Keycode.defaultExpress
             )
 
             KeyRecorderRow(
@@ -1750,8 +1763,8 @@ private struct HotkeySettingsSection: View {
                 defaultKeycode: Keycode.defaultPolish
             )
 
-            if translateKey == polishKey {
-                Label("Translate and Polish are bound to the same key — polish won't fire.",
+            if hasCollision {
+                Label("Two commands are bound to the same key — only the first will fire.",
                       systemImage: "exclamationmark.triangle.fill")
                     .font(.caption)
                     .foregroundStyle(.orange)
