@@ -49,12 +49,13 @@ struct SettingsView: View {
             .formStyle(.grouped)
     }
 
-    /// Polish behavior: output language + prompt templates. Uses whatever engine is
-    /// selected in the Language Model tab.
+    /// Polish behavior: output language only. The prompt-template editor
+    /// (`PolishPromptsSection`) is hidden from Settings — templates live in
+    /// `PolishPrompt.defaultVariantsTemplate` / `defaultProofreadTemplate` and
+    /// can still be overridden via `UserDefaults` for power-user tweaks.
     private var polishTab: some View {
         Form {
             PolishOutputLanguageSection()
-            PolishPromptsSection()
         }
         .formStyle(.grouped)
     }
@@ -1721,7 +1722,7 @@ private struct PolishPromptsSection: View {
 
 private struct HotkeySettingsSection: View {
     @AppStorage(Keycode.translateDefaultsKey) private var translateKey: Int = Keycode.defaultTranslate
-    @AppStorage(Keycode.expressDefaultsKey)   private var expressKey:   Int = Keycode.defaultExpress
+    @AppStorage(Keycode.explainDefaultsKey)   private var explainKey:   Int = Keycode.defaultExplain
     @AppStorage(Keycode.polishDefaultsKey)    private var polishKey:    Int = Keycode.defaultPolish
     @AppStorage(Keycode.leaderDefaultsKey)    private var leaderRaw:    String = Keycode.defaultLeader.rawValue
 
@@ -1733,7 +1734,7 @@ private struct HotkeySettingsSection: View {
     }
 
     private var hasCollision: Bool {
-        let codes = [translateKey, expressKey, polishKey]
+        let codes = [translateKey, explainKey, polishKey]
         return Set(codes).count < codes.count
     }
 
@@ -1750,10 +1751,10 @@ private struct HotkeySettingsSection: View {
             )
 
             KeyRecorderRow(
-                title: "Express (native → target)",
+                title: "Explain (LLM)",
                 prefix: "\(leaderBinding.wrappedValue.label) →",
-                keycode: $expressKey,
-                defaultKeycode: Keycode.defaultExpress
+                keycode: $explainKey,
+                defaultKeycode: Keycode.defaultExplain
             )
 
             KeyRecorderRow(

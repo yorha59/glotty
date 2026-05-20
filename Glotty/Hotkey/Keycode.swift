@@ -4,15 +4,18 @@ import Foundation
 /// Used by the Settings → Hotkey recorder UI.
 enum Keycode {
     /// Defaults for Glotty's leader-key commands.
-    /// T = Translate (decode: foreign → native). E = Express (encode: native → target).
-    /// P = Polish (renamed from R for a tighter T/E/P mnemonic).
+    /// T = Translate (decode: foreign → native, one-line). E = Explain (richer
+    /// LLM-generated explanation, also in the user's native language). P =
+    /// Polish (LLM rewrite of the user's own draft).
     static let defaultTranslate = 17  // T
-    static let defaultExpress   = 14  // E
+    static let defaultExplain   = 14  // E
     static let defaultPolish    = 35  // P
 
-    /// User-defaults keys that override the defaults above.
+    /// User-defaults keys that override the defaults above. NB: the persisted
+    /// key for Explain still uses the legacy "express" identifier so that any
+    /// rebind from the previous build keeps working without a migration.
     static let translateDefaultsKey = "glotty.hotkey.translate"
-    static let expressDefaultsKey   = "glotty.hotkey.express"
+    static let explainDefaultsKey   = "glotty.hotkey.express"
     static let polishDefaultsKey    = "glotty.hotkey.polish"
     static let leaderDefaultsKey    = "glotty.hotkey.leader"
 
@@ -56,9 +59,9 @@ enum Keycode {
     }
 
     /// Read the active express keycode (defaults override or hardcoded default).
-    static func currentExpress() -> Int {
-        let stored = UserDefaults.standard.object(forKey: expressDefaultsKey) as? Int
-        return stored ?? defaultExpress
+    static func currentExplain() -> Int {
+        let stored = UserDefaults.standard.object(forKey: explainDefaultsKey) as? Int
+        return stored ?? defaultExplain
     }
 
     /// Read the active polish keycode (defaults override or hardcoded default).

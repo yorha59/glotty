@@ -6,14 +6,15 @@ import AVFoundation
 import CoreServices
 
 /// Which Fn-leader command produced this popup. The view branches on this:
-/// `.translate` runs the standard Apple-Translation pipeline (decode mode:
-/// foreign → native, with phonetics + dict sections). `.express` is the encode
-/// counterpart (native → target, source row + translation only — no detection
-/// runs; source language is taken verbatim from `glotty.user.nativeLanguage`).
-/// `.polish` skips translation entirely and calls the selected LLM provider.
+/// `.translate` runs Apple's Translation framework (decode: foreign → native,
+/// one-line gloss, with phonetics + dict sections). `.explain` runs the LLM
+/// for a richer prose explanation in the user's native language — same
+/// direction as Translate but verbose and contextual instead of terse. The
+/// LLM's output is plain text, streamed token-by-token. `.polish` rewrites
+/// the user's own draft, also via LLM.
 enum PopupMode: Equatable {
     case translate
-    case express
+    case explain
     case polish
 }
 
@@ -63,11 +64,15 @@ enum PopupTokens {
     static let sectionGap: CGFloat = 10
     static let variantCardPadding: CGFloat = 10
     static let variantCardRadius: CGFloat = 8
-    /// Fixed content width for the translate popup. The popup auto-fits its
-    /// *height* to the content (via NSHostingController.preferredContentSize),
-    /// but width is anchored so layout is predictable and the panel doesn't
-    /// jitter on async content arrival.
+    /// Fixed content width for the translate / explain popup. The popup
+    /// auto-fits its *height* to the content (via
+    /// NSHostingController.preferredContentSize), but width is anchored so
+    /// layout is predictable and the panel doesn't jitter on async content
+    /// arrival.
     static let translateContentWidth: CGFloat = 460
+    /// Polish needs a bit more width for the variant cards (full sentences).
+    /// Same auto-fit-height behaviour as translate.
+    static let polishContentWidth: CGFloat = 560
     /// Uniform font size for every non-source-row element in the translate
     /// popup (section labels, dict names, POS labels, glosses, defs, examples,
     /// translation result). Source row stays at its dedicated large size; the
@@ -110,7 +115,18 @@ struct PopupView: View {
     @State private var polishStatus: Status = .working
     @State private var polishResult: PolishResult = .empty
     @State private var polishProviderName: String = ""
+    /// Raw LLM output as it streams. Polish output is JSON, which is unreadable
+    /// during the early skeleton-only chunks — so we show it as raw text in a
+    /// small terminal-style block while streaming, then crossfade to the
+    /// parsed variant cards once the stream finishes.
+    @State private var polishRawText: String = ""
     @State private var copiedVariantIndex: Int? = nil
+    /// Explain mode runs the LLM for a prose explanation in the user's native
+    /// language. Text streams in chunk-by-chunk and we render it directly — no
+    /// JSON shape, no variant cards.
+    @State private var explainText: String = ""
+    @State private var explainStatus: Status = .working
+    @State private var explainProviderName: String = ""
     @State private var detectedSource: NLLanguage?
     @State private var targetLang: String = "en"
     @State private var availableLanguages: [Locale.Language] = []
@@ -193,10 +209,17 @@ struct PopupView: View {
                 guard mode == .polish else { return }
                 await runPolish()
             }
-            // Translate fires for both decode (`.translate`) and encode (`.express`).
-            // Back-translate only fires for decode — express is one-way (the user
-            // is writing native → target, no round-trip sanity needed).
-            .translationTask(mode == .polish ? nil : configuration) { session in
+            // Explain calls the LLM for a prose explanation — same direction as
+            // Translate (output in user's native language) but verbose and
+            // contextual. The id includes targetLang so changing the target via
+            // the footer menu re-fires the LLM.
+            .task(id: mode == .explain ? "explain-\(sourceText)-\(targetLang)" : "") {
+                guard mode == .explain else { return }
+                await runExplain()
+            }
+            // Apple Translation only powers decode (`.translate`). Explain and
+            // Polish are both LLM-driven (handled by the task modifiers above).
+            .translationTask(mode == .translate ? configuration : nil) { session in
                 await translate(using: session)
             }
             .translationTask(mode == .translate ? backConfiguration : nil) { session in
@@ -208,36 +231,27 @@ struct PopupView: View {
             }
     }
 
-    /// Two layout strategies:
-    /// - `.translate` / `.express`: no ScrollView, fixed width, intrinsic height.
-    ///   The hosting controller's `preferredContentSize` then drives the panel
-    ///   size so it auto-fits the content (no scroll bar overlapping anything).
-    ///   Express's body is smaller (source + translation only) so it ends up
-    ///   noticeably shorter than translate.
-    /// - `.polish`: keep the ScrollView since variants + issues can run very
-    ///   tall, and the panel itself is user-resizable.
-    @ViewBuilder
+    /// All three modes use the same auto-fit layout: no ScrollView, fixed
+    /// width per mode, intrinsic height. The hosting controller's
+    /// `preferredContentSize` drives the panel size so it tracks the content
+    /// exactly — no large blank area below a short Polish result, and the
+    /// translate panel doesn't get cut off by a scroll bar either.
     private var outerLayout: some View {
-        switch mode {
-        case .translate, .express:
-            VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
-                contentColumn
-                footerBar
-            }
-            .padding(PopupTokens.containerPadding)
-            .frame(width: PopupTokens.translateContentWidth, alignment: .leading)
-            .fixedSize(horizontal: false, vertical: true)
-        case .polish:
-            VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
-                ScrollView {
-                    contentColumn
-                }
-                .scrollIndicators(.automatic)
+        VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
+            contentColumn
+            footerBar
+        }
+        .padding(PopupTokens.containerPadding)
+        .frame(width: contentWidth, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+    }
 
-                footerBar
-            }
-            .padding(PopupTokens.containerPadding)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    /// Polish wants a wider content column (variant cards hold full sentences);
+    /// translate and explain stay at the original 460pt.
+    private var contentWidth: CGFloat {
+        switch mode {
+        case .polish:              return PopupTokens.polishContentWidth
+        case .translate, .explain: return PopupTokens.translateContentWidth
         }
     }
 
@@ -272,12 +286,15 @@ struct PopupView: View {
             // target is also Chinese, so the framework returns the input
             // unchanged. Polish mode always shows; its variants are
             // rewrites, not identity.
-            if mode == .polish || shouldShowTranslationSection {
+            if mode == .polish || mode == .explain || shouldShowTranslationSection {
                 regionDivider
                 switch mode {
-                case .translate, .express:
+                case .translate:
                     sectionLabel("Translation")
                     translationBlock
+                case .explain:
+                    sectionLabel(explainSectionLabel)
+                    explainBlock
                 case .polish:
                     sectionLabel("Polished" + (polishProviderName.isEmpty ? "" : " · \(polishProviderName)"))
                     polishBlock
@@ -391,19 +408,19 @@ struct PopupView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Source headword. Figma: 34pt bold for single-word translate/express,
-    /// 24pt for sentence translate/express, 26pt for polish (longer source text).
+    /// Source headword. Figma: 34pt bold for single-word translate/explain,
+    /// 24pt for sentence translate/explain, 26pt for polish (longer source text).
     private var sourceBlock: some View {
         let size: CGFloat
         switch mode {
-        case .translate, .express: size = isSingleWord ? 34 : 24
+        case .translate, .explain: size = isSingleWord ? 34 : 24
         case .polish:              size = 26
         }
         return Text(sourceText)
             .font(.system(size: size, weight: .bold))
             .foregroundStyle(PopupTokens.primaryText)
             .textSelection(.enabled)
-            .lineLimit((mode == .translate || mode == .express) && isSingleWord ? 2 : 4)
+            .lineLimit((mode == .translate || mode == .explain) && isSingleWord ? 2 : 4)
             .minimumScaleFactor(0.82)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -435,25 +452,164 @@ struct PopupView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// "Explanation in English · Anthropic Claude" — the section label shown
+    /// above the streaming explanation block. Mirrors the polish label format
+    /// so the provider attribution stays consistent across modes.
+    private var explainSectionLabel: String {
+        let base = "Explanation in \(footerTargetLabel)"
+        return explainProviderName.isEmpty ? base : "\(base) · \(explainProviderName)"
+    }
+
+    /// Working-state spinner label for polish (single mode now — explain has
+    /// its own dedicated block).
+    private var polishWorkingLabel: String {
+        let provider = polishProviderName.isEmpty ? "LLM" : polishProviderName
+        return "Polishing into \(footerTargetLabel) via \(provider)…"
+    }
+
+    /// The Explain mode body — prose that streams in token by token. The
+    /// prompt asks the LLM for three titled sections (`## Title\nBody`); we
+    /// split on blank lines, peel off the title line from each block, and
+    /// render title and body in a vertical stack so each section is visually
+    /// distinct.
+    private var explainBlock: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            switch explainStatus {
+            case .working where explainText.isEmpty:
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text(explainWorkingLabel)
+                        .font(.system(size: PopupTokens.bodySize))
+                        .foregroundStyle(PopupTokens.secondaryText)
+                }
+            case .working, .ready:
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(Array(explainSections.enumerated()), id: \.offset) { _, section in
+                        VStack(alignment: .leading, spacing: 4) {
+                            if !section.title.isEmpty {
+                                Text(section.title)
+                                    .font(.system(size: PopupTokens.bodySize, weight: .semibold))
+                                    .foregroundStyle(PopupTokens.accent)
+                            }
+                            if !section.body.isEmpty {
+                                Text(section.body)
+                                    .font(.system(size: PopupTokens.bodySize))
+                                    .foregroundStyle(PopupTokens.primaryText)
+                                    .textSelection(.enabled)
+                                    .lineSpacing(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            case .failed(let message):
+                Text(message)
+                    .font(.system(size: PopupTokens.bodySize))
+                    .foregroundStyle(.red)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// One parsed section from the streamed explanation. Either field may be
+    /// empty mid-stream (e.g. the title has arrived but no body yet).
+    private struct ExplainSection {
+        let title: String
+        let body: String
+    }
+
+    /// Split the streamed explanation into titled sections. Blocks separated
+    /// by blank lines; within each block the first line is the title (stripped
+    /// of `## ` or `**…**` markdown) and the remaining lines are the body.
+    /// During streaming the last block may have just a title with no body —
+    /// that's fine, it'll render title-only and the body fills in as chunks
+    /// arrive.
+    private var explainSections: [ExplainSection] {
+        explainText
+            .components(separatedBy: "\n\n")
+            .compactMap { block -> ExplainSection? in
+                let trimmed = block.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { return nil }
+
+                // Split first line vs rest.
+                if let newlineRange = trimmed.range(of: "\n") {
+                    let firstLine = trimmed[..<newlineRange.lowerBound]
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    let rest = trimmed[newlineRange.upperBound...]
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    let (title, isTitle) = Self.parseTitleLine(firstLine)
+                    if isTitle {
+                        return ExplainSection(title: title, body: rest)
+                    }
+                    // No title marker on the first line — render the whole
+                    // block as body-only so we don't lose content if the LLM
+                    // skips the `##` prefix.
+                    return ExplainSection(title: "", body: trimmed)
+                }
+
+                // Single-line block (mid-stream, before the body starts).
+                let (title, isTitle) = Self.parseTitleLine(trimmed)
+                if isTitle {
+                    return ExplainSection(title: title, body: "")
+                }
+                return ExplainSection(title: "", body: trimmed)
+            }
+    }
+
+    /// Strip a leading title marker from `line`. Returns `(title, isTitle)`:
+    /// `## Foo` → `("Foo", true)`; `**Foo**` → `("Foo", true)`; anything else →
+    /// `(line, false)`.
+    private static func parseTitleLine(_ line: String) -> (String, Bool) {
+        if line.hasPrefix("## ") {
+            return (String(line.dropFirst(3)).trimmingCharacters(in: .whitespacesAndNewlines), true)
+        }
+        if line.hasPrefix("##") {
+            return (String(line.dropFirst(2)).trimmingCharacters(in: .whitespacesAndNewlines), true)
+        }
+        if line.hasPrefix("**"), line.hasSuffix("**"), line.count >= 4 {
+            let inner = line.dropFirst(2).dropLast(2)
+            return (String(inner).trimmingCharacters(in: .whitespacesAndNewlines), true)
+        }
+        return (line, false)
+    }
+
+    private var explainWorkingLabel: String {
+        let provider = explainProviderName.isEmpty ? "LLM" : explainProviderName
+        return "Asking \(provider) to explain in \(footerTargetLabel)…"
+    }
+
     private var polishBlock: some View {
         VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
             switch polishStatus {
-            case .working:
+            case .working where polishRawText.isEmpty:
+                // Pre-first-chunk: tiny header spinner so the user knows we're
+                // waiting for the model. Flips to the terminal as soon as any
+                // text arrives.
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.small)
-                    Text("Polishing into \(footerTargetLabel) via \(polishProviderName.isEmpty ? "LLM" : polishProviderName)…")
+                    Text(polishWorkingLabel)
                         .font(.system(size: 13))
                         .foregroundStyle(PopupTokens.secondaryText)
                 }
+            case .working:
+                polishStreamingTerminal
+                    .transition(.opacity)
             case .ready:
-                if !polishResult.variants.isEmpty {
-                    polishVariantsSection
+                Group {
+                    if !polishResult.variants.isEmpty {
+                        polishVariantsSection
+                    }
+                    if !polishResult.issues.isEmpty {
+                        regionDivider
+                        sectionLabel("Issues")
+                        polishIssuesSection
+                    }
                 }
-                if !polishResult.issues.isEmpty {
-                    regionDivider
-                    sectionLabel("Issues")
-                    polishIssuesSection
-                }
+                .transition(.opacity)
             case .failed(let message):
                 Text(message)
                     .font(.system(size: 12))
@@ -463,6 +619,47 @@ struct PopupView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(.easeInOut(duration: 0.3), value: isPolishReady)
+    }
+
+    /// SwiftUI .animation needs a `Hashable` value to compare. Boolean shortcut
+    /// for "are we showing the terminal or the final cards" — flips exactly
+    /// once per polish run, which is when the crossfade should happen.
+    private var isPolishReady: Bool {
+        if case .ready = polishStatus { return true }
+        return false
+    }
+
+    /// Terminal-style block shown while the LLM streams raw JSON. Dark surface,
+    /// monospace text, blinking cursor — visually distinct from the popup so
+    /// the user knows "this is in-progress output, not the final result".
+    private var polishStreamingTerminal: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(Color.green)
+                    .frame(width: 6, height: 6)
+                Text("Streaming from \(polishProviderName.isEmpty ? "LLM" : polishProviderName)…")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.green.opacity(0.9))
+                Spacer()
+            }
+            Text(polishRawText + "▍")
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(Color(red: 0.88, green: 0.92, blue: 0.88))
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.black.opacity(0.92))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(Color.green.opacity(0.22), lineWidth: 0.5)
+                )
+        )
     }
 
     /// Figma: "Issues" label (rendered by sectionLabel above) + body text
@@ -693,19 +890,11 @@ struct PopupView: View {
         let savedSource = UserDefaults.standard.string(forKey: "glotty.sourceLang")
         let savedTarget = UserDefaults.standard.string(forKey: "glotty.targetLang")
 
-        // Detection only runs in decode (`.translate`) and polish modes. Express
-        // is the mirror of decode: the saved Translation source/target are
-        // calibrated for "read foreign → see native" (selection is in saved
-        // source, output is saved target), so for encode mode we flip them.
-        // Selection-lang = saved target (the user's native); output-lang =
-        // saved source (the foreign they want to express in).
-        let detected: NLLanguage?
-        switch mode {
-        case .translate, .polish:
-            detected = LanguagePolicy.detectSourceLanguage(sourceText)
-        case .express:
-            detected = expressSourceLanguage(savedTarget: savedTarget)
-        }
+        // Detection runs for all modes — for `.explain` it's purely cosmetic
+        // (footer label only); the LLM call doesn't depend on it. The selection
+        // language might be anything the user picked, and the explanation goes
+        // out in their native language regardless.
+        let detected: NLLanguage? = LanguagePolicy.detectSourceLanguage(sourceText)
         detectedSource = detected
 
         let target: String
@@ -738,12 +927,16 @@ struct PopupView: View {
                 }
             }
             target = initial
-        case .express:
-            // Encode target = the foreign language the user wants to express
-            // in. That's the saved Translation "source" pref (which holds the
-            // foreign-language side of their saved pair). Empty → fall back to
-            // English (most common "how do I say this in English" case).
-            target = (savedSource?.isEmpty == false ? savedSource! : "en")
+        case .explain:
+            // Explain output = the user's native language. That's the saved
+            // Translation "target" (where decode lands its results). Empty →
+            // fall back to the Profile native lang, then English.
+            let trimmedTarget = savedTarget?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !trimmedTarget.isEmpty {
+                target = trimmedTarget
+            } else {
+                target = userNativeLanguage()
+            }
         case .polish:
             // Polish output language: user pref → fallback to English (the most
             // common "I want this in idiomatic <X>" case for our audience).
@@ -751,8 +944,8 @@ struct PopupView: View {
         }
         targetLang = target
 
-        // Dictionary lookup is decode-mode only (`.translate`). Express skips
-        // dict sections entirely per spec; polish has no dict section either.
+        // Dictionary lookup is decode-mode only (`.translate`). Explain reads
+        // a single prose block from the LLM; polish has no dict section.
         if mode == .translate, LanguagePolicy.isSingleWord(sourceText) {
             let available = DictionaryLookup.availableDictionaries()
             // Two independent priority-ordered lookups — one per dict kind. The popup
@@ -783,18 +976,6 @@ struct PopupView: View {
         rebuildConfiguration()
     }
 
-    /// Express-mode source language (the lang the user is *writing in*). Mirror
-    /// of decode: the saved Translation "target" pref is where decode lands its
-    /// output — i.e. the user's native — so it's also where encode starts. Empty
-    /// → fall back to the Profile native lang → fall back to the system locale.
-    private func expressSourceLanguage(savedTarget: String?) -> NLLanguage {
-        let trimmed = savedTarget?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if !trimmed.isEmpty {
-            return NLLanguage(rawValue: trimmed)
-        }
-        return NLLanguage(rawValue: userNativeLanguage())
-    }
-
     private func changeTarget(to newLang: String) {
         guard newLang != targetLang else { return }
         targetLang = newLang
@@ -803,6 +984,11 @@ struct PopupView: View {
     }
 
     private func rebuildConfiguration() {
+        // Explain doesn't use the Apple Translation pipeline — re-firing the
+        // LLM on target change is handled by the `.task(id: "explain-…")`
+        // modifier in `body` (the id contains `targetLang`).
+        if mode == .explain { return }
+
         translated = ""
         backTranslated = ""
         backConfiguration = nil
@@ -854,9 +1040,9 @@ struct PopupView: View {
             // Bilateral: kick off a back-translation (target → source) so the user
             // can see what the translation "means" in their source language and
             // verify the round-trip preserved their intent. Skip when source and
-            // target match (identity round-trip). Express skips back-translation
-            // entirely — the user wrote the source themselves, so a sanity check
-            // back into their native language is just noise.
+            // target match (identity round-trip). Only `.translate` triggers
+            // back-translation — Explain and Polish are LLM-driven and don't
+            // use the Apple Translation pipeline.
             if mode == .translate,
                let sourceLang = detectedSource?.rawValue,
                sourceLang != targetLang,
@@ -888,6 +1074,33 @@ struct PopupView: View {
         }
     }
 
+    /// Explain calls the LLM with the explain prompt (prose, no JSON) and
+    /// streams the accumulated text into `explainText` chunk by chunk so the
+    /// popup fills in live.
+    private func runExplain() async {
+        guard let provider = LLMRegistry.current() else {
+            explainStatus = .failed("No LLM provider configured. Add one in Settings → Language Model.")
+            return
+        }
+        let outputLanguage = targetLang
+        explainStatus = .working
+        explainText = ""
+        explainProviderName = provider.displayName
+
+        Self.dbg("explain begin — text='\(sourceText)' target=\(outputLanguage) provider=\(provider.id)")
+        do {
+            for try await snapshot in provider.explainStream(sourceText, targetLanguage: outputLanguage) {
+                explainText = snapshot
+            }
+            explainStatus = .ready
+            elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
+            Self.dbg("explain ok — \(explainText.count) chars in \(elapsedMs)ms")
+        } catch {
+            Self.dbg("explain FAIL — err=\(error.localizedDescription)")
+            explainStatus = .failed(error.localizedDescription)
+        }
+    }
+
     private func runPolish() async {
         guard let provider = LLMRegistry.current() else {
             polishStatus = .failed("No LLM provider configured.")
@@ -912,11 +1125,22 @@ struct PopupView: View {
 
         Self.dbg("polish begin — text='\(sourceText)' target=\(outputLanguage) native=\(nativeForPrompt ?? "(none)") provider=\(provider.id) mode=\(mode)")
         do {
-            let result = try await provider.polish(sourceText, mode: mode)
-            polishResult = result
+            // Stream the **raw** text via chatCompletionStream — the same
+            // transport Explain uses — and only parse the JSON once the stream
+            // finishes. Why not the structured polishStream? Polish output is
+            // JSON, so the partial parser yields nothing useful until the
+            // first variant text appears, leading to a perceived "stuck" beat.
+            // Showing raw text in the terminal block gives instant feedback;
+            // the structured cards take over at the end.
+            polishRawText = ""
+            let prompt = PolishPrompt.build(text: sourceText, mode: mode)
+            for try await accumulated in provider.chatCompletionStream(prompt: prompt) {
+                polishRawText = accumulated
+            }
+            polishResult = PolishResult.parse(polishRawText)
             polishStatus = .ready
             elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
-            Self.dbg("polish ok — variants=\(result.variants.count) issues=\(result.issues.count) in \(elapsedMs)ms")
+            Self.dbg("polish ok — variants=\(polishResult.variants.count) issues=\(polishResult.issues.count) in \(elapsedMs)ms")
         } catch {
             Self.dbg("polish FAIL — err=\(error.localizedDescription)")
             polishStatus = .failed(error.localizedDescription)

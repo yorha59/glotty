@@ -71,9 +71,9 @@ private struct HUDView: View {
             }
             Divider().background(.white.opacity(0.15))
             commandRow(key: Keycode.label(for: Keycode.currentTranslate()),
-                       label: "Translate selection")
-            commandRow(key: Keycode.label(for: Keycode.currentExpress()),
-                       label: "Express into target")
+                       label: "Translate to \(HUDView.nativeLangName)")
+            commandRow(key: Keycode.label(for: Keycode.currentExplain()),
+                       label: "Explain in \(HUDView.nativeLangName)")
             commandRow(key: Keycode.label(for: Keycode.currentPolish()),
                        label: "Polish to idiomatic")
             Text("Release \(Keycode.currentLeader().label) to cancel")
@@ -91,6 +91,25 @@ private struct HUDView: View {
                 )
         )
         .colorScheme(.dark)
+    }
+
+    /// Localized name of the user's native language. Both Translate and
+    /// Explain output in this — the saved Translation "target" is where decode
+    /// lands its results, by convention also where Explain's prose lands.
+    /// Empty pin falls back to English (most common default for our audience).
+    static var nativeLangName: String {
+        let raw = UserDefaults.standard.string(forKey: "glotty.targetLang")?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return localizedName(for: raw.isEmpty ? "en" : raw)
+    }
+
+    /// `Chinese, Simplified` → `Chinese (Simplified)` to match Figma's convention.
+    private static func localizedName(for identifier: String) -> String {
+        let raw = Locale.current.localizedString(forIdentifier: identifier) ?? identifier
+        if let commaRange = raw.range(of: ", ") {
+            return "\(raw[..<commaRange.lowerBound]) (\(raw[commaRange.upperBound...]))"
+        }
+        return raw
     }
 
     private func commandRow(key: String, label: String) -> some View {

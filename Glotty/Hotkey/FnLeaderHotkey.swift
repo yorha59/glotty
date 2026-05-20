@@ -8,7 +8,7 @@ import AppKit
 /// - All other keys / timing: pass through untouched.
 final class FnLeaderHotkey {
     var onFire: (() -> Void)?
-    var onExpressFire: (() -> Void)?
+    var onExplainFire: (() -> Void)?
     var onPolishFire: (() -> Void)?
     var onShowHUD: (() -> Void)?
     var onHideHUD: (() -> Void)?
@@ -101,7 +101,7 @@ final class FnLeaderHotkey {
             // Read user-rebindable keycodes per-event. UserDefaults lookups are
             // microsecond-cheap and let the user change bindings without restart.
             let translateKey = Int64(Keycode.currentTranslate())
-            let expressKey   = Int64(Keycode.currentExpress())
+            let explainKey   = Int64(Keycode.currentExplain())
             let polishKey    = Int64(Keycode.currentPolish())
 
             if keycode == translateKey, active {
@@ -111,15 +111,15 @@ final class FnLeaderHotkey {
                 DispatchQueue.main.async { cb?() }
                 return nil
             }
-            if keycode == expressKey, active, expressKey != translateKey {
-                FnLeaderHotkey.debug("FIRE Fn→express (key \(keycode))")
+            if keycode == explainKey, active, explainKey != translateKey {
+                FnLeaderHotkey.debug("FIRE Fn→explain (key \(keycode))")
                 cancelHUD()
-                let cb = onExpressFire
+                let cb = onExplainFire
                 DispatchQueue.main.async { cb?() }
                 return nil
             }
             if keycode == polishKey, active,
-               polishKey != translateKey, polishKey != expressKey {
+               polishKey != translateKey, polishKey != explainKey {
                 FnLeaderHotkey.debug("FIRE Fn→polish (key \(keycode))")
                 cancelHUD()
                 let cb = onPolishFire

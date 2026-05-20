@@ -50,17 +50,59 @@ struct KimiCodingProvider: LLMProvider {
     }
 
     func polish(_ text: String, mode: PolishMode) async throws -> PolishResult {
+        var last = PolishResult.empty
+        for try await snapshot in polishStream(text, mode: mode) {
+            last = snapshot
+        }
+        return last
+    }
+
+    func polishStream(_ text: String, mode: PolishMode) -> AsyncThrowingStream<PolishResult, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    try await runStream(text: text, mode: mode, continuation: continuation)
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    func chatCompletionStream(prompt: String) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    try await runChatStream(prompt: prompt, continuation: continuation)
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    private func runStream(
+        text: String,
+        mode: PolishMode,
+        continuation: AsyncThrowingStream<PolishResult, Error>.Continuation
+    ) async throws {
         guard let apiKey = Keychain.read(account: Self.keychainAccount),
               !apiKey.isEmpty else {
             throw LLMError.missingAPIKey(providerName: displayName)
         }
 
         let prompt = PolishPrompt.build(text: text, mode: mode)
-        // Anthropic Messages API body.
+        // Anthropic Messages API body. `stream: true` switches the response to
+        // SSE with `content_block_delta` events carrying the incremental text.
         let body: [String: Any] = [
             "model": model,
             "max_tokens": 1024,
             "temperature": 0.3,
+            "stream": true,
             "messages": [
                 ["role": "user", "content": prompt]
             ],
@@ -68,18 +110,19 @@ struct KimiCodingProvider: LLMProvider {
 
         var req = URLRequest(url: endpointURL)
         req.httpMethod = "POST"
-        req.timeoutInterval = 30
+        // 60s inactivity timeout — streaming resets it per chunk.
+        req.timeoutInterval = 60
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue(apiKey, forHTTPHeaderField: "x-api-key")
         req.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        req.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         // Moonshot's docs reference KimiCLI/1.5 as a default UA on this endpoint.
         req.setValue("KimiCLI/1.5", forHTTPHeaderField: "User-Agent")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let data: Data
-        let response: URLResponse
+        let (bytes, response): (URLSession.AsyncBytes, URLResponse)
         do {
-            (data, response) = try await URLSession.shared.data(for: req)
+            (bytes, response) = try await URLSession.shared.bytes(for: req)
         } catch {
             throw LLMError.networkFailure(underlying: error)
         }
@@ -88,14 +131,117 @@ struct KimiCodingProvider: LLMProvider {
             throw LLMError.malformedResponse(detail: "no HTTPURLResponse")
         }
         guard (200..<300).contains(http.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? "(non-UTF8 body)"
+            var body = ""
+            for try await line in bytes.lines { body += line + "\n" }
             throw LLMError.httpError(status: http.statusCode, body: body)
         }
 
-        let content = try Self.extractTextContent(from: data)
-        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        var accumulated = ""
+        // Anthropic SSE structure: `event: <name>\ndata: {…}\n\n`. We only care
+        // about `content_block_delta` events whose payload contains a
+        // `delta.text` token.
+        for try await line in bytes.lines {
+            try Task.checkCancellation()
+
+            guard line.hasPrefix("data:") else { continue }
+            let payload = line
+                .dropFirst("data:".count)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if payload.isEmpty { continue }
+            guard let data = payload.data(using: .utf8),
+                  let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                continue
+            }
+            // `message_stop` ends the stream; nothing else to do.
+            if (event["type"] as? String) == "message_stop" { break }
+            guard (event["type"] as? String) == "content_block_delta",
+                  let delta = event["delta"] as? [String: Any],
+                  let chunk = delta["text"] as? String,
+                  !chunk.isEmpty else { continue }
+
+            accumulated += chunk
+            let snapshot = PolishResult.parsePartial(accumulated)
+            if snapshot != .empty {
+                continuation.yield(snapshot)
+            }
+        }
+
+        let final = accumulated.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !final.isEmpty else { throw LLMError.emptyResponse }
+        continuation.yield(PolishResult.parse(final))
+    }
+
+    /// Anthropic-flavoured chat streaming for Explain. Emits accumulated text
+    /// per chunk; no JSON parsing layer.
+    private func runChatStream(
+        prompt: String,
+        continuation: AsyncThrowingStream<String, Error>.Continuation
+    ) async throws {
+        guard let apiKey = Keychain.read(account: Self.keychainAccount),
+              !apiKey.isEmpty else {
+            throw LLMError.missingAPIKey(providerName: displayName)
+        }
+
+        let body: [String: Any] = [
+            "model": model,
+            "max_tokens": 1024,
+            "temperature": 0.5,
+            "stream": true,
+            "messages": [
+                ["role": "user", "content": prompt]
+            ],
+        ]
+
+        var req = URLRequest(url: endpointURL)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 60
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        req.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        req.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        req.setValue("KimiCLI/1.5", forHTTPHeaderField: "User-Agent")
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (bytes, response): (URLSession.AsyncBytes, URLResponse)
+        do {
+            (bytes, response) = try await URLSession.shared.bytes(for: req)
+        } catch {
+            throw LLMError.networkFailure(underlying: error)
+        }
+
+        guard let http = response as? HTTPURLResponse else {
+            throw LLMError.malformedResponse(detail: "no HTTPURLResponse")
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            var bodyStr = ""
+            for try await line in bytes.lines { bodyStr += line + "\n" }
+            throw LLMError.httpError(status: http.statusCode, body: bodyStr)
+        }
+
+        var accumulated = ""
+        for try await line in bytes.lines {
+            try Task.checkCancellation()
+            guard line.hasPrefix("data:") else { continue }
+            let payload = line
+                .dropFirst("data:".count)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if payload.isEmpty { continue }
+            guard let data = payload.data(using: .utf8),
+                  let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                continue
+            }
+            if (event["type"] as? String) == "message_stop" { break }
+            guard (event["type"] as? String) == "content_block_delta",
+                  let delta = event["delta"] as? [String: Any],
+                  let chunk = delta["text"] as? String,
+                  !chunk.isEmpty else { continue }
+
+            accumulated += chunk
+            continuation.yield(accumulated)
+        }
+
+        let trimmed = accumulated.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw LLMError.emptyResponse }
-        return PolishResult.parse(trimmed)
     }
 
     /// Pull the first `text` block out of an Anthropic-shaped response:

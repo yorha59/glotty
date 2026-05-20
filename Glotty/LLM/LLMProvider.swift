@@ -140,6 +140,91 @@ struct PolishResult: Sendable, Equatable {
         }
     }
 
+    /// Streaming-friendly counterpart to `parse(_:)`. Tolerates JSON that's still
+    /// being emitted by an LLM — an open string is closed with `"`, open arrays
+    /// with `]`, open objects with `}` — then runs the normal tolerant parser.
+    /// Returns `.empty` when nothing parseable is in the buffer yet (e.g. the
+    /// model has only emitted whitespace or an opening `{`).
+    static func parsePartial(_ raw: String) -> PolishResult {
+        let stripped = stripPartialCodeFences(raw)
+        guard !stripped.isEmpty else { return .empty }
+
+        // Fast path: well-formed JSON parses without repair.
+        if let data = stripped.data(using: .utf8),
+           (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) != nil {
+            return parse(stripped)
+        }
+
+        // Repair: scan to track whether we're inside a string and what nesting
+        // is still open, then append the missing closers.
+        let repaired = closeOpenJSONStructures(stripped)
+        guard let data = repaired.data(using: .utf8),
+              (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) != nil else {
+            return .empty
+        }
+        // Don't surface raw text as a fallback variant during streaming — that
+        // would flash the JSON skeleton in the UI for a frame. parse() does that
+        // on its own when called via the normal path.
+        let parsed = parse(repaired)
+        if parsed.variants.count == 1,
+           parsed.variants[0].text.hasPrefix("{") {
+            return .empty
+        }
+        return parsed
+    }
+
+    /// Walk the buffer once tracking open `{`/`[` and whether we're inside a
+    /// `"…"` string (accounting for `\"` escapes), then append the missing
+    /// closing tokens.
+    static func closeOpenJSONStructures(_ raw: String) -> String {
+        var inString = false
+        var escape = false
+        var stack: [Character] = []   // pushed: '{' or '['
+
+        for c in raw {
+            if escape { escape = false; continue }
+            if inString {
+                if c == "\\" { escape = true }
+                else if c == "\"" { inString = false }
+                continue
+            }
+            switch c {
+            case "\"": inString = true
+            case "{":  stack.append("{")
+            case "[":  stack.append("[")
+            case "}":  if stack.last == "{" { stack.removeLast() }
+            case "]":  if stack.last == "[" { stack.removeLast() }
+            default:   break
+            }
+        }
+
+        var out = raw
+        if inString { out += "\"" }
+        while let top = stack.popLast() {
+            out += (top == "{" ? "}" : "]")
+        }
+        return out
+    }
+
+    /// Like `stripCodeFences` but tolerant of the trailing ``` not having
+    /// arrived yet — only strips the prefix fence and lets the parser handle
+    /// the unterminated suffix.
+    private static func stripPartialCodeFences(_ s: String) -> String {
+        var text = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.hasPrefix("```") {
+            if let firstNewline = text.firstIndex(of: "\n") {
+                text = String(text[text.index(after: firstNewline)...])
+            } else {
+                // Just `` ```json`` so far — nothing to parse yet.
+                return ""
+            }
+        }
+        if text.hasSuffix("```") {
+            text = String(text.dropLast(3))
+        }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     /// Strip ```json … ``` or bare ``` fences if the model wrapped its JSON in them.
     private static func stripCodeFences(_ s: String) -> String {
         var text = s.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -161,6 +246,65 @@ protocol LLMProvider: Sendable {
     var displayName: String { get }
     func isAvailable() -> Bool
     func polish(_ text: String, mode: PolishMode) async throws -> PolishResult
+    /// Streaming variant of polish — emits a fresh `PolishResult` snapshot each
+    /// time the provider has parsed more of the model's output. Final emission
+    /// is the fully parsed result; the stream then finishes. Default impl wraps
+    /// the non-streaming `polish` so providers can opt out per-protocol.
+    func polishStream(_ text: String, mode: PolishMode) -> AsyncThrowingStream<PolishResult, Error>
+    /// Streaming explanation — emits the **accumulated** text so far on each
+    /// chunk, so the popup can render a growing prose block. Plain text, no
+    /// JSON. Default impl builds the explain prompt and feeds it through
+    /// `chatCompletionStream`, which providers override for the real SSE
+    /// transport.
+    func explainStream(_ text: String, targetLanguage: String) -> AsyncThrowingStream<String, Error>
+    /// Provider-specific raw chat completion stream. Declared on the protocol
+    /// (not just the extension) so conformances override it via dynamic
+    /// dispatch — without this declaration, the extension's "not implemented"
+    /// default wins even when a provider supplies its own SSE implementation.
+    func chatCompletionStream(prompt: String) -> AsyncThrowingStream<String, Error>
+}
+
+extension LLMProvider {
+    /// Fallback streaming polish for providers that don't override: do one
+    /// blocking `polish` call and emit a single snapshot. Loses the smooth UI
+    /// fill-in but keeps the rest of the codebase uniform.
+    func polishStream(_ text: String, mode: PolishMode) -> AsyncThrowingStream<PolishResult, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    let result = try await polish(text, mode: mode)
+                    continuation.yield(result)
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    /// Default explainStream — feeds the explain prompt through the same
+    /// transport as polish (a single user message, plain-text response). Each
+    /// emission is the accumulated explanation text so far. Providers override
+    /// only if they need a different prompt/transport for explain.
+    func explainStream(_ text: String, targetLanguage: String) -> AsyncThrowingStream<String, Error> {
+        let prompt = ExplainPrompt.build(text: text, targetLanguage: targetLanguage)
+        return chatCompletionStream(prompt: prompt)
+    }
+
+    /// Default chat-completion stream: errors out. Providers that support
+    /// Explain implement this with their real SSE transport. Listed here so the
+    /// protocol requirement compiles even for hypothetical future providers
+    /// that don't support plain-text streaming.
+    func chatCompletionStream(prompt: String) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            continuation.finish(
+                throwing: LLMError.providerUnavailable(
+                    reason: "Provider does not implement plain-text streaming."
+                )
+            )
+        }
+    }
 }
 
 /// Static registry of all known providers + the user's current selection.

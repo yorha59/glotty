@@ -279,3 +279,77 @@ struct KimiResponseTests {
         }
     }
 }
+
+@Suite("PolishResult.parsePartial — streaming JSON")
+struct PolishResultParsePartialTests {
+    @Test("Empty buffer returns empty result")
+    func empty() {
+        #expect(PolishResult.parsePartial("") == .empty)
+        #expect(PolishResult.parsePartial("   \n") == .empty)
+    }
+
+    @Test("Bare opening brace before any keys yields empty (no usable structure)")
+    func openingBraceOnly() {
+        #expect(PolishResult.parsePartial("{") == .empty)
+    }
+
+    @Test("Well-formed input parses identically to parse()")
+    func wellFormedMatchesParse() {
+        let raw = #"{"variants":[{"text":"Hello","back":"你好"}]}"#
+        #expect(PolishResult.parsePartial(raw) == PolishResult.parse(raw))
+    }
+
+    @Test("Mid-string truncation closes the string and surfaces the partial variant")
+    func midStringTruncation() {
+        // Stream is in the middle of the first variant's text field.
+        let raw = #"{"variants":[{"text":"How are y"#
+        let result = PolishResult.parsePartial(raw)
+        #expect(result.variants.count == 1)
+        #expect(result.variants[0].text == "How are y")
+    }
+
+    @Test("Missing trailing brackets are inferred")
+    func missingClosers() {
+        // No closing `]` or `}` — closeOpenJSONStructures should append both.
+        let raw = #"{"variants":[{"text":"Hello","back":"你好"}"#
+        let result = PolishResult.parsePartial(raw)
+        #expect(result.variants.count == 1)
+        #expect(result.variants[0].text == "Hello")
+        #expect(result.variants[0].backTranslation == "你好")
+    }
+
+    @Test("Escaped quote inside string doesn't confuse the scanner")
+    func escapedQuote() {
+        let raw = #"{"variants":[{"text":"She said \"hi\""#
+        let result = PolishResult.parsePartial(raw)
+        #expect(result.variants.count == 1)
+        #expect(result.variants[0].text.contains("She said"))
+    }
+
+    @Test("Code-fence prefix without closing fence is tolerated")
+    func unclosedCodeFence() {
+        let raw = "```json\n{\"variants\":[{\"text\":\"Hi\""
+        let result = PolishResult.parsePartial(raw)
+        #expect(result.variants.count == 1)
+        #expect(result.variants[0].text == "Hi")
+    }
+
+    @Test("Bare code-fence opener with no JSON yet yields empty")
+    func bareCodeFenceOpener() {
+        #expect(PolishResult.parsePartial("```json") == .empty)
+        #expect(PolishResult.parsePartial("```") == .empty)
+    }
+
+    @Test("Partial issues array is parseable")
+    func partialIssues() {
+        // Variants done, issues mid-flight.
+        let raw = """
+        {"variants":[{"text":"Hi","back":"嗨"}],"issues":[{"original":"hello","explanation":"too informal
+        """
+        let result = PolishResult.parsePartial(raw)
+        #expect(result.variants.count == 1)
+        #expect(result.issues.count == 1)
+        #expect(result.issues[0].original == "hello")
+        #expect(result.issues[0].explanation.contains("too informal"))
+    }
+}
