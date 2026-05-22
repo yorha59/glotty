@@ -25,6 +25,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ruojunye.glotty
         GENERATE_INFOPLIST_FILE: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Spike-only: false = Dock icon visible. Restore to YES once menu-bar-only flow is solid.
         INFOPLIST_KEY_LSUIElement: NO
         INFOPLIST_KEY_NSAccessibilityUsageDescription: "Glotty reads selected text from the focused application so it can be translated."

@@ -6,7 +6,8 @@ import SwiftUI
 @MainActor
 final class HUDController {
     private var panel: NSPanel?
-    /// Height grew from 150 → 178 to accommodate the third command row (Express).
+    /// Height tuned to fit three command rows (Translate, Explain, Polish).
+    /// Practice/Chat is proactive-only — no hotkey, no HUD row.
     private static let size = NSSize(width: 320, height: 178)
 
     func show() {
@@ -75,7 +76,7 @@ private struct HUDView: View {
             commandRow(key: Keycode.label(for: Keycode.currentExplain()),
                        label: "Explain in \(HUDView.nativeLangName)")
             commandRow(key: Keycode.label(for: Keycode.currentPolish()),
-                       label: "Polish to idiomatic")
+                       label: "Polish to idiomatic \(HUDView.polishLangName)")
             Text("Release \(Keycode.currentLeader().label) to cancel")
                 .font(.caption2)
                 .foregroundStyle(.white.opacity(0.45))
@@ -99,6 +100,16 @@ private struct HUDView: View {
     /// Empty pin falls back to English (most common default for our audience).
     static var nativeLangName: String {
         let raw = UserDefaults.standard.string(forKey: "glotty.targetLang")?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return localizedName(for: raw.isEmpty ? "en" : raw)
+    }
+
+    /// Localized name of the Polish output language — separate from the native
+    /// lang because Polish rewrites the user's draft INTO the target tongue
+    /// they're learning (e.g. "make my Chinese sound natural"), not back into
+    /// the user's native. Settings → Polish → Polish output language drives it.
+    static var polishLangName: String {
+        let raw = UserDefaults.standard.string(forKey: "glotty.polishLang")?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return localizedName(for: raw.isEmpty ? "en" : raw)
     }

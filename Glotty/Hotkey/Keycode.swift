@@ -6,7 +6,9 @@ enum Keycode {
     /// Defaults for Glotty's leader-key commands.
     /// T = Translate (decode: foreign → native, one-line). E = Explain (richer
     /// LLM-generated explanation, also in the user's native language). P =
-    /// Polish (LLM rewrite of the user's own draft).
+    /// Polish (LLM rewrite of the user's own draft). Practice/Chat is
+    /// proactive-only — no hotkey, triggered by the macOS notification posted
+    /// by `PracticeScheduler`.
     static let defaultTranslate = 17  // T
     static let defaultExplain   = 14  // E
     static let defaultPolish    = 35  // P

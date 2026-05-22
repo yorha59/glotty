@@ -55,7 +55,9 @@ final class PermissionsWindowController {
 }
 
 struct PermissionsView: View {
-    let onClose: () -> Void
+    /// `nil` when the view is embedded in Settings (no separate window to
+    /// close). Standalone window passes a closure here.
+    let onClose: (() -> Void)?
 
     @State private var refreshToken = 0
     @State private var timer: Timer?
@@ -85,10 +87,22 @@ struct PermissionsView: View {
             }
         }
         .padding(20)
-        .frame(width: 480, height: 460)
+        // Standalone window has a fixed size; the Settings embed lets the
+        // tab pane decide. Apply the fixed frame only when there's an
+        // onClose (i.e. running in the standalone window controller).
+        .frame(
+            minWidth: 480,
+            maxWidth: onClose == nil ? .infinity : 480,
+            maxHeight: onClose == nil ? .infinity : 460
+        )
         .onAppear {
+            // Poll permission state while visible. Refreshes the local
+            // refreshToken (forces PermissionRow re-eval) and reads the
+            // async notifications status into PermissionCheck's cache.
+            PermissionCheck.refreshNotificationsStatus()
             timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
                 Task { @MainActor in
+                    PermissionCheck.refreshNotificationsStatus()
                     refreshToken &+= 1
                 }
             }
@@ -133,8 +147,10 @@ struct PermissionsView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Done", action: onClose)
-                    .keyboardShortcut(.defaultAction)
+                if let onClose {
+                    Button("Done", action: onClose)
+                        .keyboardShortcut(.defaultAction)
+                }
             }
         }
     }
@@ -229,8 +245,10 @@ struct PermissionsView: View {
                     refreshToken &+= 1
                 }
                 .help("Re-trigger macOS's registration so Glotty appears in System Settings. May show a system prompt for Accessibility.")
-                Button("Close", action: onClose)
-                    .keyboardShortcut(.defaultAction)
+                if let onClose {
+                    Button("Close", action: onClose)
+                        .keyboardShortcut(.defaultAction)
+                }
             }
         }
     }

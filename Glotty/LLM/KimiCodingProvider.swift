@@ -137,6 +137,7 @@ struct KimiCodingProvider: LLMProvider {
         }
 
         var accumulated = ""
+        let usage = AnthropicUsageStream(providerID: self.id)
         // Anthropic SSE structure: `event: <name>\ndata: {…}\n\n`. We only care
         // about `content_block_delta` events whose payload contains a
         // `delta.text` token.
@@ -152,9 +153,12 @@ struct KimiCodingProvider: LLMProvider {
                   let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                 continue
             }
+            usage.observe(event: event)
+            let eventType = event["type"] as? String
+
             // `message_stop` ends the stream; nothing else to do.
-            if (event["type"] as? String) == "message_stop" { break }
-            guard (event["type"] as? String) == "content_block_delta",
+            if eventType == "message_stop" { break }
+            guard eventType == "content_block_delta",
                   let delta = event["delta"] as? [String: Any],
                   let chunk = delta["text"] as? String,
                   !chunk.isEmpty else { continue }
@@ -165,6 +169,8 @@ struct KimiCodingProvider: LLMProvider {
                 continuation.yield(snapshot)
             }
         }
+
+        usage.finalize()
 
         let final = accumulated.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !final.isEmpty else { throw LLMError.emptyResponse }
@@ -219,6 +225,7 @@ struct KimiCodingProvider: LLMProvider {
         }
 
         var accumulated = ""
+        let usage = AnthropicUsageStream(providerID: self.id)
         for try await line in bytes.lines {
             try Task.checkCancellation()
             guard line.hasPrefix("data:") else { continue }
@@ -230,8 +237,11 @@ struct KimiCodingProvider: LLMProvider {
                   let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                 continue
             }
-            if (event["type"] as? String) == "message_stop" { break }
-            guard (event["type"] as? String) == "content_block_delta",
+            usage.observe(event: event)
+            let eventType = event["type"] as? String
+
+            if eventType == "message_stop" { break }
+            guard eventType == "content_block_delta",
                   let delta = event["delta"] as? [String: Any],
                   let chunk = delta["text"] as? String,
                   !chunk.isEmpty else { continue }
@@ -239,6 +249,8 @@ struct KimiCodingProvider: LLMProvider {
             accumulated += chunk
             continuation.yield(accumulated)
         }
+
+        usage.finalize()
 
         let trimmed = accumulated.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw LLMError.emptyResponse }

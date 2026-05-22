@@ -3,29 +3,98 @@ import Translation
 import UniformTypeIdentifiers
 import AppKit
 
-/// Standard macOS preferences pane. Opens via ⌘, or the menu-bar "Settings…" item.
-/// Split into four tabs — each groups together everything related to one feature
-/// area (Translation, Dictionaries, Polish, Hotkey).
-struct SettingsView: View {
-    var body: some View {
-        TabView {
-            userProfileTab
-                .tabItem { Text("Profile") }
-            translationTab
-                .tabItem { Text("Translation") }
-            dictionariesTab
-                .tabItem { Text("Dictionaries") }
-            languageModelTab
-                .tabItem { Text("Language Model") }
-            polishTab
-                .tabItem { Text("Polish") }
-            hotkeyTab
-                .tabItem { Text("Hotkey") }
+/// One row in the Settings sidebar. Order here = display order in the list.
+enum SettingsTab: String, Hashable, CaseIterable, Identifiable {
+    case profile
+    case translation
+    case dictionaries
+    case languageModel
+    case polish
+    case hotkey
+    case memory
+    case practice
+    case usage
+    case permissions
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .profile:       return "Profile"
+        case .translation:   return "Translation"
+        case .dictionaries:  return "Dictionaries"
+        case .languageModel: return "Language Model"
+        case .polish:        return "Polish"
+        case .hotkey:        return "Hotkey"
+        case .memory:        return "Memory"
+        case .practice:      return "Practice"
+        case .usage:         return "Usage"
+        case .permissions:   return "Permissions"
         }
-        // Forms with TextEditors and long lists have unbounded intrinsic size, which
-        // crashes the auto-layout pass under `.preferredContentSize`. Use a sensible
-        // minimum and let the window owner pick the initial size + remain resizable.
-        .frame(minWidth: 560, minHeight: 460)
+    }
+
+    /// SF Symbol shown in the sidebar row. Picked to evoke each tab's purpose
+    /// without leaning too heavily on language-related glyphs (which would all
+    /// blur together).
+    var icon: String {
+        switch self {
+        case .profile:       return "person.crop.circle"
+        case .translation:   return "character.bubble"
+        case .dictionaries:  return "book.closed"
+        case .languageModel: return "sparkles"
+        case .polish:        return "wand.and.stars"
+        case .hotkey:        return "keyboard"
+        case .memory:        return "clock.arrow.circlepath"
+        case .practice:      return "graduationcap"
+        case .usage:         return "chart.bar"
+        case .permissions:   return "lock.shield"
+        }
+    }
+}
+
+/// Standard macOS preferences pane. Opens via ⌘, or the menu-bar "Settings…" item.
+/// Uses a sidebar list (the System Settings pattern) so the seven sections have
+/// room to breathe — `TabView` ran out of horizontal space once we passed five
+/// tabs. The sidebar auto-scrolls when there are more sections than fit.
+struct SettingsView: View {
+    init(initialTab: SettingsTab = .profile) {
+        self._selection = State(initialValue: initialTab)
+    }
+
+    /// Default to Profile on first open. State lives in SettingsView (not
+    /// persisted) so reopening the window starts at the top of the sidebar —
+    /// matches what System Settings does.
+    @State private var selection: SettingsTab = .profile
+
+    var body: some View {
+        NavigationSplitView {
+            List(SettingsTab.allCases, selection: $selection) { tab in
+                NavigationLink(value: tab) {
+                    Label(tab.label, systemImage: tab.icon)
+                }
+            }
+            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
+        } detail: {
+            detailView(for: selection)
+                .navigationTitle(selection.label)
+        }
+        .frame(minWidth: 720, minHeight: 480)
+    }
+
+    @ViewBuilder
+    private func detailView(for tab: SettingsTab) -> some View {
+        switch tab {
+        case .profile:       userProfileTab
+        case .translation:   translationTab
+        case .dictionaries:  dictionariesTab
+        case .languageModel: languageModelTab
+        case .polish:        polishTab
+        case .hotkey:        hotkeyTab
+        case .memory:        memoryTab
+        case .practice:      practiceTab
+        case .usage:         usageTab
+        case .permissions:   permissionsTab
+        }
     }
 
     private var userProfileTab: some View {
@@ -63,6 +132,29 @@ struct SettingsView: View {
     private var hotkeyTab: some View {
         Form { HotkeySettingsSection() }
             .formStyle(.grouped)
+    }
+
+    private var memoryTab: some View {
+        Form { MemorySettingsSection() }
+            .formStyle(.grouped)
+    }
+
+    private var practiceTab: some View {
+        Form { PracticeSettingsSection() }
+            .formStyle(.grouped)
+    }
+
+    private var usageTab: some View {
+        Form { UsageSettingsSection() }
+            .formStyle(.grouped)
+    }
+
+    private var permissionsTab: some View {
+        // PermissionsView already implements the full permissions guide
+        // (status rows, "Open Settings" / "Re-register" buttons, troubleshooting
+        // disclosure). Embedding it directly keeps the code single-sourced.
+        PermissionsView(onClose: nil)
+            .frame(maxHeight: .infinity)
     }
 }
 
@@ -268,8 +360,10 @@ private struct LanguageModelSettingsSection: View {
             return
         }
         do {
-            let result = try await provider.polish("hello world",
-                                                   mode: .variants(target: "en", nativeLanguage: nil))
+            let result = try await UsageContext.$mode.withValue(.polish) {
+                try await provider.polish("hello world",
+                                          mode: .variants(target: "en", nativeLanguage: nil))
+            }
             let preview = result.variants.first?.text ?? "(no variants)"
             testStatus = .ok("OK · \(preview.prefix(40))\(preview.count > 40 ? "…" : "")")
         } catch {
@@ -279,7 +373,25 @@ private struct LanguageModelSettingsSection: View {
 }
 
 private struct UserProfileSection: View {
+    @AppStorage("glotty.user.displayName") private var displayName: String = ""
+    @AppStorage("glotty.user.pronouns") private var pronouns: String = ""
+    @AppStorage("glotty.user.about") private var about: String = ""
     @AppStorage("glotty.user.nativeLanguage") private var nativeLang: String = ""
+
+    /// Drives the display-name field's "fade out once you've typed something"
+    /// behavior. Once the user enters a name and unfocuses, we collapse the
+    /// row to a read-only label. Clicking the label flips this back to true
+    /// and re-focuses the field for re-edit.
+    @State private var nameEditing = false
+    @FocusState private var nameFocused: Bool
+
+    /// Gender choices stored as the third-person pronouns we'd use in prompts.
+    /// Empty string == "Prefer not to say".
+    private let pronounOptions: [(id: String, label: String)] = [
+        ("",        "Prefer not to say"),
+        ("he/him",  "Male"),
+        ("she/her", "Female"),
+    ]
 
     /// Common native-language choices. Stored as a Locale identifier so other
     /// features can read it as a `Locale.Language` later.
@@ -311,19 +423,94 @@ private struct UserProfileSection: View {
     }
 
     var body: some View {
-        Section {
-            Picker("Native language", selection: selection) {
-                ForEach(options, id: \.id) { option in
-                    Text(option.name).tag(option.id)
+        Group {
+            Section {
+                Group {
+                    if displayName.isEmpty || nameEditing {
+                        TextField("Display name", text: $displayName, prompt: Text("What should Glotty call you?"))
+                            .textFieldStyle(.roundedBorder)
+                            .focused($nameFocused)
+                            .onSubmit { nameEditing = false }
+                            .onChange(of: nameFocused) { _, focused in
+                                if !focused { nameEditing = false }
+                            }
+                            .transition(.opacity)
+                    } else {
+                        LabeledContent("Display name") {
+                            HStack(spacing: 6) {
+                                Text(displayName)
+                                    .foregroundStyle(.secondary)
+                                Image(systemName: "pencil")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            nameEditing = true
+                            // @FocusState updates need to land after the
+                            // TextField has been added back to the tree.
+                            DispatchQueue.main.async { nameFocused = true }
+                        }
+                        .transition(.opacity)
+                    }
                 }
+                .animation(.easeInOut(duration: 0.2), value: nameEditing)
+                .animation(.easeInOut(duration: 0.2), value: displayName.isEmpty)
+
+                Picker("Gender", selection: $pronouns) {
+                    ForEach(pronounOptions, id: \.id) { option in
+                        Text(option.label).tag(option.id)
+                    }
+                }
+                .pickerStyle(.menu)
+            } header: {
+                Text("About you")
+            } footer: {
+                Text("Optional. Used to address you in practice feedback and chat replies.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            .pickerStyle(.menu)
-        } header: {
-            Text("Profile")
-        } footer: {
-            Text("Your native language. Used to guide auto-detected source / target choices and to bias translation behavior toward what you're likely reading or writing.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+
+            Section {
+                Picker("Native language", selection: selection) {
+                    ForEach(options, id: \.id) { option in
+                        Text(option.name).tag(option.id)
+                    }
+                }
+                .pickerStyle(.menu)
+            } header: {
+                Text("Language")
+            } footer: {
+                Text("Your native language. Used to guide auto-detected source / target choices and to bias translation behavior toward what you're likely reading or writing.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                TextEditor(text: $about)
+                    .frame(minHeight: 80)
+                    .font(.body)
+                    .scrollContentBackground(.hidden)
+                    .padding(6)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color(NSColor.textBackgroundColor)))
+                    .overlay(alignment: .topLeading) {
+                        if about.isEmpty {
+                            Text("e.g. \"I'm learning German for a job in Berlin. Native English speaker, intermediate level.\"")
+                                .font(.callout)
+                                .foregroundStyle(.tertiary)
+                                .padding(.horizontal, 11)
+                                .padding(.vertical, 14)
+                                .allowsHitTesting(false)
+                        }
+                    }
+            } header: {
+                Text("Notes for Glotty")
+            } footer: {
+                Text("A short blurb about your learning goals or background — fed into LLM prompts so suggestions feel tailored. Optional.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -1909,5 +2096,626 @@ private struct KeyRecorderRow: View {
         }
         isRecording = false
         if let saveKeycode { keycode = saveKeycode }
+    }
+}
+
+
+/// Memory tab — shows what the user has been looking up and the grammar
+/// mistakes that keep coming back through Polish. Reads from MemoryStore on
+/// every appear; tapping Clear wipes the on-disk JSONL.
+@MainActor
+private struct MemorySettingsSection: View {
+    /// Every MemoryEvent in the current time range, newest first. Replaces
+    /// the old aggregate "Frequently looked up" rollup — each row is now a
+    /// single event the user can click to reopen the popup they originally
+    /// saw. Capped at `Self.historyDisplayLimit` for rendering cost.
+    @State private var historyEvents: [MemoryEvent] = []
+    @State private var topIssues: [MemoryAggregate] = []
+    @State private var totalEvents: Int = 0
+    @State private var recordingEnabled: Bool = MemoryStore.shared.isRecordingEnabled
+    @State private var showingClearConfirmation = false
+
+    /// Soft cap on how many rows the History section renders. Beyond this
+    /// the user can either tighten the time range or wipe history.
+    private static let historyDisplayLimit = 200
+    /// Display-only filter — the underlying history isn't pruned, so toggling
+    /// back to "All time" surfaces everything.
+    @AppStorage("glotty.memory.range") private var rangeRaw: String = MemoryTimeRange.week.rawValue
+
+    private var range: MemoryTimeRange {
+        MemoryTimeRange(rawValue: rangeRaw) ?? .week
+    }
+
+    var body: some View {
+        Group {
+            Section {
+                Toggle("Record history", isOn: $recordingEnabled)
+                    .onChange(of: recordingEnabled) { _, newValue in
+                        MemoryStore.shared.isRecordingEnabled = newValue
+                    }
+                Picker("Show records from", selection: $rangeRaw) {
+                    ForEach(MemoryTimeRange.allCases) { range in
+                        Text(range.label).tag(range.rawValue)
+                    }
+                }
+                .pickerStyle(.menu)
+                .onChange(of: rangeRaw) { _, _ in refresh() }
+                LabeledContent("Events recorded") {
+                    Text("\(totalEvents)")
+                        .foregroundStyle(.secondary)
+                        .font(.system(.body, design: .monospaced))
+                }
+            } header: {
+                Text("Recording")
+            } footer: {
+                Text("Glotty saves what you searched and which mistakes Polish flagged. Stored locally in Application Support; never sent off-device. The time range only filters the lists below — history itself is never pruned.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                if historyEvents.isEmpty {
+                    Text("No activity yet. Use Fn → T / E / P and your runs will show up here.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(historyEvents) { event in
+                        historyRow(event)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                            .onTapGesture { openEvent(event) }
+                    }
+                    if MemoryStore.shared.count > historyEvents.count {
+                        Text("Showing the most recent \(historyEvents.count) of \(MemoryStore.shared.count) events. Narrow the time range above to see fewer.")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            } header: {
+                Text("History")
+            } footer: {
+                Text("Every translate, explain, and polish run, newest first. Click any row to reopen the original popup.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                if topIssues.isEmpty {
+                    Text("No mistake patterns yet. Polish will tag your drafts with categories (verb tense, articles, word choice, …) once it has rewritten a few.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(topIssues) { row in
+                        memoryRow(key: row.key, count: row.count, lastSeen: row.lastSeen)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                MistakeTypeWindowController.shared.show(category: row.key, range: range)
+                            }
+                    }
+                }
+            } header: {
+                Text("Common mistake types")
+            } footer: {
+                Text("Click a row to reopen the most recent polish run that flagged this category.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Button(role: .destructive) {
+                    showingClearConfirmation = true
+                } label: {
+                    Label("Clear history…", systemImage: "trash")
+                }
+                .confirmationDialog(
+                    "Clear all memory?",
+                    isPresented: $showingClearConfirmation,
+                    titleVisibility: .visible
+                ) {
+                    Button("Clear history", role: .destructive) {
+                        MemoryStore.shared.clearAll()
+                        refresh()
+                    }
+                    Button("Cancel", role: .cancel) { }
+                } message: {
+                    Text("This deletes every recorded lookup and polish issue. Cannot be undone.")
+                }
+            }
+        }
+        .onAppear { refresh() }
+    }
+
+    /// Reopen the popup that produced a specific MemoryEvent. Replay is
+    /// used when the event has the richer stored fields
+    /// (`PopupReplayPayload.from` non-nil); otherwise the popup falls back
+    /// to a live re-run.
+    private func openEvent(_ event: MemoryEvent) {
+        let replay = PopupReplayPayload.from(event)
+        let mode: PopupMode
+        switch event.kind {
+        case .translate: mode = .translate
+        case .explain:   mode = .explain
+        case .polish:    mode = .polish
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        PopupController.shared.show(sourceText: event.sourceText, mode: mode, replay: replay)
+    }
+
+    private func refresh() {
+        let cutoff = range.since()
+        // History: every event in range, newest first, capped for render cost.
+        let all = MemoryStore.shared.allEvents()
+        let filtered = cutoff.map { c in all.filter { $0.timestamp >= c } } ?? all
+        historyEvents = Array(filtered.reversed().prefix(Self.historyDisplayLimit))
+        topIssues = MemoryStore.shared.topGrammarIssues(limit: 20, since: cutoff)
+        totalEvents = MemoryStore.shared.count
+        recordingEnabled = MemoryStore.shared.isRecordingEnabled
+    }
+
+    /// One row in the History section. Shows kind badge + source-text
+    /// snippet + relative timestamp. The whole row is the Button label so
+    /// any tap inside it triggers `openEvent`.
+    @ViewBuilder
+    private func historyRow(_ event: MemoryEvent) -> some View {
+        HStack(spacing: 12) {
+            Text(historyKindLabel(event.kind))
+                .font(.caption2.bold())
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(historyKindColor(event.kind).opacity(0.18)))
+                .foregroundStyle(historyKindColor(event.kind))
+                .frame(minWidth: 56)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(event.sourceText)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                if let result = event.result, !result.isEmpty {
+                    Text(result)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer(minLength: 8)
+            Text(relativeDate(event.timestamp))
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+    }
+
+    private func historyKindLabel(_ kind: MemoryEventKind) -> String {
+        switch kind {
+        case .translate: return "Translate"
+        case .explain:   return "Explain"
+        case .polish:    return "Polish"
+        }
+    }
+
+    private func historyKindColor(_ kind: MemoryEventKind) -> Color {
+        switch kind {
+        case .translate: return .blue
+        case .explain:   return .purple
+        case .polish:    return .orange
+        }
+    }
+
+    private func memoryRow(key: String, count: Int, lastSeen: Date) -> some View {
+        HStack(spacing: 12) {
+            // No `.textSelection` — it would intercept the parent row's
+            // `.onTapGesture` (selectable Text wins drag/click in macOS).
+            Text(key)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer(minLength: 8)
+            Text(relativeDate(lastSeen))
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+            Text("\(count)x")
+                .font(.system(.callout, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 36, alignment: .trailing)
+        }
+    }
+
+    private func relativeDate(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+}
+
+
+/// Practice tab — controls Glotty's proactive practice nudges. The scheduler
+/// posts a macOS notification at the configured interval; clicking it opens
+/// a quiz drawn from the user's recurring mistake categories. Default is
+/// off, so Glotty only becomes proactive if the user opts in.
+@MainActor
+private struct PracticeSettingsSection: View {
+    @ObservedObject private var scheduler = PracticeScheduler.shared
+    @ObservedObject private var library = QuizLibrary.shared
+    @AppStorage(PracticeScheduler.intervalKey)
+    private var intervalMinutes: Int = PracticeScheduler.defaultIntervalMinutes
+    @AppStorage(PracticeScheduler.questionCountKey)
+    private var questionCount: Int = PracticeScheduler.defaultQuestionCount
+    @AppStorage(PracticeScheduler.generatorIntervalKey)
+    private var generatorIntervalMinutes: Int = PracticeScheduler.defaultGeneratorIntervalMinutes
+    /// Toggle to reveal the correct answer + explanation for one specific
+    /// entry. Nil = nothing expanded. Tapping a row flips this; tapping
+    /// again collapses.
+    @State private var expandedEntryId: UUID?
+
+    private struct Frequency: Hashable, Identifiable {
+        let label: String
+        let minutes: Int
+        var id: Int { minutes }
+    }
+    private let frequencies: [Frequency] = [
+        .init(label: "Off",       minutes: 0),
+        .init(label: "Every hour", minutes: 60),
+        .init(label: "Every 4 hours", minutes: 240),
+        .init(label: "Daily",     minutes: 1440),
+        .init(label: "Weekly",    minutes: 10080),
+    ]
+
+    private let questionChoices: [Int] = [3, 5, 10]
+
+    /// Background generator cadence options. Tighter than the notification
+    /// frequencies — the goal here is "how often do we top off the buffer",
+    /// not "how often do we nag the user".
+    private let generatorFrequencies: [Frequency] = [
+        .init(label: "Every 5 minutes",  minutes: 5),
+        .init(label: "Every 10 minutes", minutes: 10),
+        .init(label: "Every 30 minutes", minutes: 30),
+        .init(label: "Every hour",       minutes: 60),
+        .init(label: "Every 4 hours",    minutes: 240),
+    ]
+
+    var body: some View {
+        Group {
+            Section {
+                Picker("Practice frequency", selection: $intervalMinutes) {
+                    ForEach(frequencies) { f in
+                        Text(f.label).tag(f.minutes)
+                    }
+                }
+                .pickerStyle(.menu)
+                .onChange(of: intervalMinutes) { _, _ in PracticeScheduler.shared.start() }
+
+                Picker("Questions per session", selection: $questionCount) {
+                    ForEach(questionChoices, id: \.self) { n in
+                        Text("\(n)").tag(n)
+                    }
+                }
+                .pickerStyle(.menu)
+
+                Button("Send a practice notification now") {
+                    Task { await PracticeScheduler.shared.fireSessionNow() }
+                }
+            } header: {
+                Text("Proactive practice")
+            } footer: {
+                Text("Glotty quietly checks the mistakes you've made (recorded by Polish) and nudges you with a quick quiz at the interval you pick. Click the notification when it appears to start a session.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Picker("Generate every", selection: $generatorIntervalMinutes) {
+                    ForEach(generatorFrequencies) { f in
+                        Text(f.label).tag(f.minutes)
+                    }
+                }
+                .pickerStyle(.menu)
+                .onChange(of: generatorIntervalMinutes) { _, _ in PracticeScheduler.shared.start() }
+
+                LabeledContent("Questions ready") {
+                    Text("\(library.count) / \(QuizLibrary.targetSize)")
+                        .font(.system(.body, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+                // Only show progress UI while we're actually generating —
+                // a static fill-bar reflecting library size carries no new
+                // information beyond the "Questions ready" line above.
+                if scheduler.isGenerating {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.small)
+                            Text("Generating…")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        ProgressView()
+                            .progressViewStyle(.linear)
+                    }
+                }
+
+                HStack {
+                    if scheduler.isGenerating {
+                        Button {
+                            PracticeScheduler.shared.cancelFill()
+                        } label: {
+                            Label("Stop", systemImage: "stop.circle")
+                        }
+                    } else {
+                        Button {
+                            PracticeScheduler.shared.startFillLibrary()
+                        } label: {
+                            Label("Fill library now", systemImage: "sparkles")
+                        }
+                        .disabled(library.count >= QuizLibrary.targetSize)
+                    }
+
+                    Spacer()
+
+                    Button(role: .destructive) {
+                        QuizLibrary.shared.clear()
+                    } label: {
+                        Label("Clear", systemImage: "trash")
+                    }
+                }
+            } header: {
+                Text("Question library")
+            } footer: {
+                Text("Glotty generates practice questions in the background and stores them here, so the notification fires instantly with no LLM wait. When you answer a question it's removed from the library; the background generator tops it back up to \(QuizLibrary.targetSize).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if !sortedEntries.isEmpty {
+                Section {
+                    ForEach(sortedEntries) { entry in
+                        libraryRow(entry)
+                    }
+                } header: {
+                    Text("Queued questions")
+                } footer: {
+                    Text("Click a row to reveal the correct answer and explanation. The trash icon drops just that question — Glotty will generate a replacement in the background.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var sortedEntries: [QuizLibrary.Entry] {
+        library.entries.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    @ViewBuilder
+    private func libraryRow(_ entry: QuizLibrary.Entry) -> some View {
+        let expanded = expandedEntryId == entry.id
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text("Tests:")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                            .textCase(.uppercase)
+                        Text(entry.question.category)
+                            .font(.system(size: 12, weight: .semibold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule().fill(Color.accentColor.opacity(0.18))
+                            )
+                            .foregroundStyle(Color.accentColor)
+                        Spacer(minLength: 6)
+                        Text(entry.createdAt, format: .relative(presentation: .named))
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                    Text(entry.question.question)
+                        .font(.callout)
+                        .foregroundStyle(.primary)
+                        .lineLimit(expanded ? nil : 2)
+                        .textSelection(.enabled)
+                }
+                Spacer(minLength: 8)
+                Button(role: .destructive) {
+                    QuizLibrary.shared.remove(id: entry.id)
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.borderless)
+                .help("Drop this question")
+            }
+            if expanded {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(entry.question.options.enumerated()), id: \.offset) { idx, option in
+                        HStack(spacing: 6) {
+                            Text(["A", "B", "C", "D"][idx])
+                                .font(.system(.caption, design: .monospaced))
+                                .foregroundStyle(.tertiary)
+                            Text(option)
+                                .font(.caption)
+                                .foregroundStyle(idx == entry.question.correctIndex
+                                                 ? Color.green : .secondary)
+                            if idx == entry.question.correctIndex {
+                                Image(systemName: "checkmark")
+                                    .font(.caption2)
+                                    .foregroundStyle(.green)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                    }
+                    Text(entry.question.explanation)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 4)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.leading, 4)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                expandedEntryId = expanded ? nil : entry.id
+            }
+        }
+    }
+}
+
+// MARK: - Usage tab
+
+/// Shows token-usage totals over a selectable time window (today / this week /
+/// this month / all time), broken down by feature (translate/explain/polish/
+/// practice) and by provider (Z.AI / Kimi). Data comes from `UsageStore`.
+@MainActor
+private struct UsageSettingsSection: View {
+    @ObservedObject private var store = UsageStore.shared
+    @State private var rangeSelection: RangeOption = .today
+    @State private var showClearConfirm = false
+
+    private enum RangeOption: String, CaseIterable, Identifiable {
+        case today, week, month, all
+        var id: String { rawValue }
+        var label: String {
+            switch self {
+            case .today: return "Today"
+            case .week:  return "This week"
+            case .month: return "This month"
+            case .all:   return "All time"
+            }
+        }
+        var cutoff: Date? {
+            switch self {
+            case .today: return UsageStore.startOfToday()
+            case .week:  return UsageStore.startOfWeek()
+            case .month: return UsageStore.startOfMonth()
+            case .all:   return nil
+            }
+        }
+    }
+
+    var body: some View {
+        Group {
+            Section {
+                Picker("Time range", selection: $rangeSelection) {
+                    ForEach(RangeOption.allCases) { r in
+                        Text(r.label).tag(r)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                let totals = store.totals(since: rangeSelection.cutoff)
+                totalsCard(totals)
+            } header: {
+                Text("Token usage")
+            } footer: {
+                Text("Tokens consumed by the configured LLM provider. Stored locally at ~/Library/Application Support/Glotty/usage.jsonl.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section("By feature") {
+                let rows = store.byMode(since: rangeSelection.cutoff)
+                if rows.isEmpty {
+                    Text("No usage in this range.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(rows, id: \.mode) { row in
+                        breakdownRow(label: row.mode.displayName, totals: row.totals)
+                    }
+                }
+            }
+
+            Section("By provider") {
+                let rows = store.byProvider(since: rangeSelection.cutoff)
+                if rows.isEmpty {
+                    Text("No usage in this range.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(rows, id: \.provider) { row in
+                        breakdownRow(label: providerLabel(row.provider), totals: row.totals)
+                    }
+                }
+            }
+
+            Section {
+                HStack {
+                    Spacer()
+                    Button(role: .destructive) {
+                        showClearConfirm = true
+                    } label: {
+                        Text("Clear all usage history")
+                    }
+                    .disabled(store.events.isEmpty)
+                }
+            }
+        }
+        .confirmationDialog("Clear all token-usage history?",
+                            isPresented: $showClearConfirm,
+                            titleVisibility: .visible) {
+            Button("Clear", role: .destructive) { store.clearAll() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes every recorded LLM call from local history. The setting cannot be undone.")
+        }
+    }
+
+    private func totalsCard(_ t: UsageTotals) -> some View {
+        // 2-column Grid so the second column (Calls / Completion) lines up
+        // between rows regardless of the first column's text width. The
+        // previous HStack-of-VStacks let each cell consume only its
+        // intrinsic width, leaving the values out of alignment.
+        Grid(alignment: .leading, horizontalSpacing: 32, verticalSpacing: 14) {
+            GridRow {
+                metric(label: "Total tokens", value: numberFormatted(t.total), bold: true)
+                metric(label: "Calls", value: numberFormatted(t.calls), bold: false)
+            }
+            GridRow {
+                metric(label: "Prompt", value: numberFormatted(t.prompt), bold: false)
+                metric(label: "Completion", value: numberFormatted(t.completion), bold: false)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func metric(label: String, value: String, bold: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(bold ? .title2 : .body)
+                .fontWeight(bold ? .semibold : .regular)
+                .monospacedDigit()
+        }
+        // Make every metric cell occupy the full column width so the trailing
+        // edge of the cell — not the trailing edge of its label — is what
+        // separates "Total" from "Calls".
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func breakdownRow(label: String, totals: UsageTotals) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            Text("\(numberFormatted(totals.total)) tokens · \(numberFormatted(totals.calls)) call\(totals.calls == 1 ? "" : "s")")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+        }
+    }
+
+    private func numberFormatted(_ n: Int) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        return f.string(from: NSNumber(value: n)) ?? "\(n)"
+    }
+
+    private func providerLabel(_ id: String) -> String {
+        switch id {
+        case "zai":          return "Z.AI (GLM)"
+        case "kimi-coding":  return "Kimi For Coding"
+        default:             return id
+        }
     }
 }

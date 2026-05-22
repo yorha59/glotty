@@ -16,6 +16,10 @@ enum PopupMode: Equatable {
     case translate
     case explain
     case polish
+    /// Practice-question popup driven by the user's recorded mistake
+    /// categories. No selection needed — the LLM generates a multiple-choice
+    /// question targeting one of the user's recurring problem areas.
+    case chat
 }
 
 /// Visual tokens taken from the Figma design (`Popup - Translate` / `Popup - Polish`
@@ -100,10 +104,122 @@ private extension Color {
     }
 }
 
+/// Pre-baked content used to restore a popup from `MemoryStore` without
+/// re-running the LLM. The Memory tab's click-through path constructs one of
+/// these from a stored `MemoryEvent` and passes it into `PopupController`.
+/// Old entries that pre-date the richer storage schema map to nil here — the
+/// popup falls back to a live re-run in that case.
+struct PopupReplayPayload: Equatable {
+    /// The MemoryEvent's id, propagated so that subsequent writes from the
+    /// popup (notably appending chat turns to a polish run) can target the
+    /// same row in MemoryStore via `update(_:)` rather than writing a new
+    /// event. Nil when the payload doesn't come from MemoryStore.
+    let eventID: UUID?
+    let sourceLang: String?
+    let targetLang: String?
+    let content: Content
+    /// Polish-only: previously-saved discussion thread for this run.
+    let polishChatThread: [PolishChatTurnSnapshot]?
+
+    enum Content: Equatable {
+        case translation(translated: String, backTranslated: String?)
+        case explanation(text: String)
+        case polish(PolishResultSnapshot)
+    }
+
+    static func from(_ event: MemoryEvent) -> PopupReplayPayload? {
+        switch event.kind {
+        case .translate:
+            guard let translated = event.result else { return nil }
+            return PopupReplayPayload(
+                eventID: event.id,
+                sourceLang: event.sourceLang,
+                targetLang: event.targetLang,
+                content: .translation(translated: translated, backTranslated: event.backTranslation),
+                polishChatThread: nil
+            )
+        case .explain:
+            guard let text = event.result else { return nil }
+            return PopupReplayPayload(
+                eventID: event.id,
+                sourceLang: event.sourceLang,
+                targetLang: event.targetLang,
+                content: .explanation(text: text),
+                polishChatThread: nil
+            )
+        case .polish:
+            guard let snap = event.polishSnapshot else { return nil }
+            return PopupReplayPayload(
+                eventID: event.id,
+                sourceLang: event.sourceLang,
+                targetLang: event.targetLang,
+                content: .polish(snap),
+                polishChatThread: event.polishChatThread
+            )
+        }
+    }
+}
+
+/// One turn in the Polish-mode discussion thread. The user's prompt is a
+/// `.user` turn; the streaming LLM reply is an `.assistant` turn whose `text`
+/// fills in as chunks arrive.
+struct PolishChatTurn: Identifiable, Equatable {
+    enum Role: String, Equatable { case user, assistant }
+    let id = UUID()
+    let role: Role
+    var text: String
+}
+
 struct PopupView: View {
     let sourceText: String
     let mode: PopupMode
+    /// When non-nil, the popup is being restored from MemoryStore — every
+    /// `.task` and `.translationTask` no-ops and the @State backing the UI
+    /// is pre-populated from this payload in `init`.
+    let replay: PopupReplayPayload?
     let onClose: () -> Void
+
+    init(sourceText: String, mode: PopupMode, replay: PopupReplayPayload? = nil, onClose: @escaping () -> Void) {
+        self.sourceText = sourceText
+        self.mode = mode
+        self.replay = replay
+        self.onClose = onClose
+
+        // Pre-load @State from the replay payload so the popup renders the
+        // stored content on first paint. Using `State(initialValue:)` here is
+        // safe because this init runs before the view is mounted.
+        if let replay {
+            if let target = replay.targetLang, !target.isEmpty {
+                _targetLang = State(initialValue: target)
+            }
+            switch replay.content {
+            case .translation(let translated, let backTranslated):
+                _translated = State(initialValue: translated)
+                _backTranslated = State(initialValue: backTranslated ?? "")
+                _status = State(initialValue: .ready)
+            case .explanation(let text):
+                _explainText = State(initialValue: text)
+                _explainStatus = State(initialValue: .ready)
+            case .polish(let snap):
+                let variants = snap.variants.map {
+                    PolishVariant(text: $0.text, backTranslation: $0.backTranslation)
+                }
+                let issues = snap.issues.map {
+                    GrammarIssue(category: $0.category, original: $0.original, explanation: $0.explanation)
+                }
+                _polishResult = State(initialValue: PolishResult(variants: variants, issues: issues))
+                _polishStatus = State(initialValue: .ready)
+                if let storedThread = replay.polishChatThread, !storedThread.isEmpty {
+                    let restored = storedThread.map {
+                        PolishChatTurn(role: $0.role == .user ? .user : .assistant, text: $0.text)
+                    }
+                    _polishChatThread = State(initialValue: restored)
+                    _polishChatExpanded = State(initialValue: true)
+                }
+            }
+            _polishEventID = State(initialValue: replay.eventID)
+        }
+    }
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -127,6 +243,42 @@ struct PopupView: View {
     @State private var explainText: String = ""
     @State private var explainStatus: Status = .working
     @State private var explainProviderName: String = ""
+    /// Chat (practice) mode state. The session is a fixed batch of questions
+    /// pre-generated by `PracticeScheduler`. Within a session: each question
+    /// gets shown with feedback after the user picks an option, then "Next"
+    /// advances. After the last question the popup switches into free-form
+    /// Q&A — the user types a follow-up, the LLM responds in streamed prose.
+    @State private var quizBatch: [QuizQuestion] = []
+    @State private var quizIndex: Int = 0
+    @State private var quizStatus: Status = .working
+    @State private var quizSelectedIndex: Int?
+    @State private var quizProviderName: String = ""
+    /// Set true once the user completes the last question — flips the popup
+    /// into the post-session Q&A panel.
+    @State private var quizSessionComplete: Bool = false
+    /// Free-form Q&A state: what the user typed, the streamed response, and
+    /// the run counter used to debounce repeat submits.
+    @State private var qnaInput: String = ""
+    @State private var qnaResponse: String = ""
+    @State private var qnaStatus: Status = .ready
+    @State private var qnaRunCounter: Int = 0
+    /// Polish-mode discussion thread. Triggered by the "Discuss" button under
+    /// the polish output — the user keeps chatting in the same popup until
+    /// they're satisfied. Each Send appends a `.user` turn, then a `.assistant`
+    /// turn that the LLM streams into. State persists for the life of the
+    /// popup; closing it discards the thread.
+    @State private var polishChatThread: [PolishChatTurn] = []
+    @State private var polishChatInput: String = ""
+    @State private var polishChatStatus: Status = .ready
+    @State private var polishChatExpanded: Bool = false
+    @State private var polishChatRunCounter: Int = 0
+    /// MemoryEvent.id of the polish run this popup represents. Set when the
+    /// initial polish call completes (live mode) or in init (replay mode).
+    /// Nil until we have a row in MemoryStore to update.
+    @State private var polishEventID: UUID?
+    /// Retry tick — bumping this re-fires the polish task, used by the
+    /// "retry" icon shown on a failed initial polish call.
+    @State private var polishRetryCounter: Int = 0
     @State private var detectedSource: NLLanguage?
     @State private var targetLang: String = "en"
     @State private var availableLanguages: [Locale.Language] = []
@@ -141,6 +293,11 @@ struct PopupView: View {
         case working
         case ready
         case failed(String)
+
+        var isWorking: Bool {
+            if case .working = self { return true }
+            return false
+        }
     }
 
     private var isSingleWord: Bool {
@@ -205,8 +362,8 @@ struct PopupView: View {
             .background(containerBackground)
             .onAppear { setupConfiguration() }
             .task { await loadAvailableLanguages() }
-            .task(id: mode == .polish ? "polish-\(sourceText)" : "") {
-                guard mode == .polish else { return }
+            .task(id: mode == .polish ? "polish-\(sourceText)-\(polishRetryCounter)" : "") {
+                guard mode == .polish, replay == nil else { return }
                 await runPolish()
             }
             // Explain calls the LLM for a prose explanation — same direction as
@@ -214,8 +371,26 @@ struct PopupView: View {
             // contextual. The id includes targetLang so changing the target via
             // the footer menu re-fires the LLM.
             .task(id: mode == .explain ? "explain-\(sourceText)-\(targetLang)" : "") {
-                guard mode == .explain else { return }
+                guard mode == .explain, replay == nil else { return }
                 await runExplain()
+            }
+            // Chat: re-fires whenever `quizRunCounter` ticks (user hits Next).
+            // Chat starts one session per popup open. Advancing within the
+            // session doesn't re-fire this task — the batch is pre-built.
+            .task(id: mode == .chat ? "chat-session-open" : "") {
+                guard mode == .chat else { return }
+                await runChat()
+            }
+            // Q&A: re-fires whenever the user submits a follow-up question.
+            .task(id: mode == .chat && quizSessionComplete ? "qna-\(qnaRunCounter)" : "") {
+                guard mode == .chat, quizSessionComplete, qnaRunCounter > 0 else { return }
+                await runQna()
+            }
+            // Polish discussion: re-fires on each Send. The thread state lives
+            // in `polishChatThread`; this task only kicks off the LLM call.
+            .task(id: mode == .polish ? "polish-chat-\(polishChatRunCounter)" : "") {
+                guard mode == .polish, polishChatRunCounter > 0 else { return }
+                await runPolishChat()
             }
             // Apple Translation only powers decode (`.translate`). Explain and
             // Polish are both LLM-driven (handled by the task modifiers above).
@@ -225,38 +400,83 @@ struct PopupView: View {
             .translationTask(mode == .translate ? backConfiguration : nil) { session in
                 await backTranslate(using: session)
             }
-            .onKeyPress(.escape) {
-                onClose()
-                return .handled
-            }
+            // No `.onKeyPress(.escape)` here — the panel handles ESC via
+            // `PopupPanel.cancelOperation`, which defers to the active IME
+            // when CJK input candidates are showing. SwiftUI's hook would
+            // run before the IME and close the popup mid-composition.
     }
 
-    /// All three modes use the same auto-fit layout: no ScrollView, fixed
-    /// width per mode, intrinsic height. The hosting controller's
-    /// `preferredContentSize` drives the panel size so it tracks the content
-    /// exactly — no large blank area below a short Polish result, and the
-    /// translate panel doesn't get cut off by a scroll bar either.
+    /// Translate / explain auto-fit to content. Polish is user-resizable —
+    /// once chat turns start accumulating the user wants to control the
+    /// height themselves, so the polish panel has `.resizable` in its
+    /// styleMask and this view lets its frame stretch to the panel size
+    /// (no `.fixedSize`, with `maxWidth` / `maxHeight` set to `.infinity`).
+    /// The initial width is the same `contentWidth` either way.
     private var outerLayout: some View {
         VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
             contentColumn
-            footerBar
+            footerForMode
         }
         .padding(PopupTokens.containerPadding)
-        .frame(width: contentWidth, alignment: .leading)
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(
+            minWidth: contentWidth,
+            idealWidth: contentWidth,
+            maxWidth: mode == .polish ? .infinity : contentWidth,
+            maxHeight: mode == .polish ? .infinity : nil,
+            alignment: .topLeading
+        )
+        .fixedSize(horizontal: false, vertical: mode != .polish)
+    }
+
+    /// Chat doesn't have a source language to display — the question came from
+    /// the LLM, not a selection. Show just the practice target language and
+    /// elapsed time instead of the usual "src → tgt" footer.
+    @ViewBuilder
+    private var footerForMode: some View {
+        if mode == .chat {
+            HStack(spacing: 6) {
+                Text("Practice")
+                    .font(.system(size: 11))
+                    .foregroundStyle(PopupTokens.tertiaryText)
+                Text("·")
+                    .font(.system(size: 11))
+                    .foregroundStyle(PopupTokens.tertiaryText)
+                Text(footerTargetLabel)
+                    .font(.system(size: 11))
+                    .foregroundStyle(PopupTokens.tertiaryText)
+                Spacer()
+                Text("\(elapsedMs)ms · Esc")
+                    .font(.system(size: 11))
+                    .foregroundStyle(PopupTokens.tertiaryText)
+            }
+        } else {
+            footerBar
+        }
     }
 
     /// Polish wants a wider content column (variant cards hold full sentences);
-    /// translate and explain stay at the original 460pt.
+    /// translate, explain, and chat stay at the original 460pt.
     private var contentWidth: CGFloat {
         switch mode {
-        case .polish:              return PopupTokens.polishContentWidth
-        case .translate, .explain: return PopupTokens.translateContentWidth
+        case .polish:                       return PopupTokens.polishContentWidth
+        case .translate, .explain, .chat:   return PopupTokens.translateContentWidth
         }
     }
 
-    /// All section blocks above the footer. Extracted so both layouts can reuse it.
+    /// All section blocks above the footer. Extracted so both layouts can
+    /// reuse it. `.chat` short-circuits to a dedicated practice-question
+    /// block instead of the source-row + dict/translate flow.
+    @ViewBuilder
     private var contentColumn: some View {
+        if mode == .chat {
+            chatBlock
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            translateExplainPolishColumn
+        }
+    }
+
+    private var translateExplainPolishColumn: some View {
         VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
             sourceBlock
 
@@ -298,6 +518,8 @@ struct PopupView: View {
                 case .polish:
                     sectionLabel("Polished" + (polishProviderName.isEmpty ? "" : " · \(polishProviderName)"))
                     polishBlock
+                case .chat:
+                    EmptyView()   // chat short-circuits at contentColumn — unreachable here
                 }
             }
         }
@@ -415,6 +637,7 @@ struct PopupView: View {
         switch mode {
         case .translate, .explain: size = isSingleWord ? 34 : 24
         case .polish:              size = 26
+        case .chat:                size = 24   // sourceBlock isn't rendered for chat, but the compiler needs exhaustiveness
         }
         return Text(sourceText)
             .font(.system(size: size, weight: .bold))
@@ -582,6 +805,525 @@ struct PopupView: View {
         return "Asking \(provider) to explain in \(footerTargetLabel)…"
     }
 
+    /// Chat mode body: header tag for the targeted mistake category, the
+    /// question text, four clickable answer cards, and post-answer feedback +
+    /// "Next question" button. The cards are buttons until answered, then
+    /// disabled and re-colored (green = correct, red = wrong).
+    private var chatBlock: some View {
+        VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
+            switch quizStatus {
+            case .working:
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Preparing your practice session via \(quizProviderName.isEmpty ? "LLM" : quizProviderName)…")
+                        .font(.system(size: PopupTokens.bodySize))
+                        .foregroundStyle(PopupTokens.secondaryText)
+                }
+            case .ready:
+                if quizSessionComplete {
+                    qnaPanel
+                } else if quizIndex < quizBatch.count {
+                    quizSessionPanel(quizBatch[quizIndex])
+                }
+            case .failed(let message):
+                Text(message)
+                    .font(.system(size: PopupTokens.bodySize))
+                    .foregroundStyle(.red)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    /// One question of the session. Header shows progress + category, body
+    /// shows the question + options, feedback area appears after an answer.
+    private func quizSessionPanel(_ q: QuizQuestion) -> some View {
+        VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
+            quizCategoryHeader(q.category)
+            Text(q.question)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(PopupTokens.primaryText)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(q.options.enumerated()), id: \.offset) { idx, option in
+                    quizOptionButton(option, index: idx, question: q)
+                }
+            }
+            if quizSelectedIndex != nil {
+                quizFeedback(q)
+            }
+        }
+    }
+
+    /// Post-session Q&A: the user types a follow-up; the LLM streams back a
+    /// short prose answer below.
+    private var qnaPanel: some View {
+        VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.seal.fill")
+                    .foregroundStyle(.green)
+                Text("Session complete")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(PopupTokens.primaryText)
+                Spacer()
+                Text("\(quizBatch.count) / \(quizBatch.count)")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(PopupTokens.tertiaryText)
+            }
+            Text("Any follow-up questions? Ask anything — I can explain a mistake, give examples, or walk through a rule.")
+                .font(.system(size: PopupTokens.bodySize))
+                .foregroundStyle(PopupTokens.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                TextField("Ask a question…", text: $qnaInput, axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                    .lineLimit(1...3)
+                    .onSubmit { submitQna() }
+                Button("Ask") { submitQna() }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(qnaInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                              || qnaStatus.isWorking)
+                    .keyboardShortcut(.return, modifiers: [])
+            }
+            switch qnaStatus {
+            case .working:
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Thinking…")
+                        .font(.system(size: PopupTokens.bodySize))
+                        .foregroundStyle(PopupTokens.secondaryText)
+                }
+            case .ready where !qnaResponse.isEmpty:
+                Self.markdownText(qnaResponse)
+                    .font(.system(size: PopupTokens.bodySize))
+                    .foregroundStyle(PopupTokens.primaryText)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(PopupTokens.variantSurface)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .strokeBorder(PopupTokens.border, lineWidth: 1)
+                            )
+                    )
+            case .failed(let message):
+                Text(message)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.red)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            default:
+                EmptyView()
+            }
+        }
+    }
+
+    private func submitQna() {
+        let trimmed = qnaInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        qnaRunCounter += 1
+    }
+
+    // MARK: - Polish discussion
+
+    /// Collapsed-by-default panel under the polish output. Lets the user
+    /// continue chatting with the LLM about their draft — ask why a fix was
+    /// suggested, request a different rewrite tone, etc. — without leaving
+    /// the popup.
+    @ViewBuilder
+    private var polishDiscussionSection: some View {
+        VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
+            if polishChatExpanded {
+                HStack(spacing: 6) {
+                    Image(systemName: "bubble.left.and.bubble.right")
+                        .foregroundStyle(PopupTokens.accent)
+                    Text("Discuss with Glotty")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(PopupTokens.primaryText)
+                    Spacer()
+                    Button {
+                        polishChatExpanded = false
+                    } label: {
+                        Image(systemName: "chevron.up")
+                            .font(.system(size: 11))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(PopupTokens.tertiaryText)
+                }
+
+                if !polishChatThread.isEmpty {
+                    // ≤3 turns render inline (every message visible by
+                    // default, no scrollbar). Once the thread grows past
+                    // 3 turns, the older ones recede into a ScrollView
+                    // capped at ~3 bubbles tall — the user can drag the
+                    // popup taller to see more without scrolling, since
+                    // polish panels are now user-resizable.
+                    if polishChatThread.count > 3 {
+                        ScrollView {
+                            polishChatTurnsList
+                        }
+                        .frame(maxHeight: 360)
+                    } else {
+                        polishChatTurnsList
+                    }
+                }
+
+                HStack(spacing: 8) {
+                    TextField("Not satisfied? Ask a follow-up…",
+                              text: $polishChatInput,
+                              axis: .vertical)
+                        .textFieldStyle(.roundedBorder)
+                        .lineLimit(1...3)
+                        .onSubmit { submitPolishChat() }
+                    Button("Send") { submitPolishChat() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(polishChatInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                  || polishChatStatus.isWorking)
+                        .keyboardShortcut(.return, modifiers: [])
+                }
+            } else {
+                Button {
+                    polishChatExpanded = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "bubble.left.and.bubble.right")
+                        Text("Not satisfied? Discuss with Glotty")
+                            .font(.system(size: 12, weight: .medium))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10))
+                            .foregroundStyle(PopupTokens.tertiaryText)
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(PopupTokens.variantSurface)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .strokeBorder(PopupTokens.border, lineWidth: 1)
+                            )
+                    )
+                    .foregroundStyle(PopupTokens.accent)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    /// Boolean shortcut for the bubble retry pill — only the failure case
+    /// shows the inline "Retry" affordance.
+    private var polishChatFailed: Bool {
+        if case .failed = polishChatStatus { return true }
+        return false
+    }
+
+    /// The bubbled chat turns. Lives in its own view so the polish discussion
+    /// section can switch between "inline VStack" (≤3 turns, fully visible)
+    /// and "ScrollView wrapped" (>3 turns) without duplicating the body.
+    @ViewBuilder
+    private var polishChatTurnsList: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(Array(polishChatThread.enumerated()), id: \.element.id) { idx, turn in
+                polishChatBubble(
+                    turn,
+                    showRetry: turn.role == .user
+                        && idx == polishChatThread.count - 1
+                        && polishChatFailed
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func polishChatBubble(_ turn: PolishChatTurn, showRetry: Bool) -> some View {
+        let isUser = turn.role == .user
+        VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
+            HStack {
+                if isUser { Spacer(minLength: 24) }
+                Group {
+                    if turn.role == .assistant && turn.text.isEmpty && polishChatStatus.isWorking {
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.small)
+                            Text("Thinking…")
+                                .font(.system(size: PopupTokens.bodySize))
+                                .foregroundStyle(PopupTokens.secondaryText)
+                        }
+                    } else {
+                        Self.markdownText(turn.text)
+                            .font(.system(size: PopupTokens.bodySize))
+                            .foregroundStyle(PopupTokens.primaryText)
+                            .textSelection(.enabled)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(isUser ? PopupTokens.accent.opacity(0.15) : PopupTokens.variantSurface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .strokeBorder(PopupTokens.border, lineWidth: isUser ? 0 : 1)
+                        )
+                )
+                if !isUser { Spacer(minLength: 24) }
+            }
+            if showRetry {
+                HStack(spacing: 6) {
+                    if case .failed(let message) = polishChatStatus {
+                        Text(message)
+                            .font(.caption2)
+                            .foregroundStyle(.red)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                    Button {
+                        retryPolishChat()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.clockwise")
+                            Text("Retry")
+                        }
+                        .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(.red)
+                }
+            }
+        }
+    }
+
+    private func submitPolishChat() {
+        let trimmed = polishChatInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !polishChatStatus.isWorking else { return }
+        polishChatThread.append(PolishChatTurn(role: .user, text: trimmed))
+        polishChatInput = ""
+        polishChatRunCounter += 1
+    }
+
+    /// LLM call backing the polish discussion. Builds a prompt that primes
+    /// the model with the user's original draft, the suggested top variant,
+    /// the flagged issues, and the full conversation so far — then streams
+    /// the reply into the trailing assistant turn.
+    private func runPolishChat() async {
+        guard let provider = LLMRegistry.current() else {
+            polishChatStatus = .failed("No LLM provider configured. Add one in Settings → Language Model.")
+            return
+        }
+        polishChatStatus = .working
+        // Reserve an empty assistant turn that the stream will fill in. The
+        // bubble renderer shows "Thinking…" until the first chunk lands.
+        polishChatThread.append(PolishChatTurn(role: .assistant, text: ""))
+        let assistantIndex = polishChatThread.count - 1
+
+        let language = polishTargetLanguage()
+        let topVariant = polishResult.variants.first?.text ?? "(no variant)"
+        let issuesList = polishResult.issues
+            .compactMap { issue -> String? in
+                let parts = [issue.category, issue.original.map { "“\($0)”" }, issue.explanation]
+                    .compactMap { $0 }
+                return parts.isEmpty ? nil : "- " + parts.joined(separator: " — ")
+            }
+            .joined(separator: "\n")
+        // Skip the placeholder assistant turn we just appended when rendering
+        // history — it has no content yet.
+        let history = polishChatThread
+            .dropLast()
+            .map { "\($0.role == .user ? "User" : "Assistant"): \($0.text)" }
+            .joined(separator: "\n\n")
+
+        let prompt = """
+        You are a writing tutor helping a user polish their \(PolishPrompt.englishName(for: language)) text. Reply concisely (2-5 sentences) in \(PolishPrompt.englishName(for: language)) unless the user asks otherwise. Reference the draft and your earlier suggestions when relevant.
+
+        User's original draft:
+        \(sourceText)
+
+        Your top suggested rewrite:
+        \(topVariant)
+
+        Issues you flagged:
+        \(issuesList.isEmpty ? "(none)" : issuesList)
+
+        Conversation so far:
+        \(history)
+
+        Continue the conversation by responding to the user's most recent message.
+        """
+
+        do {
+            try await UsageContext.$mode.withValue(.practiceQna) {
+                for try await chunk in provider.chatCompletionStream(prompt: prompt) {
+                    polishChatThread[assistantIndex].text = chunk
+                }
+            }
+            polishChatStatus = .ready
+            persistPolishChatThread()
+        } catch {
+            // Drop the now-empty assistant placeholder on error so retry can
+            // re-fire from the same user turn without an empty bubble in the
+            // middle of the thread.
+            if polishChatThread.indices.contains(assistantIndex),
+               polishChatThread[assistantIndex].text.isEmpty {
+                polishChatThread.remove(at: assistantIndex)
+            }
+            polishChatStatus = .failed(error.localizedDescription)
+        }
+    }
+
+    /// Write the current chat thread back onto the parent polish event in
+    /// MemoryStore. Runs after every successful chat exchange so closing
+    /// and reopening the popup later restores the full conversation. No-op
+    /// when we don't have an event id yet (live polish hasn't completed) or
+    /// the parent event has gone missing.
+    private func persistPolishChatThread() {
+        guard let eventID = polishEventID else { return }
+        guard let existing = MemoryStore.shared.allEvents().first(where: { $0.id == eventID }) else { return }
+        let snapshot = polishChatThread.map { turn in
+            PolishChatTurnSnapshot(
+                role: turn.role == .user ? .user : .assistant,
+                text: turn.text
+            )
+        }
+        let updated = MemoryEvent(
+            kind: existing.kind,
+            sourceText: existing.sourceText,
+            sourceLang: existing.sourceLang,
+            targetLang: existing.targetLang,
+            result: existing.result,
+            issues: existing.issues,
+            backTranslation: existing.backTranslation,
+            polishSnapshot: existing.polishSnapshot,
+            polishChatThread: snapshot.isEmpty ? nil : snapshot,
+            timestamp: existing.timestamp,
+            id: existing.id
+        )
+        MemoryStore.shared.update(updated)
+    }
+
+    /// Re-fire the most recent user turn after a network failure. Drops any
+    /// failed-status state and bumps the run counter so `.task(id:)` kicks
+    /// off a fresh `runPolishChat` against the existing user turn (which
+    /// stayed in the thread).
+    private func retryPolishChat() {
+        guard case .failed = polishChatStatus else { return }
+        polishChatStatus = .ready
+        polishChatRunCounter += 1
+    }
+
+    private func quizCategoryHeader(_ category: String) -> some View {
+        HStack(spacing: 8) {
+            Text("Question \(quizIndex + 1) / \(quizBatch.count)")
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .textCase(.uppercase)
+                .foregroundStyle(PopupTokens.tertiaryText)
+            Text(category)
+                .font(.system(size: 11, weight: .semibold))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(
+                    Capsule().fill(PopupTokens.accent.opacity(0.15))
+                )
+                .foregroundStyle(PopupTokens.accent)
+            Spacer()
+        }
+    }
+
+    private func quizOptionButton(_ option: String, index idx: Int, question q: QuizQuestion) -> some View {
+        let answered = quizSelectedIndex != nil
+        let isSelected = quizSelectedIndex == idx
+        let isCorrect = idx == q.correctIndex
+
+        let bgColor: Color = {
+            guard answered else { return PopupTokens.variantSurface }
+            if isCorrect { return Color.green.opacity(0.18) }
+            if isSelected { return Color.red.opacity(0.16) }
+            return PopupTokens.variantSurface
+        }()
+
+        let borderColor: Color = {
+            guard answered else { return PopupTokens.border }
+            if isCorrect { return Color.green.opacity(0.5) }
+            if isSelected { return Color.red.opacity(0.5) }
+            return PopupTokens.border
+        }()
+
+        let letter = ["A", "B", "C", "D"][idx]
+        return Button {
+            guard quizSelectedIndex == nil else { return }
+            quizSelectedIndex = idx
+            // The question's been answered — drop it from the library so it
+            // doesn't recur in future sessions. Library matches by question
+            // text, so this is a no-op if the question came from an ad-hoc
+            // (Fn-triggered) generation and was never persisted.
+            QuizLibrary.shared.remove(q)
+        } label: {
+            HStack(spacing: 10) {
+                Text(letter)
+                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(PopupTokens.tertiaryText)
+                    .frame(width: 18, alignment: .leading)
+                Text(option)
+                    .font(.system(size: PopupTokens.bodySize))
+                    .foregroundStyle(PopupTokens.primaryText)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                if answered, isCorrect {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                        .font(.system(size: 14))
+                } else if answered, isSelected {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.red)
+                        .font(.system(size: 14))
+                }
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(bgColor)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(borderColor, lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(answered)
+    }
+
+    private func quizFeedback(_ q: QuizQuestion) -> some View {
+        let isLast = quizIndex + 1 >= quizBatch.count
+        return VStack(alignment: .leading, spacing: 10) {
+            Text(q.explanation)
+                .font(.system(size: PopupTokens.bodySize))
+                .foregroundStyle(PopupTokens.secondaryText)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack {
+                Spacer()
+                Button(isLast ? "Finish session" : "Next question") {
+                    if isLast {
+                        quizSessionComplete = true
+                    } else {
+                        quizIndex += 1
+                        quizSelectedIndex = nil
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.return, modifiers: [])
+            }
+        }
+    }
+
     private var polishBlock: some View {
         VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
             switch polishStatus {
@@ -608,14 +1350,31 @@ struct PopupView: View {
                         sectionLabel("Issues")
                         polishIssuesSection
                     }
+                    regionDivider
+                    polishDiscussionSection
                 }
                 .transition(.opacity)
             case .failed(let message):
-                Text(message)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.red)
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .top, spacing: 8) {
+                    Text(message)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.red)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 8)
+                    Button {
+                        // Bump the polish task id so `.task(id:)` re-fires.
+                        polishStatus = .working
+                        polishRawText = ""
+                        polishResult = .empty
+                        polishRetryCounter += 1
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Retry polish")
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -887,6 +1646,28 @@ struct PopupView: View {
     }
 
     private func setupConfiguration() {
+        // Chat has no source text or translation/dict flow — `runChat()`
+        // pulls topics from MemoryStore and generates a question on its own.
+        if mode == .chat {
+            targetLang = polishTargetLanguage()
+            return
+        }
+
+        // Replay path: state was already pre-loaded in init. We still want
+        // `detectedSource` populated so the footer shows the right language,
+        // and the translate dict lookup can still run (it's local and cheap),
+        // but we DO NOT call `rebuildConfiguration()` — leaving
+        // `configuration` nil prevents `.translationTask` from firing.
+        if let replay {
+            detectedSource = replay.sourceLang.flatMap { NLLanguage(rawValue: $0) }
+                ?? LanguagePolicy.detectSourceLanguage(sourceText)
+            if mode == .translate, LanguagePolicy.isSingleWord(sourceText) {
+                runDictLookup()
+            }
+            Self.dbg("setup (replay) — mode=\(mode) text='\(sourceText)' target=\(targetLang)")
+            return
+        }
+
         let savedSource = UserDefaults.standard.string(forKey: "glotty.sourceLang")
         let savedTarget = UserDefaults.standard.string(forKey: "glotty.targetLang")
 
@@ -941,39 +1722,48 @@ struct PopupView: View {
             // Polish output language: user pref → fallback to English (the most
             // common "I want this in idiomatic <X>" case for our audience).
             target = polishTargetLanguage()
+        case .chat:
+            // Unreachable — chat early-returns above. Compiler exhaustiveness.
+            target = polishTargetLanguage()
         }
         targetLang = target
 
         // Dictionary lookup is decode-mode only (`.translate`). Explain reads
         // a single prose block from the LLM; polish has no dict section.
         if mode == .translate, LanguagePolicy.isSingleWord(sourceText) {
-            let available = DictionaryLookup.availableDictionaries()
-            // Two independent priority-ordered lookups — one per dict kind. The popup
-            // shows the first hit from each list in its own region; this prevents a
-            // bilingual dict from crowding out the source-language slot or vice versa.
-            let monoIDs = DictionarySelection.selectedIDs(
-                kind: .monolingual,
-                sourcePreference: savedSource ?? "",
-                targetPreference: savedTarget ?? "",
-                detectedSource: detected,
-                availableDictionaries: available
-            )
-            let biIDs = DictionarySelection.selectedIDs(
-                kind: .bilingual,
-                sourcePreference: savedSource ?? "",
-                targetPreference: savedTarget ?? "",
-                detectedSource: detected,
-                availableDictionaries: available
-            )
-            let monoResults = DictionaryLookup.allSourcedEntries(for: sourceText, selectedIDs: monoIDs)
-            let biResults   = DictionaryLookup.allSourcedEntries(for: sourceText, selectedIDs: biIDs)
-            dictResults = monoResults + biResults
-            Self.dbg("dict — mono=[\(monoResults.map(\.dictionary.name).joined(separator: ", "))] " +
-                     "bi=[\(biResults.map(\.dictionary.name).joined(separator: ", "))]")
+            runDictLookup()
         }
 
         Self.dbg("setup — mode=\(mode) text='\(sourceText)' detected=\(detected?.rawValue ?? "nil") target=\(target)")
         rebuildConfiguration()
+    }
+
+    /// Pull dictionary entries for the current source text using the user's
+    /// preferred priority order. Local (Apple Dictionary), so safe to call
+    /// from both the live-run path and the replay path.
+    private func runDictLookup() {
+        let savedSource = UserDefaults.standard.string(forKey: "glotty.sourceLang") ?? ""
+        let savedTarget = UserDefaults.standard.string(forKey: "glotty.targetLang") ?? ""
+        let available = DictionaryLookup.availableDictionaries()
+        let monoIDs = DictionarySelection.selectedIDs(
+            kind: .monolingual,
+            sourcePreference: savedSource,
+            targetPreference: savedTarget,
+            detectedSource: detectedSource,
+            availableDictionaries: available
+        )
+        let biIDs = DictionarySelection.selectedIDs(
+            kind: .bilingual,
+            sourcePreference: savedSource,
+            targetPreference: savedTarget,
+            detectedSource: detectedSource,
+            availableDictionaries: available
+        )
+        let monoResults = DictionaryLookup.allSourcedEntries(for: sourceText, selectedIDs: monoIDs)
+        let biResults   = DictionaryLookup.allSourcedEntries(for: sourceText, selectedIDs: biIDs)
+        dictResults = monoResults + biResults
+        Self.dbg("dict — mono=[\(monoResults.map(\.dictionary.name).joined(separator: ", "))] " +
+                 "bi=[\(biResults.map(\.dictionary.name).joined(separator: ", "))]")
     }
 
     private func changeTarget(to newLang: String) {
@@ -1037,6 +1827,19 @@ struct PopupView: View {
             elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
             Self.dbg("translate ok — '\(sourceText)' → '\(response.targetText)' in \(elapsedMs)ms")
 
+            // Recording moves to the end of `backTranslate(using:)` so the
+            // event has both halves of the round-trip. For pairs where the
+            // back-translation won't run (same language, empty target), we
+            // record here directly with backTranslation = nil. The branch
+            // below sets backConfiguration only when back-translation IS
+            // expected — so we mirror that condition.
+            let willBackTranslate = (detectedSource?.rawValue != nil
+                                     && detectedSource!.rawValue != targetLang
+                                     && !response.targetText.isEmpty)
+            if !willBackTranslate {
+                recordTranslateEvent()
+            }
+
             // Bilateral: kick off a back-translation (target → source) so the user
             // can see what the translation "means" in their source language and
             // verify the round-trip preserved their intent. Skip when source and
@@ -1072,6 +1875,25 @@ struct PopupView: View {
             // translation has already succeeded by this point.
             Self.dbg("back-translate FAIL — err=\(error.localizedDescription)")
         }
+        // Record the full round-trip so Memory's click-through can restore
+        // both halves. If back-translate errored, backTranslated stays empty
+        // and we still persist the forward result.
+        recordTranslateEvent()
+    }
+
+    /// Persist a single .translate MemoryEvent capturing both forward and
+    /// back-translation. Called either at the end of `translate(using:)`
+    /// (when no back-translation is expected) or at the end of
+    /// `backTranslate(using:)`.
+    private func recordTranslateEvent() {
+        MemoryStore.shared.record(MemoryEvent(
+            kind: .translate,
+            sourceText: sourceText,
+            sourceLang: detectedSource?.rawValue,
+            targetLang: targetLang,
+            result: translated,
+            backTranslation: backTranslated.isEmpty ? nil : backTranslated
+        ))
     }
 
     /// Explain calls the LLM with the explain prompt (prose, no JSON) and
@@ -1089,15 +1911,111 @@ struct PopupView: View {
 
         Self.dbg("explain begin — text='\(sourceText)' target=\(outputLanguage) provider=\(provider.id)")
         do {
-            for try await snapshot in provider.explainStream(sourceText, targetLanguage: outputLanguage) {
-                explainText = snapshot
+            try await UsageContext.$mode.withValue(.explain) {
+                for try await snapshot in provider.explainStream(sourceText, targetLanguage: outputLanguage) {
+                    explainText = snapshot
+                }
             }
             explainStatus = .ready
             elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
             Self.dbg("explain ok — \(explainText.count) chars in \(elapsedMs)ms")
+
+            MemoryStore.shared.record(MemoryEvent(
+                kind: .explain,
+                sourceText: sourceText,
+                sourceLang: detectedSource?.rawValue,
+                targetLang: outputLanguage,
+                result: explainText
+            ))
         } catch {
             Self.dbg("explain FAIL — err=\(error.localizedDescription)")
             explainStatus = .failed(error.localizedDescription)
+        }
+    }
+
+    /// Chat (practice) session bootstrap. First drains any batch the
+    /// `PracticeScheduler` has waiting (set by the proactive notification
+    /// flow); if nothing's pending, falls back to generating a one-question
+    /// batch on the fly so the manual Fn → C hotkey still works.
+    private func runChat() async {
+        // Reset session state on every open.
+        quizStatus = .working
+        quizSelectedIndex = nil
+        quizIndex = 0
+        quizSessionComplete = false
+        qnaResponse = ""
+        qnaInput = ""
+        qnaStatus = .ready
+        qnaRunCounter = 0
+
+        guard let provider = LLMRegistry.current() else {
+            quizStatus = .failed("No LLM provider configured. Add one in Settings → Language Model.")
+            return
+        }
+        quizProviderName = provider.displayName
+
+        // Use the scheduler's pre-built batch if available; otherwise build
+        // one ad-hoc (manual trigger path).
+        let prebuilt = PracticeScheduler.shared.takePendingBatch()
+        if !prebuilt.isEmpty {
+            quizBatch = prebuilt
+            quizStatus = .ready
+            elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
+            Self.dbg("chat session — pre-built \(prebuilt.count) Qs from scheduler")
+            return
+        }
+
+        // Manual trigger: build a single-question batch in line.
+        let categories = MemoryStore.shared.topGrammarIssues(limit: 5).map(\.key)
+        let language = polishTargetLanguage()
+        let prompt = QuizPrompt.build(categories: categories, targetLanguage: language)
+        Self.dbg("chat session — building ad-hoc Q (categories=\(categories) lang=\(language))")
+
+        var raw = ""
+        do {
+            try await UsageContext.$mode.withValue(.practiceGenerate) {
+                for try await chunk in provider.chatCompletionStream(prompt: prompt) {
+                    raw = chunk
+                }
+            }
+            if let q = QuizPrompt.parse(raw) {
+                quizBatch = [q]
+                quizStatus = .ready
+                elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
+            } else {
+                quizStatus = .failed("Couldn't parse the generated question. Try again.")
+            }
+        } catch {
+            quizStatus = .failed(error.localizedDescription)
+        }
+    }
+
+    /// Free-form Q&A — after the quiz, the user can type a follow-up question
+    /// and have the LLM answer in streamed prose. Same `chatCompletionStream`
+    /// transport as Explain; no JSON shape, just prose.
+    private func runQna() async {
+        let question = qnaInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !question.isEmpty, let provider = LLMRegistry.current() else { return }
+        qnaStatus = .working
+        qnaResponse = ""
+        let language = polishTargetLanguage()
+        let prompt = """
+        You are a helpful tutor for a user learning \(PolishPrompt.englishName(for: language)). \
+        Answer their follow-up question concisely, in 2-4 sentences. Reply in \
+        \(PolishPrompt.englishName(for: language)) prose only — no preamble.
+
+        Question:
+        \(question)
+        """
+        do {
+            try await UsageContext.$mode.withValue(.practiceQna) {
+                for try await chunk in provider.chatCompletionStream(prompt: prompt) {
+                    qnaResponse = chunk
+                }
+            }
+            qnaStatus = .ready
+        } catch {
+            qnaStatus = .failed(error.localizedDescription)
         }
     }
 
@@ -1134,13 +2052,54 @@ struct PopupView: View {
             // the structured cards take over at the end.
             polishRawText = ""
             let prompt = PolishPrompt.build(text: sourceText, mode: mode)
-            for try await accumulated in provider.chatCompletionStream(prompt: prompt) {
-                polishRawText = accumulated
+            try await UsageContext.$mode.withValue(.polish) {
+                for try await accumulated in provider.chatCompletionStream(prompt: prompt) {
+                    polishRawText = accumulated
+                }
             }
             polishResult = PolishResult.parse(polishRawText)
             polishStatus = .ready
             elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
             Self.dbg("polish ok — variants=\(polishResult.variants.count) issues=\(polishResult.issues.count) in \(elapsedMs)ms")
+
+            // Record the polish run + categories of the issues the LLM
+            // flagged so the Memory tab can surface recurring mistake types.
+            // Only the category is persisted — the user's literal phrasing
+            // (`original`) stays in the popup but never on disk.
+            // Skip the memory write when the LLM returned something the parser
+            // couldn't extract structure from (garbage JSON, hallucinated
+            // prose, etc.). The popup still shows the raw text as a single
+            // variant so the user sees the output, but storing a fallback
+            // would put an unreplayable row in the Memory tab.
+            if polishResult.isFallback {
+                Self.dbg("polish — skipping memory record (parser returned fallback)")
+            } else {
+                let issueSnapshots = polishResult.issues
+                    .compactMap { PolishIssueSnapshot(category: $0.category) }
+                // Full snapshot persists variants + per-issue category/original/
+                // explanation so the Memory click-through can rebuild the polish
+                // window verbatim. Aggregate `issues` field above is kept for
+                // backwards compatibility with old "Common mistake types" rollups.
+                let snapshot = PolishResultSnapshot(
+                    variants: polishResult.variants.map {
+                        .init(text: $0.text, backTranslation: $0.backTranslation)
+                    },
+                    issues: polishResult.issues.map {
+                        .init(category: $0.category, original: $0.original, explanation: $0.explanation)
+                    }
+                )
+                let event = MemoryEvent(
+                    kind: .polish,
+                    sourceText: sourceText,
+                    sourceLang: detectedSource?.rawValue,
+                    targetLang: outputLanguage,
+                    result: polishResult.variants.first?.text,
+                    issues: issueSnapshots.isEmpty ? nil : issueSnapshots,
+                    polishSnapshot: snapshot
+                )
+                MemoryStore.shared.record(event)
+                polishEventID = event.id
+            }
         } catch {
             Self.dbg("polish FAIL — err=\(error.localizedDescription)")
             polishStatus = .failed(error.localizedDescription)
@@ -1170,6 +2129,26 @@ struct PopupView: View {
         s.components(separatedBy: .whitespacesAndNewlines)
             .filter { !$0.isEmpty }
             .joined(separator: " ")
+    }
+
+    /// Render `raw` as Markdown — bold (`**…**`), italic (`*…*`), inline
+    /// code (`` `…` ``), and links all show up styled instead of as
+    /// literal asterisks/backticks. Uses `inlineOnlyPreservingWhitespace`
+    /// so paragraph breaks and indentation in chat replies stay intact;
+    /// block-level constructs (headers, lists, fenced code blocks) render
+    /// inline rather than as separate visual blocks, which is fine for the
+    /// short prose answers Glotty's chat / Q&A returns. Falls back to a
+    /// plain Text if parsing fails — defensive only; the
+    /// `returnPartiallyParsedIfPossible` policy means even mid-stream
+    /// fragments parse successfully.
+    static func markdownText(_ raw: String) -> Text {
+        var options = AttributedString.MarkdownParsingOptions()
+        options.interpretedSyntax = .inlineOnlyPreservingWhitespace
+        options.failurePolicy = .returnPartiallyParsedIfPossible
+        if let attr = try? AttributedString(markdown: raw, options: options) {
+            return Text(attr)
+        }
+        return Text(raw)
     }
 
     private static func dbg(_ msg: String) {

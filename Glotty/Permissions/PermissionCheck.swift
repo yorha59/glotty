@@ -2,10 +2,12 @@ import Foundation
 import AppKit
 import ApplicationServices
 import IOKit.hid
+import UserNotifications
 
 enum Permission: String, CaseIterable, Identifiable {
     case accessibility
     case inputMonitoring
+    case notifications
 
     var id: String { rawValue }
 
@@ -13,6 +15,7 @@ enum Permission: String, CaseIterable, Identifiable {
         switch self {
         case .accessibility:    return "Accessibility"
         case .inputMonitoring:  return "Input Monitoring"
+        case .notifications:    return "Notifications"
         }
     }
 
@@ -22,6 +25,8 @@ enum Permission: String, CaseIterable, Identifiable {
             return "Read selected text from the focused application so it can be translated."
         case .inputMonitoring:
             return "Detect the Fn → T hotkey via a low-level event tap."
+        case .notifications:
+            return "Deliver proactive practice reminders when it's time for a quick quiz on your recent mistakes."
         }
     }
 
@@ -31,6 +36,11 @@ enum Permission: String, CaseIterable, Identifiable {
             return URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
         case .inputMonitoring:
             return URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")
+        case .notifications:
+            // macOS routes "Notifications" via its own pane — no per-app
+            // deep-link works reliably across versions, so this lands on the
+            // Notifications root and the user picks Glotty from the list.
+            return URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")
         }
     }
 
@@ -40,11 +50,33 @@ enum Permission: String, CaseIterable, Identifiable {
             return AXIsProcessTrustedWithOptions(nil)
         case .inputMonitoring:
             return IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
+        case .notifications:
+            // UNUserNotificationCenter's settings API is async — we keep a
+            // cached value that PermissionCheck.refreshNotificationsStatus()
+            // updates in the background (called on app start + while the
+            // Permissions view is visible).
+            return PermissionCheck.cachedNotificationsGranted
         }
     }
 }
 
 enum PermissionCheck {
+    /// Cached notifications-authorized status — UN's settings API is async,
+    /// so we read it via `refreshNotificationsStatus()` and stash the result
+    /// here for synchronous `Permission.notifications.isGranted()` queries.
+    /// Defaults to false: better to show "not granted" briefly on launch
+    /// than falsely report success.
+    nonisolated(unsafe) static var cachedNotificationsGranted: Bool = false
+
+    /// Read the current notifications authorization status and update the
+    /// cache. Cheap (system call) and idempotent.
+    static func refreshNotificationsStatus() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            cachedNotificationsGranted = (settings.authorizationStatus == .authorized
+                                          || settings.authorizationStatus == .provisional)
+        }
+    }
+
     static func anyMissing() -> Bool {
         Permission.allCases.contains { !$0.isGranted() }
     }
@@ -74,6 +106,14 @@ enum PermissionCheck {
         case .inputMonitoring:
             let result = IOHIDRequestAccess(kIOHIDRequestTypeListenEvent)
             debugWrite("IOHIDRequestAccess(ListenEvent) -> \(result)")
+        case .notifications:
+            // First-ever call shows the system prompt; subsequent calls are
+            // no-ops if the user has already decided. Either way, refresh
+            // the cache afterward so the row flips to ✓ without delay.
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+                cachedNotificationsGranted = granted
+                debugWrite("UNUserNotificationCenter.requestAuthorization -> granted=\(granted) err=\(error?.localizedDescription ?? "nil")")
+            }
         }
     }
 
@@ -97,6 +137,13 @@ enum PermissionCheck {
     static func registerSilentlyIfMissing() {
         if !Permission.inputMonitoring.isGranted() {
             requestRegistration(for: .inputMonitoring)
+        }
+        // Notifications: prime the cache and (on first run) trigger the
+        // system prompt. Subsequent runs are no-ops if the user already
+        // decided, so this is safe to call unconditionally.
+        refreshNotificationsStatus()
+        if !cachedNotificationsGranted {
+            requestRegistration(for: .notifications)
         }
     }
 

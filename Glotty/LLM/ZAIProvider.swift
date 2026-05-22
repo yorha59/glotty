@@ -128,6 +128,7 @@ struct ZAIProvider: LLMProvider {
             "max_tokens": 1024,
             "temperature": 0.3,
             "stream": true,
+            "stream_options": OpenAIUsageStream.streamOptions,
             "thinking": ["type": "disabled"],
         ]
 
@@ -171,8 +172,11 @@ struct ZAIProvider: LLMProvider {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             if payload == "[DONE]" { break }
             guard let data = payload.data(using: .utf8),
-                  let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let choices = event["choices"] as? [[String: Any]],
+                  let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
+
+            OpenAIUsageStream.record(from: event, providerID: self.id)
+
+            guard let choices = event["choices"] as? [[String: Any]],
                   let first = choices.first,
                   let delta = first["delta"] as? [String: Any],
                   let chunk = delta["content"] as? String,
@@ -213,6 +217,7 @@ struct ZAIProvider: LLMProvider {
             "max_tokens": 1024,
             "temperature": 0.5,   // a touch warmer than polish — explanations benefit from some variation
             "stream": true,
+            "stream_options": OpenAIUsageStream.streamOptions,
             "thinking": ["type": "disabled"],
         ]
 
@@ -249,8 +254,11 @@ struct ZAIProvider: LLMProvider {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             if payload == "[DONE]" { break }
             guard let data = payload.data(using: .utf8),
-                  let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let choices = event["choices"] as? [[String: Any]],
+                  let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
+
+            OpenAIUsageStream.record(from: event, providerID: self.id)
+
+            guard let choices = event["choices"] as? [[String: Any]],
                   let first = choices.first,
                   let delta = first["delta"] as? [String: Any],
                   let chunk = delta["content"] as? String,

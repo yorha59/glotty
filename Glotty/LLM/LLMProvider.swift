@@ -55,9 +55,14 @@ enum PolishMode: Sendable, Equatable {
     }
 }
 
-/// One grammar/usage issue called out by the LLM. `original` is the offending span
-/// (or `nil` if the LLM didn't isolate one); `explanation` is the one-line fix.
+/// One grammar/usage issue called out by the LLM. `original` is the offending
+/// span shown in the popup (or `nil` if the LLM didn't isolate one);
+/// `explanation` is the one-line fix; `category` is a short label of the
+/// mistake *type* (used only by the Memory tab to aggregate patterns —
+/// "Subject-verb agreement", "Article usage", etc. — without persisting the
+/// user's literal text).
 struct GrammarIssue: Sendable, Equatable, Hashable {
+    let category: String?
     let original: String?
     let explanation: String
 }
@@ -75,6 +80,17 @@ struct PolishVariant: Sendable, Equatable, Hashable {
 struct PolishResult: Sendable, Equatable {
     let variants: [PolishVariant]
     let issues: [GrammarIssue]
+    /// True when the parser couldn't extract a structured response and
+    /// surfaced the raw text as a single variant. The popup still renders
+    /// this (so the user sees *something*), but the Memory recorder skips
+    /// fallback runs — there's no clean structure to replay.
+    let isFallback: Bool
+
+    init(variants: [PolishVariant], issues: [GrammarIssue], isFallback: Bool = false) {
+        self.variants = variants
+        self.issues = issues
+        self.isFallback = isFallback
+    }
 
     static let empty = PolishResult(variants: [], issues: [])
 
@@ -82,25 +98,30 @@ struct PolishResult: Sendable, Equatable {
     /// into a `PolishResult`. Accepts both the legacy `"variants":["a","b"]` shape
     /// and the richer `"variants":[{"text":"a","back":"..."}]` shape so old models
     /// and old prompt-templates keep working. Tolerant of code fences and
-    /// non-conforming JSON (surfaces raw text as a single variant in that case).
+    /// non-conforming JSON (surfaces raw text as a single variant in that case,
+    /// with `isFallback = true` so memory recording can skip it).
     static func parse(_ raw: String) -> PolishResult {
         let stripped = stripCodeFences(raw)
         guard let data = stripped.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return PolishResult(variants: [PolishVariant(text: raw, backTranslation: nil)],
-                                issues: [])
+                                issues: [],
+                                isFallback: true)
         }
 
         let variants = parseVariants(json["variants"])
 
         let issuesRaw = (json["issues"] as? [[String: Any]]) ?? []
         let issues: [GrammarIssue] = issuesRaw.compactMap { entry in
+            let category = (entry["category"] as? String)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
             let original = (entry["original"] as? String)?
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             guard let explanation = (entry["explanation"] as? String)?
                 .trimmingCharacters(in: .whitespacesAndNewlines),
                   !explanation.isEmpty else { return nil }
             return GrammarIssue(
+                category: (category?.isEmpty == false) ? category : nil,
                 original: (original?.isEmpty == false) ? original : nil,
                 explanation: explanation
             )
@@ -108,7 +129,8 @@ struct PolishResult: Sendable, Equatable {
 
         if variants.isEmpty && issues.isEmpty {
             return PolishResult(variants: [PolishVariant(text: raw, backTranslation: nil)],
-                                issues: [])
+                                issues: [],
+                                isFallback: true)
         }
         return PolishResult(variants: variants, issues: issues)
     }
@@ -241,6 +263,11 @@ struct PolishResult: Sendable, Equatable {
 }
 
 /// Minimal protocol every LLM backend implements.
+///
+/// Token-usage tracking is a cross-cutting concern handled by the helpers in
+/// `Usage/UsageReporter.swift` — providers feed their parsed SSE chunks into
+/// `OpenAIUsageStream` or `AnthropicUsageStream` rather than reimplementing
+/// the format-specific accounting per provider.
 protocol LLMProvider: Sendable {
     var id: String { get }
     var displayName: String { get }

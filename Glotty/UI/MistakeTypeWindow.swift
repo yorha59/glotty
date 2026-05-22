@@ -1,0 +1,196 @@
+import AppKit
+import SwiftUI
+
+/// Standalone window that lists every polish run flagged with a given
+/// grammar category. Opened by clicking a row in the Memory tab's "Common
+/// mistake types" section. Rows are clickable — they reuse the same
+/// `PopupController.shared.show(replay:)` path the History list uses, so
+/// each event redraws its original popup with the stored variants/issues.
+///
+/// One window at a time — clicking another category replaces the contents
+/// of the existing window rather than spawning a second one, matching the
+/// way SettingsWindowController and PermissionsWindowController behave.
+@MainActor
+final class MistakeTypeWindowController {
+    static let shared = MistakeTypeWindowController()
+
+    private var window: NSWindow?
+    private let contentWidth: CGFloat = 540
+    /// Window is allowed to grow vertically with content up to this cap. The
+    /// SwiftUI body itself clamps the inner ScrollView to roughly this
+    /// height so long lists scroll instead of taking over the screen.
+    static let maxContentHeight: CGFloat = 640
+
+    func show(category: String, range: MemoryTimeRange) {
+        Self.diag("show ENTER category='\(category)' range=\(range.rawValue)")
+        let view = MistakeTypeView(category: category, range: range) { [weak self] in
+            self?.window?.orderOut(nil)
+        }
+        let host = NSHostingController(rootView: view)
+        // Auto-fit: the hosting controller asks SwiftUI for its intrinsic
+        // size, and AppKit resizes the window to match. Combined with the
+        // explicit width frame + `.fixedSize` vertically in the SwiftUI
+        // body, this gives "tall enough to show everything (up to the cap),
+        // short when there are only a few rows".
+        host.sizingOptions = [.preferredContentSize]
+
+        if let window {
+            Self.diag("show REUSE existing window")
+            window.contentViewController = host
+            window.title = "Mistake type — \(category)"
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
+            window.orderFrontRegardless()
+            return
+        }
+
+        let w = NSWindow(contentViewController: host)
+        w.title = "Mistake type — \(category)"
+        w.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+        w.isReleasedWhenClosed = false
+        host.view.layoutSubtreeIfNeeded()
+        let preferred = host.preferredContentSize
+        w.setContentSize(
+            preferred.width > 0 && preferred.height > 0
+                ? preferred
+                : NSSize(width: contentWidth, height: 320)
+        )
+        w.contentMinSize = NSSize(width: contentWidth, height: 180)
+        w.center()
+        w.collectionBehavior = [.moveToActiveSpace]
+        window = w
+        NSApp.activate(ignoringOtherApps: true)
+        w.makeKeyAndOrderFront(nil)
+        w.orderFrontRegardless()
+        Self.diag("show NEW window size=\(w.frame.size) visible=\(w.isVisible)")
+    }
+
+    private static func diag(_ msg: String) {
+        let line = "[\(Date())] MistakeTypeWindow: \(msg)\n"
+        guard let data = line.data(using: .utf8) else { return }
+        let path = URL(fileURLWithPath: "/tmp/glotty-debug.log")
+        if let h = try? FileHandle(forWritingTo: path) {
+            h.seekToEndOfFile()
+            h.write(data)
+            try? h.close()
+        } else {
+            try? data.write(to: path)
+        }
+    }
+}
+
+/// SwiftUI body for the mistake-type drill-in. Pulls the matching events
+/// out of `MemoryStore` each time `category` or `range` changes. Each row
+/// taps through to the standard popup-restore flow.
+@MainActor
+struct MistakeTypeView: View {
+    let category: String
+    let range: MemoryTimeRange
+    let onClose: () -> Void
+
+    private var events: [MemoryEvent] {
+        MemoryStore.shared.eventsForGrammarCategory(category, since: range.since())
+    }
+
+    /// Fixed width so AppKit only needs to ask SwiftUI for the *height* —
+    /// keeps the auto-fit math 1-dimensional and avoids the window pulsing
+    /// wider when long source-text rows are present.
+    private let contentWidth: CGFloat = 540
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(category)
+                        .font(.title3).bold()
+                        .lineLimit(2)
+                    Text("\(events.count) polish run\(events.count == 1 ? "" : "s") flagged with this category")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("Done", action: onClose)
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(16)
+
+            Divider()
+
+            if events.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "tray")
+                        .font(.title)
+                        .foregroundStyle(.secondary)
+                    Text("No polish runs in this time range.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(20)
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 10) {
+                        ForEach(events) { event in
+                            row(event)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                                .onTapGesture { openEvent(event) }
+                        }
+                    }
+                    .padding(16)
+                }
+                // Let the ScrollView grow with content, but cap it so a long
+                // history doesn't force a window taller than the screen.
+                // `.fixedSize` on the outer stack then collapses the column to
+                // exactly this height (or less, if the content is shorter).
+                .frame(maxHeight: MistakeTypeWindowController.maxContentHeight)
+            }
+        }
+        .frame(width: contentWidth)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func openEvent(_ event: MemoryEvent) {
+        let replay = PopupReplayPayload.from(event)
+        NSApp.activate(ignoringOtherApps: true)
+        PopupController.shared.show(sourceText: event.sourceText,
+                                    mode: .polish,
+                                    replay: replay)
+    }
+
+    @ViewBuilder
+    private func row(_ event: MemoryEvent) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text("Polish")
+                    .font(.caption2.bold())
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Color.orange.opacity(0.18)))
+                    .foregroundStyle(Color.orange)
+                if let lang = event.targetLang {
+                    Text(lang.uppercased())
+                        .font(.caption2.monospaced())
+                        .foregroundStyle(.tertiary)
+                }
+                Spacer()
+                Text(event.timestamp, format: .relative(presentation: .named))
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            Text(event.sourceText)
+                .font(.callout)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+            if let result = event.result, !result.isEmpty {
+                Text(result)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+    }
+}

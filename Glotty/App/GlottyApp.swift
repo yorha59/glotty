@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UserNotifications
 
 private func dbg(_ msg: String) {
     let line = "[\(Date())] \(msg)\n"
@@ -32,8 +33,12 @@ struct GlottyApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
+    private var mascot: MenuBarMascot?
     private var hotkey: FnLeaderHotkey?
-    private var popup: PopupController!
+    /// Accessed from MemorySettingsSection's drill-in to reopen a popup for
+    /// a stored memory event. Internal-not-private so other module code can
+    /// route into the same controller without an NSApp dance.
+    var popup: PopupController!
     private var hud: HUDController!
     private let grabber = SelectionGrabber()
     private let permissionsWindow = PermissionsWindowController()
@@ -41,22 +46,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         dbg("applicationDidFinishLaunching START")
-        popup = PopupController()
+        popup = .shared
         hud = HUDController()
         dbg("popup + hud created")
         setupStatusItem()
         dbg("status item created")
 
+        // Prime the notifications-status cache so PermissionCheck.anyMissing()
+        // can see notification state on the very first check.
+        PermissionCheck.refreshNotificationsStatus()
+
         let missing = PermissionCheck.anyMissing()
         dbg("anyMissing = \(missing)")
         if missing {
-            // Defer window creation to next runloop tick — creating an NSHostingController
-            // from inside applicationDidFinishLaunching with a SwiftUI App lifecycle deadlocks
-            // because the SwiftUI scene graph is still initializing.
+            // Open Settings → Permissions tab instead of the legacy standalone
+            // window. The permissions UI now lives there. Defer to next runloop
+            // tick — creating an NSHostingController inside
+            // applicationDidFinishLaunching deadlocks the SwiftUI App scene init.
             DispatchQueue.main.async { [weak self] in
-                dbg("calling permissionsWindow.show (deferred)")
-                self?.permissionsWindow.show()
-                dbg("permissionsWindow.show returned")
+                dbg("opening Settings → Permissions (first-launch missing perms)")
+                self?.settingsWindow.show(selecting: .permissions)
             }
         }
 
@@ -75,14 +84,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             dbg("DictionaryCatalog: metadata cache loaded")
         }
 
+        // Proactive practice scheduler — opt-in via Settings. Permission and
+        // category registration are idempotent so we always run them; the
+        // scheduler itself is a no-op until the user picks a non-zero interval.
+        UNUserNotificationCenter.current().delegate = self
+        PracticeScheduler.shared.requestNotificationPermissionIfNeeded()
+        PracticeScheduler.shared.start()
+
         dbg("applicationDidFinishLaunching END")
     }
 
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "globe", accessibilityDescription: "Glotty")
-            button.image?.isTemplate = true
+            // Custom mascot from Assets.xcassets/StatusItemIcon (+ Active for
+            // the hover frame). Falls back to the SF Symbol globe if assets
+            // are missing during dev. The MenuBarMascot controller installs a
+            // tracking area on the button and cycles between frames while the
+            // cursor is hovering.
+            let defaultImage = NSImage(named: "StatusItemIcon")
+            let activeImage = NSImage(named: "StatusItemIconActive")
+            // NB: MenuBarMascot overrides these sizes on init to drive the
+            // hover "grow" effect (14pt resting → 22pt active). Setting them
+            // here just gives us a sensible fallback if the controller fails.
+            defaultImage?.isTemplate = true
+            activeImage?.isTemplate = true
+
+            if let defaultImage, let activeImage {
+                self.mascot = MenuBarMascot(
+                    button: button,
+                    defaultImage: defaultImage,
+                    activeImage: activeImage
+                )
+            } else {
+                button.image = NSImage(systemSymbolName: "globe", accessibilityDescription: "Glotty")
+                button.image?.isTemplate = true
+            }
             button.toolTip = "Glotty"
         } else {
             print("[Glotty] WARNING: status item has no button — menu bar may be full")
@@ -129,6 +166,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func handleFire(mode: PopupMode) {
         Task { @MainActor in
+            // Chat mode doesn't need a selection — it pulls practice topics
+            // from MemoryStore instead, so the popup opens with an empty
+            // source text.
+            if mode == .chat {
+                popup.show(sourceText: "", mode: mode)
+                return
+            }
             let started = CFAbsoluteTimeGetCurrent()
             guard let text = await grabber.grab() else {
                 print("Glotty: no selection available")
@@ -138,5 +182,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             print("Glotty: grabbed \(text.count) chars in \(String(format: "%.0f", elapsed))ms (mode=\(mode))")
             popup.show(sourceText: text, mode: mode)
         }
+    }
+}
+
+// MARK: - Practice notification handling
+
+extension AppDelegate: UNUserNotificationCenterDelegate {
+    /// Show the notification banner even when Glotty is frontmost — the user
+    /// might be deep in a polish session and we still want them to see the
+    /// nudge. Without this, banners are suppressed for the active app.
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                willPresent notification: UNNotification,
+                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        dbg("notification willPresent — id=\(notification.request.identifier) userInfo=\(notification.request.content.userInfo)")
+        completionHandler([.banner, .sound])
+    }
+
+    /// User clicked the notification (or the "Start Practice" action button).
+    /// Open the chat popup; it'll pick up the scheduler's pending batch.
+    /// We always open the popup on any practice notification — including
+    /// the fallback "library is filling" notification — so the click is
+    /// never a dead-end. Posting to the main queue ensures the popup opens
+    /// even when the system has just woken the app from a background state.
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        let userInfo = response.notification.request.content.userInfo
+        let kind = userInfo["kind"] as? String
+        let actionId = response.actionIdentifier
+        dbg("notification didReceive — kind=\(kind ?? "nil") action=\(actionId) id=\(response.notification.request.identifier)")
+        let isPractice = (kind == "practice-session")
+            || (kind == "practice-empty")
+            || actionId == PracticeScheduler.notificationActionStart
+        if isPractice {
+            // Hop to the main queue explicitly — UN delegate callbacks come
+            // from a worker thread, and `popup` is main-actor-isolated.
+            DispatchQueue.main.async { [weak self] in
+                self?.popup?.show(sourceText: "", mode: .chat)
+            }
+        }
+        completionHandler()
     }
 }

@@ -31,8 +31,15 @@ enum PolishPrompt {
     ${language}. It may contain grammar mistakes, awkward word choices, or \
     unidiomatic phrasing.
 
-    1. List any grammar or usage issues briefly (each `original` field should quote \
-    the offending span; each `explanation` field is one short sentence).
+    1. List any grammar or usage issues briefly. Each issue has three fields:
+       - `category`: a short type label naming the *kind* of mistake. Pick one of \
+    these when possible: "Article usage", "Subject-verb agreement", "Verb tense", \
+    "Pluralization", "Preposition", "Word order", "Word choice", "Punctuation", \
+    "Spelling", "Capitalization", "Sentence structure", "Pronoun reference", \
+    "Register/tone". If none fit, invent a short label of two or three words. \
+    Never include the user's literal text in this field.
+       - `original`: quote the offending span verbatim.
+       - `explanation`: one short sentence explaining the fix.
     2. Provide 1 to 3 natural ${language} rewrites of the whole text.
     3. For each variant, include a faithful translation into the user's native \
     language (${native}) so they can verify the rewrite matches their intent. \
@@ -44,7 +51,7 @@ enum PolishPrompt {
     Output STRICT JSON only — no markdown fences, no preamble, no trailing prose:
 
     {
-      "issues": [{"original": "<span>", "explanation": "<short fix>"}],
+      "issues": [{"category": "<type>", "original": "<span>", "explanation": "<short fix>"}],
       "variants": [{"text": "<polished>", "back": "<native-language translation>"}, ...]
     }
 
