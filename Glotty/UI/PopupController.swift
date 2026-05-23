@@ -14,6 +14,35 @@ final class PopupPanel: NSPanel {
     /// is active. Set by `PopupController.show(...)` to dismiss the panel.
     var onCancel: (() -> Void)?
 
+    /// `.nonactivatingPanel` defaults this to false, which prevents the
+    /// panel from becoming key — and without a key window, the input method
+    /// server can't bind its candidate window to the field editor (e.g.
+    /// Chinese pinyin candidates never appear). Override to true so the
+    /// panel can hold keyboard focus while still leaving the underlying
+    /// app's activation state alone.
+    override var canBecomeKey: Bool { true }
+
+    override func becomeKey() {
+        super.becomeKey()
+        Self.fileLog("PopupPanel becomeKey — level=\(level.rawValue) collectionBehavior=\(collectionBehavior.rawValue) firstResponder=\(String(describing: firstResponder))")
+    }
+
+    override func resignKey() {
+        super.resignKey()
+        Self.fileLog("PopupPanel resignKey — level=\(level.rawValue)")
+    }
+
+    private static func fileLog(_ message: String) {
+        let line = "[\(Date())] \(message)\n"
+        let url = URL(fileURLWithPath: "/tmp/glotty-debug.log")
+        guard let data = line.data(using: .utf8) else { return }
+        if let h = try? FileHandle(forWritingTo: url) {
+            h.seekToEndOfFile(); h.write(data); try? h.close()
+        } else {
+            try? data.write(to: url)
+        }
+    }
+
     override func cancelOperation(_ sender: Any?) {
         if Self.responderChainHasMarkedText(from: firstResponder) {
             // IME owns this key — defer to the system so the candidate
@@ -72,8 +101,13 @@ final class PopupController {
         let screenFrame = (NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main)?.visibleFrame
             ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
 
-        // Polish panels are user-resizable (the chat thread grows over time
-        // and the user wants control); translate/explain stay auto-fit.
+        // All modes use translate's panel config — non-activating overlay
+        // at `.floating` level with `.fullScreenAuxiliary` collection
+        // behavior. This is the combination macOS needs for the popup to
+        // appear alongside a full-screen source app (Chrome, Safari, etc.).
+        // Polish/chat only diverge from translate by being resizable; the
+        // chat-field IME first-open binding is handled separately when the
+        // user actually taps into the field, not at panel creation.
         let panel = createPanel(resizable: mode == .polish)
 
         // Per-panel dismiss closure — each PopupView's onClose targets its own
@@ -153,7 +187,35 @@ final class PopupController {
             }
         }
 
+        let levelBeforeShow = panel.level.rawValue
         panel.orderFrontRegardless()
+        let levelAfterShow = panel.level.rawValue
+        // Re-assert level AFTER orderFront. macOS bumps the effective
+        // level of `.fullScreenAuxiliary` windows so they can overlay a
+        // full-screen app — but if our level ends up above
+        // `NSWindow.Level.popUpMenu` (101), the system IME candidate
+        // window is drawn *behind* us and never appears. Forcing back to
+        // `.floating` (3) keeps the candidate window on top.
+        panel.level = .floating
+        let levelAfterReassert = panel.level.rawValue
+        Self.debugLog("PopupPanel post-show mode=\(mode) — beforeShow=\(levelBeforeShow) afterShow=\(levelAfterShow) afterReassert=\(levelAfterReassert) target=\(NSWindow.Level.floating.rawValue) popUpMenu=\(NSWindow.Level.popUpMenu.rawValue)")
+    }
+
+    /// Append a timestamped line to `/tmp/glotty-debug.log`. NSLog via the
+    /// unified logging system has been unreliable here (lines never surface
+    /// through `log show`), so this file is our actual diagnostic sink —
+    /// the same sink `PermissionsWindowController` writes to.
+    private static func debugLog(_ message: String) {
+        let line = "[\(Date())] \(message)\n"
+        let url = URL(fileURLWithPath: "/tmp/glotty-debug.log")
+        guard let data = line.data(using: .utf8) else { return }
+        if let h = try? FileHandle(forWritingTo: url) {
+            h.seekToEndOfFile()
+            h.write(data)
+            try? h.close()
+        } else {
+            try? data.write(to: url)
+        }
     }
 
     func dismiss(_ panel: PopupPanel) {
@@ -197,8 +259,10 @@ final class PopupController {
         p.hidesOnDeactivate = false
         // Don't release on close — we control the lifetime via `panels`.
         p.isReleasedWhenClosed = false
-        // .canJoinAllSpaces and .moveToActiveSpace are mutually exclusive — pick one.
-        p.collectionBehavior = [.moveToActiveSpace, .transient]
+        // `.fullScreenAuxiliary` lets the popup overlay a full-screen
+        // source app (Chrome, Safari, etc.) without forcing macOS to
+        // switch out of that app's space.
+        p.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary, .transient]
         p.standardWindowButton(.miniaturizeButton)?.isHidden = true
         p.standardWindowButton(.zoomButton)?.isHidden = true
         return p

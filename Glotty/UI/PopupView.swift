@@ -269,6 +269,14 @@ struct PopupView: View {
     /// popup; closing it discards the thread.
     @State private var polishChatThread: [PolishChatTurn] = []
     @State private var polishChatInput: String = ""
+    /// Bound to the chat TextField via `.focused(...)`. When the user taps
+    /// in, we use the focus transition as our cue to call `NSApp.activate()`
+    /// — that's the moment they signal "I want to type" so even if it
+    /// triggers a space-swipe out of a source app's full-screen mode, it's
+    /// justified UX. Without that activation, the macOS IME server stays
+    /// bound to whatever app owns the full-screen space and CJK candidates
+    /// never appear in our field.
+    @FocusState private var polishChatInputFocused: Bool
     @State private var polishChatStatus: Status = .ready
     @State private var polishChatExpanded: Bool = false
     @State private var polishChatRunCounter: Int = 0
@@ -979,6 +987,23 @@ struct PopupView: View {
                               axis: .vertical)
                         .textFieldStyle(.roundedBorder)
                         .lineLimit(1...3)
+                        .focused($polishChatInputFocused)
+                        .onChange(of: polishChatInputFocused) { _, gainedFocus in
+                            guard gainedFocus else { return }
+                            Self.dbg("polishChat focus gained — activating app (active=\(NSApp.isActive))")
+                            // Use the legacy `ignoringOtherApps:true` variant
+                            // unconditionally — the new macOS 14 `activate()`
+                            // is too conservative to force a space switch
+                            // out of a source app's full-screen mode. The
+                            // deprecation warning is fine; the older API is
+                            // what actually behaves like "yank our app to
+                            // the front, even from a full-screen space".
+                            NSApp.activate(ignoringOtherApps: true)
+                            Self.dbg("polishChat post-activate — active=\(NSApp.isActive)")
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                polishChatInputFocused = true
+                            }
+                        }
                         .onSubmit { submitPolishChat() }
                     Button("Send") { submitPolishChat() }
                         .buttonStyle(.borderedProminent)
@@ -2058,22 +2083,27 @@ struct PopupView: View {
                 }
             }
             polishResult = PolishResult.parse(polishRawText)
-            polishStatus = .ready
             elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
+
+            // Detect a parse-failure fallback: the LLM returned text that
+            // didn't conform to our JSON schema, so the parser surfaced it
+            // as a single fake variant. Treat this as a failure so the user
+            // gets the retry icon — re-running often produces a parseable
+            // response since LLM output is non-deterministic.
+            if polishResult.isFallback {
+                Self.dbg("polish — parser returned fallback, surfacing as failure for retry")
+                polishStatus = .failed("Couldn't parse the model's response. The output may be malformed JSON.")
+                return
+            }
+
+            polishStatus = .ready
             Self.dbg("polish ok — variants=\(polishResult.variants.count) issues=\(polishResult.issues.count) in \(elapsedMs)ms")
 
             // Record the polish run + categories of the issues the LLM
             // flagged so the Memory tab can surface recurring mistake types.
             // Only the category is persisted — the user's literal phrasing
             // (`original`) stays in the popup but never on disk.
-            // Skip the memory write when the LLM returned something the parser
-            // couldn't extract structure from (garbage JSON, hallucinated
-            // prose, etc.). The popup still shows the raw text as a single
-            // variant so the user sees the output, but storing a fallback
-            // would put an unreplayable row in the Memory tab.
-            if polishResult.isFallback {
-                Self.dbg("polish — skipping memory record (parser returned fallback)")
-            } else {
+            do {
                 let issueSnapshots = polishResult.issues
                     .compactMap { PolishIssueSnapshot(category: $0.category) }
                 // Full snapshot persists variants + per-issue category/original/

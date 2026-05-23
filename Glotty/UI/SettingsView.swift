@@ -11,7 +11,7 @@ enum SettingsTab: String, Hashable, CaseIterable, Identifiable {
     case languageModel
     case polish
     case hotkey
-    case memory
+    case history
     case practice
     case usage
     case permissions
@@ -26,7 +26,7 @@ enum SettingsTab: String, Hashable, CaseIterable, Identifiable {
         case .languageModel: return "Language Model"
         case .polish:        return "Polish"
         case .hotkey:        return "Hotkey"
-        case .memory:        return "Memory"
+        case .history:       return "History"
         case .practice:      return "Practice"
         case .usage:         return "Usage"
         case .permissions:   return "Permissions"
@@ -44,7 +44,7 @@ enum SettingsTab: String, Hashable, CaseIterable, Identifiable {
         case .languageModel: return "sparkles"
         case .polish:        return "wand.and.stars"
         case .hotkey:        return "keyboard"
-        case .memory:        return "clock.arrow.circlepath"
+        case .history:       return "clock.arrow.circlepath"
         case .practice:      return "graduationcap"
         case .usage:         return "chart.bar"
         case .permissions:   return "lock.shield"
@@ -90,7 +90,7 @@ struct SettingsView: View {
         case .languageModel: languageModelTab
         case .polish:        polishTab
         case .hotkey:        hotkeyTab
-        case .memory:        memoryTab
+        case .history:       memoryTab
         case .practice:      practiceTab
         case .usage:         usageTab
         case .permissions:   permissionsTab

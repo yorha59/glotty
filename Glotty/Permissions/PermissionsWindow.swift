@@ -141,9 +141,21 @@ struct PermissionsView: View {
             Spacer(minLength: 0)
 
             HStack {
-                Image(systemName: "globe")
-                    .foregroundStyle(.secondary)
-                Text("Glotty lives in your menu bar — click 🌐 for options.")
+                // Show the actual menu-bar mascot here instead of a globe
+                // glyph — the user should see exactly what to look for in
+                // the status bar. Falls back to a globe SF symbol when the
+                // asset is missing (dev / tests).
+                if let mascot = NSImage(named: "StatusItemIcon") {
+                    Image(nsImage: mascot)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 18, height: 18)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Image(systemName: "globe")
+                        .foregroundStyle(.secondary)
+                }
+                Text("Glotty lives in your menu bar — click the mascot for options.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 Spacer()
