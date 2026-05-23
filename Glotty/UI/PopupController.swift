@@ -22,27 +22,6 @@ final class PopupPanel: NSPanel {
     /// app's activation state alone.
     override var canBecomeKey: Bool { true }
 
-    override func becomeKey() {
-        super.becomeKey()
-        Self.fileLog("PopupPanel becomeKey — level=\(level.rawValue) collectionBehavior=\(collectionBehavior.rawValue) firstResponder=\(String(describing: firstResponder))")
-    }
-
-    override func resignKey() {
-        super.resignKey()
-        Self.fileLog("PopupPanel resignKey — level=\(level.rawValue)")
-    }
-
-    private static func fileLog(_ message: String) {
-        let line = "[\(Date())] \(message)\n"
-        let url = URL(fileURLWithPath: "/tmp/glotty-debug.log")
-        guard let data = line.data(using: .utf8) else { return }
-        if let h = try? FileHandle(forWritingTo: url) {
-            h.seekToEndOfFile(); h.write(data); try? h.close()
-        } else {
-            try? data.write(to: url)
-        }
-    }
-
     override func cancelOperation(_ sender: Any?) {
         if Self.responderChainHasMarkedText(from: firstResponder) {
             // IME owns this key — defer to the system so the candidate
@@ -187,35 +166,7 @@ final class PopupController {
             }
         }
 
-        let levelBeforeShow = panel.level.rawValue
         panel.orderFrontRegardless()
-        let levelAfterShow = panel.level.rawValue
-        // Re-assert level AFTER orderFront. macOS bumps the effective
-        // level of `.fullScreenAuxiliary` windows so they can overlay a
-        // full-screen app — but if our level ends up above
-        // `NSWindow.Level.popUpMenu` (101), the system IME candidate
-        // window is drawn *behind* us and never appears. Forcing back to
-        // `.floating` (3) keeps the candidate window on top.
-        panel.level = .floating
-        let levelAfterReassert = panel.level.rawValue
-        Self.debugLog("PopupPanel post-show mode=\(mode) — beforeShow=\(levelBeforeShow) afterShow=\(levelAfterShow) afterReassert=\(levelAfterReassert) target=\(NSWindow.Level.floating.rawValue) popUpMenu=\(NSWindow.Level.popUpMenu.rawValue)")
-    }
-
-    /// Append a timestamped line to `/tmp/glotty-debug.log`. NSLog via the
-    /// unified logging system has been unreliable here (lines never surface
-    /// through `log show`), so this file is our actual diagnostic sink —
-    /// the same sink `PermissionsWindowController` writes to.
-    private static func debugLog(_ message: String) {
-        let line = "[\(Date())] \(message)\n"
-        let url = URL(fileURLWithPath: "/tmp/glotty-debug.log")
-        guard let data = line.data(using: .utf8) else { return }
-        if let h = try? FileHandle(forWritingTo: url) {
-            h.seekToEndOfFile()
-            h.write(data)
-            try? h.close()
-        } else {
-            try? data.write(to: url)
-        }
     }
 
     func dismiss(_ panel: PopupPanel) {

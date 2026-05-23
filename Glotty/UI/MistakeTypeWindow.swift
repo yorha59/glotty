@@ -15,6 +15,11 @@ final class MistakeTypeWindowController {
     static let shared = MistakeTypeWindowController()
 
     private var window: NSWindow?
+    /// Refcount slot held with `AppActivation` while the window is open.
+    /// Released by the willClose observer so we return to `.accessory`
+    /// once the user dismisses the drill-in.
+    private var didRegisterActivation = false
+    private var closeObserver: NSObjectProtocol?
     private let contentWidth: CGFloat = 540
     /// Window is allowed to grow vertically with content up to this cap. The
     /// SwiftUI body itself clamps the inner ScrollView to roughly this
@@ -24,7 +29,7 @@ final class MistakeTypeWindowController {
     func show(category: String, range: MemoryTimeRange) {
         Self.diag("show ENTER category='\(category)' range=\(range.rawValue)")
         let view = MistakeTypeView(category: category, range: range) { [weak self] in
-            self?.window?.orderOut(nil)
+            self?.window?.close()
         }
         let host = NSHostingController(rootView: view)
         // Auto-fit: the hosting controller asks SwiftUI for its intrinsic
@@ -38,6 +43,7 @@ final class MistakeTypeWindowController {
             Self.diag("show REUSE existing window")
             window.contentViewController = host
             window.title = "Mistake type — \(category)"
+            // Already hold an activation slot — just nudge to the front.
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
             window.orderFrontRegardless()
@@ -59,10 +65,32 @@ final class MistakeTypeWindowController {
         w.center()
         w.collectionBehavior = [.moveToActiveSpace]
         window = w
-        NSApp.activate(ignoringOtherApps: true)
+        // Become a regular app for the lifetime of this window so it gets
+        // proper Dock/⌘-Tab presence. Released on willClose.
+        AppActivation.register()
+        didRegisterActivation = true
+        closeObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: w,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.handleWindowClosed() }
+        }
         w.makeKeyAndOrderFront(nil)
         w.orderFrontRegardless()
         Self.diag("show NEW window size=\(w.frame.size) visible=\(w.isVisible)")
+    }
+
+    private func handleWindowClosed() {
+        if let observer = closeObserver {
+            NotificationCenter.default.removeObserver(observer)
+            closeObserver = nil
+        }
+        window = nil
+        if didRegisterActivation {
+            didRegisterActivation = false
+            AppActivation.unregister()
+        }
     }
 
     private static func diag(_ msg: String) {

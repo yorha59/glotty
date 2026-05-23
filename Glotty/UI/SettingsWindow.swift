@@ -7,6 +7,12 @@ import SwiftUI
 @MainActor
 final class SettingsWindowController {
     private var window: NSWindow?
+    /// Tracks whether we've already incremented `AppActivation` for the
+    /// currently-open window. Without this, repeated `show()` calls (or
+    /// the tab-rebuild path) could double-register and leave the app
+    /// stuck as `.regular` after close.
+    private var didRegisterActivation = false
+    private var closeObserver: NSObjectProtocol?
     // Sidebar + detail layout needs more room than the old top-tab TabView.
     private let preferredContentWidth: CGFloat = 780
     private let minimumContentSize = NSSize(width: 720, height: 480)
@@ -25,12 +31,20 @@ final class SettingsWindowController {
         // its default on first construction, so we can't update an already-
         // running view's selection from out here without a binding.
         if let tab, window != nil {
-            window?.orderOut(nil)
-            window = nil
+            tearDownWindow()
         }
 
         if let window {
-            NSApp.activate(ignoringOtherApps: true)
+            // Reusing an existing window — still need to bring the app
+            // forward in case the user invoked Settings from the menu
+            // bar while another app was key. `register()` is a no-op
+            // for the count if we already incremented.
+            if !didRegisterActivation {
+                AppActivation.register()
+                didRegisterActivation = true
+            } else {
+                NSApp.activate(ignoringOtherApps: true)
+            }
             window.makeKeyAndOrderFront(nil)
             window.orderFrontRegardless()
             return
@@ -52,9 +66,50 @@ final class SettingsWindowController {
         w.collectionBehavior = [.moveToActiveSpace]
 
         window = w
-        NSApp.activate(ignoringOtherApps: true)
+        // Bump to `.regular` so Settings gets a Dock icon / ⌘-Tab presence
+        // while it's open. Released back to `.accessory` by the willClose
+        // observer below. The tab-rebuild path keeps `didRegisterActivation`
+        // true across `tearDownWindow` so we don't double-count here.
+        if !didRegisterActivation {
+            AppActivation.register()
+            didRegisterActivation = true
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
+        }
+        closeObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: w,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.handleWindowClosed() }
+        }
         w.makeKeyAndOrderFront(nil)
         w.orderFrontRegardless()
+    }
+
+    /// Order out the window without releasing the activation slot — used
+    /// by the tab-rebuild path which immediately reopens a fresh window.
+    private func tearDownWindow() {
+        if let observer = closeObserver {
+            NotificationCenter.default.removeObserver(observer)
+            closeObserver = nil
+        }
+        window?.orderOut(nil)
+        window = nil
+        // Keep `didRegisterActivation = true` so the immediate re-show
+        // reuses the existing `.regular` slot instead of double-counting.
+    }
+
+    private func handleWindowClosed() {
+        if let observer = closeObserver {
+            NotificationCenter.default.removeObserver(observer)
+            closeObserver = nil
+        }
+        window = nil
+        if didRegisterActivation {
+            didRegisterActivation = false
+            AppActivation.unregister()
+        }
     }
 
     private func initialContentSize() -> NSSize {

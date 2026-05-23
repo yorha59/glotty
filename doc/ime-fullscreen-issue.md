@@ -145,3 +145,47 @@ useful:
 Not yet — recording the issue here so it can be researched / submitted
 as a Feedback Assistant report against macOS if no public-API workaround
 exists.
+
+## Resolution
+
+**Fixed by switching Glotty to an agent app** (`LSUIElement = YES`).
+
+The root cause turned out to be activation policy, not window level or
+collection behavior. When a *regular* app (one with a Dock icon) calls
+`NSApp.activate` while another regular app owns a full-screen Mission
+Control space, macOS's input-method server suppresses the candidate
+window for the regular app's auxiliary panels. Agent apps
+(`LSUIElement = YES` — Raycast, Alfred, Hammerspoon, etc.) bypass that
+suppression entirely; their auxiliary panels receive IME candidates
+normally even when overlaid on another app's full-screen space.
+
+Diagnostic that confirmed window level was *not* the cause:
+
+```
+beforeShow=3   afterShow=3   afterReassert=3   target=3   popUpMenu=101
+becomeKey: level=3   collectionBehavior=266
+```
+
+Our panel stayed at `.floating` (3) through every transition, well below
+`.popUpMenu` (101), yet candidates still didn't appear. Hypothesis ruled
+out. The remaining differentiator vs. Raycast was `LSUIElement`.
+
+### How the agent switch is wired
+
+- `INFOPLIST_KEY_LSUIElement = YES` for both Debug and Release.
+- `AppActivation` (Glotty/App/AppActivation.swift) is a refcounted
+  helper. While any caller holds a slot, the policy is `.regular` (Dock
+  icon, ⌘-Tab, app menu); when the count drops to zero we return to
+  `.accessory`.
+- `SettingsWindowController` and `MistakeTypeWindowController` call
+  `AppActivation.register()` on show and `unregister()` on the
+  window's `willClose`. Popups don't register — they're the windows
+  that need to stay in agent mode for the IME fix to apply.
+
+### Trade-off accepted
+
+- No persistent Dock icon. The menu-bar mascot is Glotty's only
+  always-on UI, which matches the "Glotty lives in your menu bar"
+  tagline.
+- Settings/Mistake-type windows briefly bring back a Dock icon while
+  open, then it disappears on close. Acceptable UX.

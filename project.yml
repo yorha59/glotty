@@ -26,8 +26,12 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.ruojunye.glotty
         GENERATE_INFOPLIST_FILE: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        # Spike-only: false = Dock icon visible. Restore to YES once menu-bar-only flow is solid.
-        INFOPLIST_KEY_LSUIElement: NO
+        # Agent app — no Dock icon at idle. Required for popup panels to
+        # receive IME candidates when overlaying another app's full-screen
+        # space; see doc/ime-fullscreen-issue.md. Settings/Mistake-type
+        # windows flip the policy back to .regular while open via
+        # AppActivation.
+        INFOPLIST_KEY_LSUIElement: YES
         INFOPLIST_KEY_NSAccessibilityUsageDescription: "Glotty reads selected text from the focused application so it can be translated."
         INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026"
         ENABLE_HARDENED_RUNTIME: YES
