@@ -106,6 +106,12 @@ final class PopupController {
                 self?.dismiss(panelRef)
             },
             onChatExpand: { [weak panelRef] in
+                // Polish panels are user-resizable with a fixed initial
+                // size, so the chat region needs a manual nudge to give
+                // it room. Explain panels use `sizingOptions = .preferred-
+                // ContentSize` and grow on their own as the SwiftUI body
+                // demands more height — no manual grow needed.
+                guard mode == .polish else { return }
                 guard let panelRef, !didGrowForChat else { return }
                 didGrowForChat = true
                 Self.growPanelForChat(panelRef)

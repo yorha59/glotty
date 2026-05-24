@@ -75,10 +75,13 @@ struct MemoryEvent: Codable, Identifiable, Sendable {
     /// for backwards compatibility with old entries. Old entries without
     /// this field decode as nil and force a live re-run on replay.
     let polishSnapshot: PolishResultSnapshot?
-    /// Polish-only: the discussion thread the user had with Glotty *about*
-    /// this polish run. Updated via `MemoryStore.update(_:)` each time a
+    /// Discussion thread the user had with Glotty *about* this run.
+    /// Originally polish-only — now also used by explain when the user
+    /// expands "Discuss with Glotty" under the explanation. Field name
+    /// stays `polishChatThread` for JSON compatibility with pre-existing
+    /// events on disk. Updated via `MemoryStore.update(_:)` each time a
     /// chat exchange completes, so reopening the event restores the full
-    /// back-and-forth, not just the original variants. Nil = no chat yet.
+    /// back-and-forth. Nil = no chat yet.
     let polishChatThread: [PolishChatTurnSnapshot]?
 
     init(

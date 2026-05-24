@@ -145,7 +145,7 @@ struct PopupReplayPayload: Equatable {
                 sourceLang: event.sourceLang,
                 targetLang: event.targetLang,
                 content: .explanation(text: text),
-                polishChatThread: nil
+                polishChatThread: event.polishChatThread
             )
         case .polish:
             guard let snap = event.polishSnapshot else { return nil }
@@ -211,6 +211,17 @@ struct PopupView: View {
             case .explanation(let text):
                 _explainText = State(initialValue: text)
                 _explainStatus = State(initialValue: .ready)
+                // Restore the discussion thread (shared field with
+                // polish — see MemoryEvent.polishChatThread). If the
+                // user had a chat about this explanation before, the
+                // popup opens with it already expanded.
+                if let storedThread = replay.polishChatThread, !storedThread.isEmpty {
+                    let restored = storedThread.map {
+                        PolishChatTurn(role: $0.role == .user ? .user : .assistant, text: $0.text)
+                    }
+                    _polishChatThread = State(initialValue: restored)
+                    _polishChatExpanded = State(initialValue: true)
+                }
             case .polish(let snap):
                 let variants = snap.variants.map {
                     PolishVariant(text: $0.text, backTranslation: $0.backTranslation)
@@ -412,10 +423,16 @@ struct PopupView: View {
                 guard mode == .chat, quizSessionComplete, qnaRunCounter > 0 else { return }
                 await runQna()
             }
-            // Polish discussion: re-fires on each Send. The thread state lives
-            // in `polishChatThread`; this task only kicks off the LLM call.
-            .task(id: mode == .polish ? "polish-chat-\(polishChatRunCounter)" : "") {
-                guard mode == .polish, polishChatRunCounter > 0 else { return }
+            // Polish / explain discussion: re-fires on each Send. The
+            // thread state lives in `polishChatThread`; this task only
+            // kicks off the LLM call. The same chat affordance is
+            // available under both polish and explain — `runPolishChat`
+            // switches on `mode` to feed the right context.
+            .task(id: (mode == .polish || mode == .explain)
+                  ? "discuss-chat-\(polishChatRunCounter)"
+                  : "") {
+                guard mode == .polish || mode == .explain else { return }
+                guard polishChatRunCounter > 0 else { return }
                 await runPolishChat()
             }
             // Apple Translation only powers decode (`.translate`). Explain and
@@ -541,6 +558,14 @@ struct PopupView: View {
                 case .explain:
                     sectionLabel(explainSectionLabel)
                     explainBlock
+                    // Same discussion affordance as polish — only show
+                    // once the explanation stream has finished. Reuses
+                    // `polishDiscussionSection`; `runPolishChat` is
+                    // mode-aware so the LLM context matches.
+                    if case .ready = explainStatus {
+                        regionDivider
+                        polishDiscussionSection
+                    }
                 case .polish:
                     sectionLabel("Polished" + (polishProviderName.isEmpty ? "" : " · \(polishProviderName)"))
                     polishBlock
@@ -1208,10 +1233,12 @@ struct PopupView: View {
         polishChatRunCounter += 1
     }
 
-    /// LLM call backing the polish discussion. Builds a prompt that primes
-    /// the model with the user's original draft, the suggested top variant,
-    /// the flagged issues, and the full conversation so far — then streams
-    /// the reply into the trailing assistant turn.
+    /// LLM call backing the discussion thread under polish or explain.
+    /// Builds a prompt that primes the model with the relevant context
+    /// for the current mode — for polish that's the draft + top variant
+    /// + issues; for explain it's the source text + the explanation
+    /// Glotty already produced — plus the full conversation so far,
+    /// then streams the reply into the trailing assistant turn.
     private func runPolishChat() async {
         guard let provider = LLMRegistry.current() else {
             polishChatStatus = .failed("No LLM provider configured. Add one in Settings → Language Model.")
@@ -1227,14 +1254,6 @@ struct PopupView: View {
         // back to the resolved default if the picker hasn't initialized
         // yet (e.g. first message sent before the header `.task` runs).
         let language = polishChatLanguage.isEmpty ? defaultChatLanguage() : polishChatLanguage
-        let topVariant = polishResult.variants.first?.text ?? "(no variant)"
-        let issuesList = polishResult.issues
-            .compactMap { issue -> String? in
-                let parts = [issue.category, issue.original.map { "“\($0)”" }, issue.explanation]
-                    .compactMap { $0 }
-                return parts.isEmpty ? nil : "- " + parts.joined(separator: " — ")
-            }
-            .joined(separator: "\n")
         // Skip the placeholder assistant turn we just appended when rendering
         // history — it has no content yet.
         let history = polishChatThread
@@ -1242,17 +1261,47 @@ struct PopupView: View {
             .map { "\($0.role == .user ? "User" : "Assistant"): \($0.text)" }
             .joined(separator: "\n\n")
 
+        let contextBlock: String
+        let roleDescription: String
+        switch mode {
+        case .explain:
+            roleDescription = "a language tutor who just explained the following text to a learner"
+            contextBlock = """
+            User asked about:
+            \(sourceText)
+
+            Your earlier explanation:
+            \(explainText)
+            """
+        case .polish, .translate, .chat:
+            // Polish is the primary case here; translate/chat fall
+            // through to the polish-style prompt because the
+            // discussion section is only rendered for polish/explain.
+            let topVariant = polishResult.variants.first?.text ?? "(no variant)"
+            let issuesList = polishResult.issues
+                .compactMap { issue -> String? in
+                    let parts = [issue.category, issue.original.map { "“\($0)”" }, issue.explanation]
+                        .compactMap { $0 }
+                    return parts.isEmpty ? nil : "- " + parts.joined(separator: " — ")
+                }
+                .joined(separator: "\n")
+            roleDescription = "a writing tutor helping a user polish their \(PolishPrompt.englishName(for: language)) text"
+            contextBlock = """
+            User's original draft:
+            \(sourceText)
+
+            Your top suggested rewrite:
+            \(topVariant)
+
+            Issues you flagged:
+            \(issuesList.isEmpty ? "(none)" : issuesList)
+            """
+        }
+
         let prompt = """
-        You are a writing tutor helping a user polish their \(PolishPrompt.englishName(for: language)) text. Reply concisely (2-5 sentences) in \(PolishPrompt.englishName(for: language)) unless the user asks otherwise. Reference the draft and your earlier suggestions when relevant.
+        You are \(roleDescription). Reply concisely (2-5 sentences) in \(PolishPrompt.englishName(for: language)) unless the user asks otherwise. Reference the earlier context when relevant.
 
-        User's original draft:
-        \(sourceText)
-
-        Your top suggested rewrite:
-        \(topVariant)
-
-        Issues you flagged:
-        \(issuesList.isEmpty ? "(none)" : issuesList)
+        \(contextBlock)
 
         Conversation so far:
         \(history)
@@ -2024,13 +2073,18 @@ struct PopupView: View {
             elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
             Self.dbg("explain ok — \(explainText.count) chars in \(elapsedMs)ms")
 
-            MemoryStore.shared.record(MemoryEvent(
+            let event = MemoryEvent(
                 kind: .explain,
                 sourceText: sourceText,
                 sourceLang: detectedSource?.rawValue,
                 targetLang: outputLanguage,
                 result: explainText
-            ))
+            )
+            MemoryStore.shared.record(event)
+            // Capture id so a follow-up chat under this explanation
+            // can persist its thread onto the same event via
+            // MemoryStore.update — same flow polish uses.
+            polishEventID = event.id
         } catch {
             Self.dbg("explain FAIL — err=\(error.localizedDescription)")
             explainStatus = .failed(error.localizedDescription)
