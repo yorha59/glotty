@@ -1806,24 +1806,13 @@ private struct DictionarySettingsSection: View {
 private struct PolishOutputLanguageSection: View {
     @AppStorage("glotty.polishLang") private var polishLang: String = "en"
 
-    /// Common polish targets. Polish is "rewrite into idiomatic X" — X is often the
-    /// *opposite* of the translate target (you read Chinese translations of English;
-    /// you polish your Chinese drafts into English).
-    private let polishLanguageOptions: [(id: String, name: String)] = [
-        ("en", "English"),
-        ("zh-Hans", "Chinese (Simplified)"),
-        ("zh-Hant", "Chinese (Traditional)"),
-        ("ja", "Japanese"),
-        ("ko", "Korean"),
-        ("fr", "French"),
-        ("de", "German"),
-        ("es", "Spanish"),
-    ]
-
     var body: some View {
         Section {
             Picker("Polish output language", selection: $polishLang) {
-                ForEach(polishLanguageOptions, id: \.id) { option in
+                // Shared list — also drives the per-chat "Reply in" picker
+                // on the polish popup. Edit PolishPrompt.outputLanguageOptions
+                // to add/remove languages everywhere at once.
+                ForEach(PolishPrompt.outputLanguageOptions, id: \.id) { option in
                     Text(option.name).tag(option.id)
                 }
             }

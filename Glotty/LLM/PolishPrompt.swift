@@ -10,6 +10,21 @@ enum PolishPrompt {
     static let variantsTemplateKey  = "glotty.polishPrompt.variants"
     static let proofreadTemplateKey = "glotty.polishPrompt.proofread"
 
+    /// Single source of truth for "languages Glotty can polish into". Used by
+    /// both the Settings → Polish output language picker and the per-chat
+    /// "Reply in" picker on the polish popup, so the two stay in sync.
+    /// Order matches the Settings dropdown so users see the same menu.
+    static let outputLanguageOptions: [(id: String, name: String)] = [
+        ("en", "English"),
+        ("zh-Hans", "Chinese (Simplified)"),
+        ("zh-Hant", "Chinese (Traditional)"),
+        ("ja", "Japanese"),
+        ("ko", "Korean"),
+        ("fr", "French"),
+        ("de", "German"),
+        ("es", "Spanish"),
+    ]
+
     static let defaultVariantsTemplate = """
     You are a native speaker of ${language}. The user wrote the following text and \
     wants it expressed in idiomatic, native ${language}. Provide 2 to 3 distinct \

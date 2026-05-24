@@ -93,6 +93,10 @@ final class PopupController {
         // panel, not the controller's notion of "the current one". This is
         // what lets Esc on one window leave the others standing.
         let panelRef = panel
+        // One-shot guard so collapse + re-expand doesn't keep growing
+        // the panel each time. The first expansion buys the chat room;
+        // subsequent ones reuse that space.
+        var didGrowForChat = false
         let rootView = PopupView(
             sourceText: sourceText,
             mode: mode,
@@ -100,6 +104,11 @@ final class PopupController {
             onClose: { [weak self, weak panelRef] in
                 guard let panelRef else { return }
                 self?.dismiss(panelRef)
+            },
+            onChatExpand: { [weak panelRef] in
+                guard let panelRef, !didGrowForChat else { return }
+                didGrowForChat = true
+                Self.growPanelForChat(panelRef)
             }
         )
         // ESC routes through `PopupPanel.cancelOperation`, which checks
@@ -185,6 +194,27 @@ final class PopupController {
     private func removeFromTracking(_ panel: PopupPanel) {
         hosts.removeValue(forKey: ObjectIdentifier(panel))
         panels.removeAll { $0 === panel }
+    }
+
+    /// Add ~220pt of vertical room when the user expands the polish chat
+    /// for the first time. The chat region inside `PopupView` reserves a
+    /// 180pt min-height; without growing the panel, that space would come
+    /// out of the polish content above. We anchor the top of the window
+    /// so the polish content stays put and the chat appears below — and
+    /// we clamp to the screen so we don't shove the window off-edge on
+    /// small displays.
+    private static func growPanelForChat(_ panel: NSPanel) {
+        let delta: CGFloat = 220
+        let screen = panel.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? .zero
+        var frame = panel.frame
+        let topY = frame.origin.y + frame.size.height
+        let maxHeight = max(frame.size.height, screen.height - 40)
+        let newHeight = min(frame.size.height + delta, maxHeight)
+        frame.size.height = newHeight
+        // Anchor the top edge so existing polish content doesn't appear
+        // to "jump" — the new room opens downward.
+        frame.origin.y = max(topY - newHeight, screen.minY)
+        panel.setFrame(frame, display: true, animate: true)
     }
 
     /// Build a fresh panel. We always create a new one — supporting multiple

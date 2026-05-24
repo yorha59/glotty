@@ -165,6 +165,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleFire(mode: PopupMode) {
+        // Raycast-style: if Settings or a Mistake-type drill-in is open,
+        // close it before showing the popup. Those windows hold an
+        // `AppActivation` slot (.regular policy), and a popup launched
+        // while we're .regular won't receive IME candidates over a
+        // full-screen overlay — reads as a bug to the user.
+        // `dismissAllRegistered` runs synchronously and resets the
+        // activation policy back to .accessory before this function
+        // returns, so the popup below opens in agent mode.
+        AppActivation.dismissAllRegistered()
         Task { @MainActor in
             // Chat mode doesn't need a selection — it pulls practice topics
             // from MemoryStore instead, so the popup opens with an empty

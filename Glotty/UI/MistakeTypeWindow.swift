@@ -15,10 +15,11 @@ final class MistakeTypeWindowController {
     static let shared = MistakeTypeWindowController()
 
     private var window: NSWindow?
-    /// Refcount slot held with `AppActivation` while the window is open.
-    /// Released by the willClose observer so we return to `.accessory`
-    /// once the user dismisses the drill-in.
-    private var didRegisterActivation = false
+    /// Token from `AppActivation.register` so the hotkey path can
+    /// dismiss this window when a popup is about to open (Raycast-
+    /// style — Settings/drill-in goes away before the next popup
+    /// appears, keeping the popup in agent mode for IME).
+    private var activationToken: UUID?
     private var closeObserver: NSObjectProtocol?
     private let contentWidth: CGFloat = 540
     /// Window is allowed to grow vertically with content up to this cap. The
@@ -67,8 +68,9 @@ final class MistakeTypeWindowController {
         window = w
         // Become a regular app for the lifetime of this window so it gets
         // proper Dock/⌘-Tab presence. Released on willClose.
-        AppActivation.register()
-        didRegisterActivation = true
+        activationToken = AppActivation.register { [weak w] in
+            w?.performClose(nil)
+        }
         closeObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification,
             object: w,
@@ -87,9 +89,9 @@ final class MistakeTypeWindowController {
             closeObserver = nil
         }
         window = nil
-        if didRegisterActivation {
-            didRegisterActivation = false
-            AppActivation.unregister()
+        if let token = activationToken {
+            activationToken = nil
+            AppActivation.unregister(token)
         }
     }
 

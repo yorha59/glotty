@@ -178,12 +178,23 @@ struct PopupView: View {
     /// is pre-populated from this payload in `init`.
     let replay: PopupReplayPayload?
     let onClose: () -> Void
+    /// Fired the first time the user expands the polish chat from the
+    /// collapsed pill. Lets `PopupController` grow the panel vertically
+    /// so the new chat region doesn't squeeze the polish content above.
+    /// `nil` skips the auto-grow (e.g. previews, replay paths where the
+    /// chat is already expanded on first paint).
+    let onChatExpand: (() -> Void)?
 
-    init(sourceText: String, mode: PopupMode, replay: PopupReplayPayload? = nil, onClose: @escaping () -> Void) {
+    init(sourceText: String,
+         mode: PopupMode,
+         replay: PopupReplayPayload? = nil,
+         onClose: @escaping () -> Void,
+         onChatExpand: (() -> Void)? = nil) {
         self.sourceText = sourceText
         self.mode = mode
         self.replay = replay
         self.onClose = onClose
+        self.onChatExpand = onChatExpand
 
         // Pre-load @State from the replay payload so the popup renders the
         // stored content on first paint. Using `State(initialValue:)` here is
@@ -279,6 +290,13 @@ struct PopupView: View {
     @FocusState private var polishChatInputFocused: Bool
     @State private var polishChatStatus: Status = .ready
     @State private var polishChatExpanded: Bool = false
+    /// Language the assistant should reply in for the polish chat.
+    /// Defaults to the polish target language; the header picker lets
+    /// the user switch (e.g. to their native language when they need an
+    /// explanation in plain Chinese instead of practice-grade English).
+    /// Empty string is "not yet initialized" — populated on first task
+    /// run since UserDefaults reads aren't safe at struct init time.
+    @State private var polishChatLanguage: String = ""
     @State private var polishChatRunCounter: Int = 0
     /// MemoryEvent.id of the polish run this popup represents. Set when the
     /// initial polish call completes (live mode) or in init (replay mode).
@@ -954,6 +972,24 @@ struct PopupView: View {
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(PopupTokens.primaryText)
                     Spacer()
+                    Picker("Reply in", selection: $polishChatLanguage) {
+                        ForEach(chatLanguageOptions(), id: \.id) { option in
+                            Text(option.name).tag(option.id)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .fixedSize()
+                    // Lock the reply language once the conversation is
+                    // underway — mid-thread switching would leave half
+                    // the bubbles in one language and the rest in
+                    // another, which reads as a model glitch rather
+                    // than a user choice.
+                    .disabled(!polishChatThread.isEmpty)
+                    .help(polishChatThread.isEmpty
+                          ? "Language Glotty replies in for this chat."
+                          : "Locked once the conversation has started.")
                     Button {
                         polishChatExpanded = false
                     } label: {
@@ -963,30 +999,63 @@ struct PopupView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(PopupTokens.tertiaryText)
                 }
+                .task {
+                    // Initialize once on first appear. Picker bindings need
+                    // a non-empty value that exists in the options list, or
+                    // SwiftUI logs a warning and the selection ghosts blank.
+                    if polishChatLanguage.isEmpty {
+                        polishChatLanguage = defaultChatLanguage()
+                    }
+                }
 
-                if !polishChatThread.isEmpty {
-                    // ≤3 turns render inline (every message visible by
-                    // default, no scrollbar). Once the thread grows past
-                    // 3 turns, the older ones recede into a ScrollView
-                    // capped at ~3 bubbles tall — the user can drag the
-                    // popup taller to see more without scrolling, since
-                    // polish panels are now user-resizable.
-                    if polishChatThread.count > 3 {
+                // Always reserve room for a few messages when the chat is
+                // open, even before the user has sent anything. An empty
+                // chat that's just a single text field reads as cramped;
+                // the placeholder + minHeight here makes it obvious the
+                // area is for an unfolding conversation.
+                Group {
+                    if polishChatThread.isEmpty {
+                        VStack(spacing: 8) {
+                            Spacer(minLength: 0)
+                            Image(systemName: "bubble.left.and.bubble.right")
+                                .font(.system(size: 22))
+                                .foregroundStyle(PopupTokens.tertiaryText.opacity(0.45))
+                            Text("Ask a follow-up — replies will appear here.")
+                                .font(.system(size: 12))
+                                .foregroundStyle(PopupTokens.tertiaryText)
+                                .multilineTextAlignment(.center)
+                            Spacer(minLength: 0)
+                        }
+                        .frame(maxWidth: .infinity)
+                    } else if polishChatThread.count > 3 {
+                        // ≤3 turns render inline (every message visible).
+                        // Past 3, the thread becomes a ScrollView so the
+                        // chat region doesn't grow without bound. Polish
+                        // panels are user-resizable, so the user can drag
+                        // taller to see more without scrolling.
                         ScrollView {
                             polishChatTurnsList
                         }
-                        .frame(maxHeight: 360)
                     } else {
                         polishChatTurnsList
                     }
                 }
+                .frame(minHeight: 180, maxHeight: 360, alignment: .topLeading)
 
                 HStack(spacing: 8) {
                     TextField("Not satisfied? Ask a follow-up…",
                               text: $polishChatInput,
                               axis: .vertical)
                         .textFieldStyle(.roundedBorder)
-                        .lineLimit(1...3)
+                        // Single-line floor so the placeholder and
+                        // cursor sit centered in the rounded-border
+                        // chrome (a 2-line floor would top-align them).
+                        // `.controlSize(.large)` gives the row roughly
+                        // double the default height; the field still
+                        // grows to 6 lines as the user types longer
+                        // follow-ups before its own scroll engages.
+                        .controlSize(.large)
+                        .lineLimit(1...6)
                         .focused($polishChatInputFocused)
                         .onChange(of: polishChatInputFocused) { _, gainedFocus in
                             guard gainedFocus else { return }
@@ -1014,6 +1083,13 @@ struct PopupView: View {
             } else {
                 Button {
                     polishChatExpanded = true
+                    // Ask the controller to grow the panel so the new
+                    // chat region has room without crowding the polish
+                    // content above. Fires on every expand transition —
+                    // PopupController only grows the first time so a
+                    // user who collapses and re-expands doesn't get a
+                    // runaway window.
+                    onChatExpand?()
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "bubble.left.and.bubble.right")
@@ -1147,7 +1223,10 @@ struct PopupView: View {
         polishChatThread.append(PolishChatTurn(role: .assistant, text: ""))
         let assistantIndex = polishChatThread.count - 1
 
-        let language = polishTargetLanguage()
+        // User-selected chat language (via the header picker) — falls
+        // back to the resolved default if the picker hasn't initialized
+        // yet (e.g. first message sent before the header `.task` runs).
+        let language = polishChatLanguage.isEmpty ? defaultChatLanguage() : polishChatLanguage
         let topVariant = polishResult.variants.first?.text ?? "(no variant)"
         let issuesList = polishResult.issues
             .compactMap { issue -> String? in
@@ -2148,6 +2227,32 @@ struct PopupView: View {
     private func polishTargetLanguage() -> String {
         let savedPolish = UserDefaults.standard.string(forKey: "glotty.polishLang")
         return (savedPolish?.isEmpty == false ? savedPolish! : "en")
+    }
+
+    /// Options shown in the polish-chat "Reply in" picker. Mirrors the
+    /// global Polish output language list in Settings so the two stay
+    /// in sync — change `PolishPrompt.outputLanguageOptions` to add or
+    /// remove languages everywhere at once. Returns `(id, name)` tuples
+    /// so the menu can show full names ("Chinese (Simplified)") while
+    /// the selection binds to BCP-47 codes ("zh-Hans").
+    func chatLanguageOptions() -> [(id: String, name: String)] {
+        PolishPrompt.outputLanguageOptions
+    }
+
+    /// Default chat reply language: the user's native language if it's
+    /// in the picker's supported list, otherwise the polish target,
+    /// finally "en" as a guaranteed-supported floor. We prefer native
+    /// because chat questions are usually meta ("explain this", "why
+    /// did you suggest X?") — answers in the user's own language are
+    /// easier to read. The user can switch to the target language via
+    /// the header picker if they want to practice instead.
+    private func defaultChatLanguage() -> String {
+        let supported = Set(PolishPrompt.outputLanguageOptions.map { $0.id.lowercased() })
+        let native = userNativeLanguage()
+        if supported.contains(native.lowercased()) { return native }
+        let target = polishTargetLanguage()
+        if supported.contains(target.lowercased()) { return target }
+        return "en"
     }
 
     /// Apple's `Translation` framework sometimes returns multi-line output even
