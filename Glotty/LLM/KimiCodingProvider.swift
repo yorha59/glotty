@@ -95,7 +95,12 @@ struct KimiCodingProvider: LLMProvider {
             throw LLMError.missingAPIKey(providerName: displayName)
         }
 
-        let prompt = PolishPrompt.build(text: text, mode: mode)
+        // Build the prompt on the main actor. `PolishPrompt.build` reads
+        // main-isolated MemoryStore state via `MainActor.assumeIsolated`,
+        // which crashes if called from the background. Provider stream
+        // tasks aren't main-actor-isolated (Task {} doesn't inherit
+        // MainActor), so we hop explicitly here.
+        let prompt = await MainActor.run { PolishPrompt.build(text: text, mode: mode) }
         // Anthropic Messages API body. `stream: true` switches the response to
         // SSE with `content_block_delta` events carrying the incremental text.
         let body: [String: Any] = [

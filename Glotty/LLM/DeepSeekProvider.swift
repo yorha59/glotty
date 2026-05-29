@@ -133,7 +133,10 @@ struct DeepSeekProvider: LLMProvider {
             throw LLMError.missingAPIKey(providerName: displayName)
         }
 
-        let prompt = PolishPrompt.build(text: text, mode: mode)
+        // PolishPrompt.build reads main-isolated MemoryStore state via
+        // `MainActor.assumeIsolated`; this Task isn't main-actor-isolated,
+        // so we hop explicitly before building the prompt.
+        let prompt = await MainActor.run { PolishPrompt.build(text: text, mode: mode) }
         let body = try makeBody(prompt: prompt, temperature: 0.3)
         let bytes = try await openStream(apiKey: apiKey, body: body)
 
