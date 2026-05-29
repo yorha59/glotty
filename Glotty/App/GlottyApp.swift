@@ -129,6 +129,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installHotkey()
         dbg("installHotkey done")
 
+        // First-run walkthrough — no-op if the user has already finished
+        // or dismissed it. Runs after permissions / hotkey setup so the
+        // user can actually try the hotkey demo it points at.
+        WelcomeWindowController.shared.showIfFirstRun()
+
         let aiStatus = AppleIntelligenceStatus.current()
         dbg("AppleIntelligence: \(aiStatus.displayName)" + (aiStatus.fixInstructions.map { " — \($0)" } ?? ""))
 
@@ -278,9 +283,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
+        let welcome = NSMenuItem(title: String(localized: "Show welcome…"),
+                                 action: #selector(showWelcome),
+                                 keyEquivalent: "")
+        welcome.target = self
+        menu.addItem(welcome)
+
         menu.addItem(NSMenuItem(title: String(localized: "Quit Glotty"),
                                 action: #selector(NSApplication.terminate(_:)),
                                 keyEquivalent: "q"))
+    }
+
+    /// Re-open the first-run walkthrough on demand. Useful for users
+    /// who skipped it on first launch and want a refresher.
+    @objc private func showWelcome() {
+        WelcomeWindowController.shared.show()
     }
 
     /// True if the currently-frontmost app has at least one window
