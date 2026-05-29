@@ -44,26 +44,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let permissionsWindow = PermissionsWindowController()
     private let settingsWindow = SettingsWindowController.shared
 
-    /// Single-instance gate. Glotty is an LSUIElement agent — running two
-    /// copies would mean two status-bar mascots, two Fn-leader hotkey
-    /// handlers fighting for the same key event, and duplicate proactive
-    /// notifications. Detect a previously-launched instance and exit
-    /// cleanly so only one daemon is alive at a time. Runs in
-    /// `willFinishLaunching` so we bail before any subsystem (status item,
-    /// hotkey, scheduler) has been wired up.
+    /// Single-instance gate — "new launch wins". Glotty is an LSUIElement
+    /// agent, so two copies running at once means two status-bar mascots,
+    /// two Fn-leader hotkey handlers fighting for the same key event, and
+    /// duplicate proactive notifications. Detect any previously-launched
+    /// instance and tell it to quit so this one can take over. Runs in
+    /// `willFinishLaunching` so the old instance is gone before we set up
+    /// the status item / hotkey / scheduler.
+    ///
+    /// "New wins" rather than "old wins" because the dev / "rebuild and
+    /// relaunch from Xcode" flow needs each new launch to actually run.
+    /// For end users, the cost is a brief mascot flicker on a duplicate
+    /// launch — there are no documents to save, so a hard takeover is
+    /// safe.
     func applicationWillFinishLaunching(_ notification: Notification) {
         guard let bundleID = Bundle.main.bundleIdentifier else { return }
         let me = ProcessInfo.processInfo.processIdentifier
         let others = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
             .filter { $0.processIdentifier != me }
-        guard let existing = others.first else { return }
-        dbg("Another Glotty instance is already running (pid \(existing.processIdentifier)) — exiting.")
-        // Best-effort surface of the existing instance. For an LSUIElement
-        // agent this is essentially a no-op (no Dock/app-switcher
-        // presence) but it costs nothing and helps if the user launched a
-        // second copy through Spotlight expecting it to "show up".
-        existing.activate(options: [])
-        NSApp.terminate(nil)
+        guard !others.isEmpty else { return }
+        dbg("Found \(others.count) other Glotty instance(s) — terminating so this build can take over.")
+        for existing in others {
+            // `terminate()` is the graceful signal; an LSUIElement agent
+            // with no open documents will exit immediately on receipt.
+            existing.terminate()
+        }
+        // Poll briefly for the old instance(s) to actually exit. Without
+        // this wait the system can still hold the old status item when
+        // we register ours, producing two visible mascots until the old
+        // one finally cleans up. Cap at ~500ms; if anything's still
+        // around past that we proceed anyway (transient overlap is
+        // better than blocking launch).
+        let deadline = Date().addingTimeInterval(0.5)
+        while Date() < deadline {
+            let still = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+                .filter { $0.processIdentifier != me }
+            if still.isEmpty { break }
+            Thread.sleep(forTimeInterval: 0.05)
+        }
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
