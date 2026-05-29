@@ -383,34 +383,49 @@ enum SettingsRegistry {
         // valid-values list always matches the active backend.
         // Provider switching itself stays blocked (see below).
         let activeProviderID = LLMRegistry.currentProviderID()
-        if activeProviderID == "zai" {
-            let opts = ZAIProvider.supportedModels
+        // Resolve the active provider to (options, ud-key, description) so the
+        // registry entry covers every provider type without per-id branching.
+        // Stock OpenAI-compatible presets share a uniform shape; DeepSeek and
+        // Kimi are dedicated classes with their own model lists.
+        let modelSpec: (options: [(id: String, name: String)],
+                        userDefaultsKey: String,
+                        description: String)?
+        if let preset = OpenAIStockPresets.find(id: activeProviderID) {
+            modelSpec = (
+                options: preset.models.map { ($0.id, $0.displayName) },
+                userDefaultsKey: preset.modelUserDefaultsKey,
+                description: "The \(preset.displayName) model used for polish, explain, and chat. Switching takes effect on the next LLM call."
+            )
+        } else if activeProviderID == "deepseek" {
+            modelSpec = (
+                options: DeepSeekProvider.supportedModels.map { ($0.id, $0.displayName) },
+                userDefaultsKey: "glotty.deepseek.model",
+                description: "The DeepSeek model used for polish, explain, and chat. Switching takes effect on the next LLM call."
+            )
+        } else if activeProviderID == "kimi-coding" {
+            modelSpec = (
+                options: KimiCodingProvider.supportedModels.map { ($0.id, $0.displayName) },
+                userDefaultsKey: "glotty.kimi.model",
+                description: "The Kimi model used for polish, explain, and chat. Switching takes effect on the next LLM call."
+            )
+        } else {
+            // Custom OpenAI-compatible providers don't have an enumerated
+            // model list — the user supplies a free-text model id when they
+            // create the entry. Skip registration.
+            modelSpec = nil
+        }
+        if let spec = modelSpec {
             let display: [String: String] = Dictionary(
-                uniqueKeysWithValues: opts.map { ($0.id, $0.displayName) }
+                uniqueKeysWithValues: spec.options.map { ($0.id, $0.name) }
             )
             entries.append(SettingEntry(
                 id: "model",
                 displayName: String(localized: "Model"),
-                description: "The Z.AI / GLM model used for polish, explain, and chat. Switching takes effect on the next LLM call.",
-                kind: .enumeration(options: opts.map(\.id), display: display),
+                description: spec.description,
+                kind: .enumeration(options: spec.options.map(\.id), display: display),
                 sensitivity: .normal,
-                read: { UserDefaults.standard.string(forKey: "glotty.zai.model") },
-                write: { UserDefaults.standard.set($0, forKey: "glotty.zai.model") },
-                displayValue: { id in display[id] ?? id }
-            ))
-        } else if activeProviderID == "kimi" {
-            let opts = KimiCodingProvider.supportedModels
-            let display: [String: String] = Dictionary(
-                uniqueKeysWithValues: opts.map { ($0.id, $0.displayName) }
-            )
-            entries.append(SettingEntry(
-                id: "model",
-                displayName: String(localized: "Model"),
-                description: "The Kimi model used for polish, explain, and chat. Switching takes effect on the next LLM call.",
-                kind: .enumeration(options: opts.map(\.id), display: display),
-                sensitivity: .normal,
-                read: { UserDefaults.standard.string(forKey: "glotty.kimi.model") },
-                write: { UserDefaults.standard.set($0, forKey: "glotty.kimi.model") },
+                read: { UserDefaults.standard.string(forKey: spec.userDefaultsKey) },
+                write: { UserDefaults.standard.set($0, forKey: spec.userDefaultsKey) },
                 displayValue: { id in display[id] ?? id }
             ))
         }

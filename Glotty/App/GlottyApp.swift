@@ -44,6 +44,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let permissionsWindow = PermissionsWindowController()
     private let settingsWindow = SettingsWindowController.shared
 
+    /// Single-instance gate. Glotty is an LSUIElement agent — running two
+    /// copies would mean two status-bar mascots, two Fn-leader hotkey
+    /// handlers fighting for the same key event, and duplicate proactive
+    /// notifications. Detect a previously-launched instance and exit
+    /// cleanly so only one daemon is alive at a time. Runs in
+    /// `willFinishLaunching` so we bail before any subsystem (status item,
+    /// hotkey, scheduler) has been wired up.
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        guard let bundleID = Bundle.main.bundleIdentifier else { return }
+        let me = ProcessInfo.processInfo.processIdentifier
+        let others = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+            .filter { $0.processIdentifier != me }
+        guard let existing = others.first else { return }
+        dbg("Another Glotty instance is already running (pid \(existing.processIdentifier)) — exiting.")
+        // Best-effort surface of the existing instance. For an LSUIElement
+        // agent this is essentially a no-op (no Dock/app-switcher
+        // presence) but it costs nothing and helps if the user launched a
+        // second copy through Spotlight expecting it to "show up".
+        existing.activate(options: [])
+        NSApp.terminate(nil)
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         dbg("applicationDidFinishLaunching START")
         // Write the user's UI-language preference into AppleLanguages
