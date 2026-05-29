@@ -1,10 +1,17 @@
 name: Glotty
+# `knownRegions` exposes the localizations Xcode should respect.
+# Without zh-Hans here, the .xcstrings catalog's Chinese column
+# would be ignored at build time even though the JSON contains it.
+# The in-app System Language picker (Settings → Profile → Language)
+# overrides AppleLanguages at launch so the user can switch UI
+# language regardless of macOS's setting.
 options:
   bundleIdPrefix: com.ruojunye
   deploymentTarget:
     macOS: "26.0"
   developmentLanguage: en
   createIntermediateGroups: true
+  knownRegions: [en, zh-Hans]
 
 settings:
   base:

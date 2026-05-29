@@ -56,8 +56,11 @@ enum ExplainPrompt {
     static func build(text: String, targetLanguage: String) -> String {
         let lang = PolishPrompt.englishName(for: targetLanguage)
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return currentTemplate()
+        let body = currentTemplate()
             .replacingOccurrences(of: "${language}", with: lang)
             .replacingOccurrences(of: "${text}", with: trimmed)
+        // Same memory injection used by polish — see
+        // PolishPrompt.prependedWithUserContext for the why.
+        return PolishPrompt.prependedWithUserContext(body, sourceText: trimmed)
     }
 }

@@ -14,15 +14,19 @@ enum AppleIntelligenceStatus: Equatable {
     case osNotSupported        // running on something below macOS 26
     case unknown(String)       // future-proofing for new failure modes
 
-    /// Short label suitable for a Settings badge.
+    /// Short label suitable for a Settings badge. Each return goes
+    /// through `String(localized:)` so the swizzle / catalog can
+    /// translate it — without that wrap, Text(status.displayName)
+    /// hits the String overload of Text init and bypasses Foundation
+    /// localization entirely.
     var displayName: String {
         switch self {
-        case .available:           return "Available"
-        case .notEnabled:          return "Apple Intelligence is off"
-        case .deviceNotEligible:   return "This Mac doesn't support Apple Intelligence"
-        case .modelDownloading:    return "Apple Intelligence is downloading"
-        case .osNotSupported:      return "Requires macOS 26"
-        case .unknown(let msg):    return "Unavailable (\(msg))"
+        case .available:           return String(localized: "Available")
+        case .notEnabled:          return String(localized: "Apple Intelligence is off")
+        case .deviceNotEligible:   return String(localized: "This Mac doesn't support Apple Intelligence")
+        case .modelDownloading:    return String(localized: "Apple Intelligence is downloading")
+        case .osNotSupported:      return String(localized: "Requires macOS 26")
+        case .unknown(let msg):    return "\(String(localized: "Unavailable")) (\(msg))"
         }
     }
 
@@ -32,13 +36,13 @@ enum AppleIntelligenceStatus: Equatable {
         case .available:
             return nil
         case .notEnabled:
-            return "Enable in System Settings → Apple Intelligence & Siri."
+            return String(localized: "Enable in System Settings → Apple Intelligence & Siri.")
         case .deviceNotEligible:
-            return "Apple Intelligence requires an Apple Silicon Mac with sufficient memory. Use a cloud LLM provider instead."
+            return String(localized: "Apple Intelligence requires an Apple Silicon Mac with sufficient memory. Use a cloud LLM provider instead.")
         case .modelDownloading:
-            return "The model is still downloading. Try again in a few minutes."
+            return String(localized: "The model is still downloading. Try again in a few minutes.")
         case .osNotSupported:
-            return "Glotty targets macOS 26+; this status should never appear in a normal build."
+            return String(localized: "Glotty targets macOS 26+; this status should never appear in a normal build.")
         case .unknown:
             return nil
         }

@@ -10,6 +10,9 @@ final class FnLeaderHotkey {
     var onFire: (() -> Void)?
     var onExplainFire: (() -> Void)?
     var onPolishFire: (() -> Void)?
+    /// Fn → C — opens a free-form chat with Glotty (no selection
+    /// required; the popup starts with the tutor's opening turn).
+    var onChatFire: (() -> Void)?
     var onShowHUD: (() -> Void)?
     var onHideHUD: (() -> Void)?
 
@@ -17,6 +20,13 @@ final class FnLeaderHotkey {
     private var runLoopSource: CFRunLoopSource?
     private var fnDownAt: CFAbsoluteTime = 0
     private var wasFnPressed = false
+    /// True once a hotkey has fired during the current Fn hold (or
+    /// within the post-release leader window). Resets when Fn goes
+    /// down again. Prevents a single Fn → P press from triggering
+    /// multiple actions when the system emits more than one key event
+    /// for the same physical press (observed on some keyboard layouts
+    /// where Fn-held letters can produce a stray secondary keycode).
+    private var firedDuringCurrentHold = false
     private var pendingHUDShow: DispatchWorkItem?
     private var hudVisible = false
     private let leaderWindow: CFTimeInterval = 0.6
@@ -83,6 +93,9 @@ final class FnLeaderHotkey {
             let leaderNow = leader.isActive(in: event.flags)
             if leaderNow && !wasFnPressed {
                 fnDownAt = CFAbsoluteTimeGetCurrent()
+                // Fresh hold begins — re-arm so the next key press
+                // can fire even if a previous press already fired.
+                firedDuringCurrentHold = false
                 FnLeaderHotkey.debug("\(leader.label) DOWN")
                 scheduleHUDShow()
             } else if !leaderNow && wasFnPressed {
@@ -96,16 +109,18 @@ final class FnLeaderHotkey {
         if type == .keyDown {
             let keycode = event.getIntegerValueField(.keyboardEventKeycode)
             let withinWindow = (CFAbsoluteTimeGetCurrent() - fnDownAt) < leaderWindow
-            let active = wasFnPressed || withinWindow
+            let active = (wasFnPressed || withinWindow) && !firedDuringCurrentHold
 
             // Read user-rebindable keycodes per-event. UserDefaults lookups are
             // microsecond-cheap and let the user change bindings without restart.
             let translateKey = Int64(Keycode.currentTranslate())
             let explainKey   = Int64(Keycode.currentExplain())
             let polishKey    = Int64(Keycode.currentPolish())
+            let chatKey      = Int64(Keycode.currentChat())
 
             if keycode == translateKey, active {
                 FnLeaderHotkey.debug("FIRE Fn→translate (key \(keycode))")
+                firedDuringCurrentHold = true
                 cancelHUD()
                 let cb = onFire
                 DispatchQueue.main.async { cb?() }
@@ -113,6 +128,7 @@ final class FnLeaderHotkey {
             }
             if keycode == explainKey, active, explainKey != translateKey {
                 FnLeaderHotkey.debug("FIRE Fn→explain (key \(keycode))")
+                firedDuringCurrentHold = true
                 cancelHUD()
                 let cb = onExplainFire
                 DispatchQueue.main.async { cb?() }
@@ -121,8 +137,18 @@ final class FnLeaderHotkey {
             if keycode == polishKey, active,
                polishKey != translateKey, polishKey != explainKey {
                 FnLeaderHotkey.debug("FIRE Fn→polish (key \(keycode))")
+                firedDuringCurrentHold = true
                 cancelHUD()
                 let cb = onPolishFire
+                DispatchQueue.main.async { cb?() }
+                return nil
+            }
+            if keycode == chatKey, active,
+               chatKey != translateKey, chatKey != explainKey, chatKey != polishKey {
+                FnLeaderHotkey.debug("FIRE Fn→chat (key \(keycode))")
+                firedDuringCurrentHold = true
+                cancelHUD()
+                let cb = onChatFire
                 DispatchQueue.main.async { cb?() }
                 return nil
             }

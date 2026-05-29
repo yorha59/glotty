@@ -251,6 +251,14 @@ final class MemoryStore {
     /// Total event count (cheap UI signal for "no history yet" states).
     var count: Int { cache.count }
 
+    /// Wholesale replace every event with the supplied list,
+    /// preserving original UUIDs and timestamps. Used by the
+    /// Backup import path.
+    func replaceAll(with events: [MemoryEvent]) {
+        cache = events
+        rewriteAll()
+    }
+
     /// Wipe everything — in-memory and on disk. Called from the Clear button.
     func clearAll() {
         cache.removeAll()
@@ -310,10 +318,19 @@ final class MemoryStore {
     /// failed to label them or these are legacy entries from before the
     /// schema change). The display key is title-cased so "verb tense" and
     /// "Verb tense" both display as "Verb tense".
-    func topGrammarIssues(limit: Int = 20, since: Date? = nil) -> [MemoryAggregate] {
+    func topGrammarIssues(
+        limit: Int = 20,
+        since: Date? = nil,
+        language: String? = nil
+    ) -> [MemoryAggregate] {
         var counts: [String: (display: String, count: Int, lastSeen: Date)] = [:]
         for event in cache where event.kind == .polish {
             if let since, event.timestamp < since { continue }
+            // Language filter: only count categories from polishes
+            // whose target language matches. Without this, English
+            // "Word choice" and Chinese "用词不当" would be counted
+            // as two separate categories — useless for aggregation.
+            if let language, event.targetLang != language { continue }
             guard let issues = event.issues else { continue }
             for issue in issues {
                 guard let category = issue.category?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -329,6 +346,131 @@ final class MemoryStore {
             .sorted { ($0.count, $0.lastSeen) > ($1.count, $1.lastSeen) }
             .prefix(limit)
             .map { $0 }
+    }
+
+    /// One bucketed data point for the polish "common mistake types"
+    /// trend chart. Each `(bucketStart, category)` pair appears once;
+    /// `count` is the number of polish issues with that category that
+    /// fell inside the bucket. Buckets are filled in for every
+    /// `(bucket, category)` combination so the chart's lines don't
+    /// drop to nil when a category has zero mistakes in a given day.
+    struct GrammarIssueTrendPoint: Identifiable, Sendable {
+        let bucketStart: Date
+        let category: String
+        let count: Int
+        var id: String { "\(bucketStart.timeIntervalSinceReferenceDate)|\(category)" }
+    }
+
+    /// Time-series of grammar issue counts per category, ready for a
+    /// line chart. Restricted to the top `topN` categories within the
+    /// window so the chart stays readable (the long tail just adds
+    /// visual noise). Bucket size is picked from the range so we get
+    /// a useful number of points: hourly for the 24h view, daily for
+    /// week / month, weekly for "all time".
+    func grammarIssueTrend(
+        topN: Int = 5,
+        since: Date? = nil,
+        language: String? = nil,
+        now: Date = Date()
+    ) -> (categories: [String], points: [GrammarIssueTrendPoint]) {
+        // Pick top categories first — same ranking the list used —
+        // so the lines plotted match the legend the user expects.
+        let top = topGrammarIssues(limit: topN, since: since, language: language)
+        let displayByKey: [String: String] = Dictionary(
+            uniqueKeysWithValues: top.map { ($0.key.lowercased(), $0.key) }
+        )
+        let trackedKeys = Set(displayByKey.keys)
+        guard !trackedKeys.isEmpty else { return ([], []) }
+
+        let calendar = Calendar.current
+        let component: Calendar.Component = bucketComponent(forSince: since, now: now)
+
+        // Walk events once, bucket the matching issues.
+        var counts: [Date: [String: Int]] = [:]
+        for event in cache where event.kind == .polish {
+            if let since, event.timestamp < since { continue }
+            if let language, event.targetLang != language { continue }
+            guard let issues = event.issues else { continue }
+            let bucket = calendar.dateInterval(of: component, for: event.timestamp)?.start
+                ?? event.timestamp
+            for issue in issues {
+                guard let raw = issue.category?.trimmingCharacters(in: .whitespacesAndNewlines),
+                      !raw.isEmpty else { continue }
+                let key = raw.lowercased()
+                guard trackedKeys.contains(key) else { continue }
+                counts[bucket, default: [:]][key, default: 0] += 1
+            }
+        }
+
+        // Zero-fill every bucket × category cell so SwiftUI Charts
+        // draws continuous lines across the window even when a
+        // category has gaps.
+        let firstBucket: Date = {
+            if let since {
+                return calendar.dateInterval(of: component, for: since)?.start ?? since
+            }
+            // "All time" — anchor on the earliest event we actually have.
+            let earliest = cache.first(where: { $0.kind == .polish })?.timestamp ?? now
+            return calendar.dateInterval(of: component, for: earliest)?.start ?? earliest
+        }()
+        let lastBucket = calendar.dateInterval(of: component, for: now)?.start ?? now
+
+        var buckets: [Date] = []
+        var cursor = firstBucket
+        while cursor <= lastBucket {
+            buckets.append(cursor)
+            guard let next = calendar.date(byAdding: component, value: 1, to: cursor) else { break }
+            cursor = next
+            // Guard against runaway loops (e.g. malformed component).
+            if buckets.count > 500 { break }
+        }
+
+        var points: [GrammarIssueTrendPoint] = []
+        points.reserveCapacity(buckets.count * displayByKey.count)
+        for bucket in buckets {
+            for (key, display) in displayByKey {
+                let count = counts[bucket]?[key] ?? 0
+                points.append(GrammarIssueTrendPoint(
+                    bucketStart: bucket,
+                    category: display,
+                    count: count
+                ))
+            }
+        }
+
+        // Return categories in the same top-N order so the chart's
+        // legend matches the underlying ranking.
+        return (top.map { $0.key }, points)
+    }
+
+    /// Bucket size for the trend chart. Short ranges get finer
+    /// granularity so the chart isn't reduced to one or two points.
+    private func bucketComponent(forSince since: Date?, now: Date) -> Calendar.Component {
+        guard let since else { return .weekOfYear }
+        let span = now.timeIntervalSince(since)
+        let day: TimeInterval = 86_400
+        if span <= 2 * day { return .hour }
+        if span <= 60 * day { return .day }
+        return .weekOfYear
+    }
+
+    /// Distinct category strings the LLM has produced for polish
+    /// events in this target language. Fed back into the polish
+    /// prompt's "prefer existing categories" instruction so the
+    /// model doesn't drift (same kind of mistake getting different
+    /// labels across runs, which would defeat aggregation).
+    func knownCategories(for language: String) -> Set<String> {
+        var result: Set<String> = []
+        for event in cache where event.kind == .polish && event.targetLang == language {
+            guard let issues = event.issues else { continue }
+            for issue in issues {
+                if let category = issue.category?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !category.isEmpty {
+                    result.insert(category)
+                }
+            }
+        }
+        return result
     }
 
     /// Internal helper for count/last-seen aggregations. Lowercases keys so

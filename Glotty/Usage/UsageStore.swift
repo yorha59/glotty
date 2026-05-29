@@ -18,17 +18,19 @@ enum UsageMode: String, Codable, Sendable, CaseIterable {
     case explain
     case polish
     case chat              // ad-hoc / popup-generated question
-    case practiceGenerate  // background library top-off
-    case practiceQna       // free-form follow-up question after a session
+    case practiceGenerate  // legacy: pre-chat MCQ library top-off (no longer emitted; kept for old on-disk decode)
+    case practiceQna       // legacy: pre-chat post-session Q&A (no longer emitted; kept for old on-disk decode)
+    case memoryExtract     // post-chat extraction of learned memories
 
     var displayName: String {
         switch self {
-        case .translate:        return "Translate"
-        case .explain:          return "Explain"
-        case .polish:           return "Polish"
-        case .chat:             return "Chat (ad-hoc)"
-        case .practiceGenerate: return "Practice generation"
-        case .practiceQna:      return "Practice Q&A"
+        case .translate:        return String(localized: "Translate")
+        case .explain:          return String(localized: "Explain")
+        case .polish:           return String(localized: "Polish")
+        case .chat:             return String(localized: "Chat (ad-hoc)")
+        case .practiceGenerate: return String(localized: "Practice generation")
+        case .practiceQna:      return String(localized: "Practice Q&A")
+        case .memoryExtract:    return String(localized: "Memory extraction")
         }
     }
 }

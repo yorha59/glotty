@@ -30,7 +30,7 @@ final class PermissionsWindowController {
 
         let host = NSHostingController(rootView: view)
         let w = NSWindow(contentViewController: host)
-        w.title = "Glotty — Permissions"
+        w.title = "Glotty — \(String(localized: "Permissions"))"
         w.styleMask = [.titled, .closable, .miniaturizable]
         w.isReleasedWhenClosed = false
         w.setContentSize(NSSize(width: 480, height: 460))
@@ -111,6 +111,7 @@ struct PermissionsView: View {
             timer?.invalidate()
             timer = nil
         }
+        .localizationAware()
     }
 
     private var readyStage: some View {

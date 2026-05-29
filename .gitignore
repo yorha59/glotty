@@ -16,3 +16,10 @@ Package.resolved
 # Editor
 .vscode/
 .idea/
+
+# Claude Code working dir + per-session resume scripts
+.claude/
+session
+
+# Local DMG build output (scripts/make-dmg.sh)
+dist/

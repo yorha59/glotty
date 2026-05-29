@@ -2,88 +2,44 @@ import Foundation
 import UserNotifications
 import AppKit
 
-/// Proactive practice scheduler. Two timers operate independently:
+/// Proactive chat scheduler. Posts a "Time to chat with Glotty"
+/// notification at the user-configured cadence (off / hourly / 4h /
+/// daily / weekly). The notification's Start action opens the
+/// conversational chat popup (the same Fn → C surface).
 ///
-/// 1. **Notification timer** — fires at the user-configured cadence
-///    (off / hourly / 4h / daily / weekly). On fire it picks N random
-///    questions out of `QuizLibrary` and posts a macOS notification with a
-///    "Start Practice" action. No LLM call happens here — delivery is
-///    instant.
-/// 2. **Generation timer** — runs in the background every ~10 minutes,
-///    topping off the library when it falls below `QuizLibrary.targetSize`.
-///    One LLM call per generated question.
-///
-/// Separating the two means notifications never wait on the LLM, and the
-/// library acts as a buffer that smooths over slow / failed generation
-/// without affecting the user-visible cadence.
+/// Pre-chat history: this used to manage a background-generated
+/// quiz library so multiple-choice notifications could fire instantly
+/// without an LLM call. Chat sessions take their first turn from the
+/// LLM on open, so there's no library to maintain anymore — just
+/// the reminder timer.
 @MainActor
 final class PracticeScheduler: NSObject, ObservableObject {
     static let shared = PracticeScheduler()
 
-    /// UserDefaults keys + defaults. Interval in minutes; 0 == disabled.
-    static let intervalKey          = "glotty.practice.intervalMinutes"
-    static let questionCountKey     = "glotty.practice.questionCount"
-    static let generatorIntervalKey = "glotty.practice.generatorIntervalMinutes"
+    /// UserDefaults key + default. Interval in minutes; 0 == disabled.
+    static let intervalKey            = "glotty.practice.intervalMinutes"
     static let defaultIntervalMinutes = 0
-    static let defaultQuestionCount   = 5
-    static let defaultGeneratorIntervalMinutes = 10
 
     /// Notification category + action identifiers — tied to handlers in
     /// `AppDelegate`'s `UNUserNotificationCenterDelegate` conformance.
-    static let notificationCategory  = "glotty.practice.session"
+    static let notificationCategory    = "glotty.practice.session"
     static let notificationActionStart = "glotty.practice.start"
 
-    /// Published so SwiftUI can show a progress indicator. The library
-    /// count itself comes straight from `QuizLibrary.shared.count` — that
-    /// type is its own ObservableObject, so views observe it directly
-    /// rather than reading a stale mirror here.
-    @Published private(set) var isGenerating: Bool = false
-
-    /// Whatever quiz batch the scheduler most recently picked for delivery.
-    /// Drained when the popup opens — so each session uses a fresh batch.
-    private(set) var pendingBatch: [QuizQuestion] = []
-
     private var notificationTimer: Timer?
-    private var generatorTimer: Timer?
-    /// Tracks the in-flight on-demand fill so the user can cancel mid-loop
-    /// from Settings. Nil when nothing is running.
-    private var fillTask: Task<Void, Never>?
 
-    private override init() {
-        super.init()
-    }
+    private override init() { super.init() }
 
     var intervalMinutes: Int {
         UserDefaults.standard.object(forKey: Self.intervalKey) as? Int
             ?? Self.defaultIntervalMinutes
     }
 
-    var questionCount: Int {
-        UserDefaults.standard.object(forKey: Self.questionCountKey) as? Int
-            ?? Self.defaultQuestionCount
-    }
-
-    /// Configurable background-generator cadence (minutes between top-off
-    /// ticks). Settings → Practice exposes a picker.
-    var generatorIntervalMinutes: Int {
-        UserDefaults.standard.object(forKey: Self.generatorIntervalKey) as? Int
-            ?? Self.defaultGeneratorIntervalMinutes
-    }
-
-    /// Kick everything off. Safe to call multiple times — invalidates
-    /// existing timers first. Settings UI calls this after the user changes
-    /// the interval.
+    /// Kick the timer. Safe to call multiple times — invalidates any
+    /// existing timer first. Settings UI calls this after the user
+    /// changes the interval.
     func start() {
         notificationTimer?.invalidate()
         notificationTimer = nil
-        generatorTimer?.invalidate()
-        generatorTimer = nil
-
-        // Always run the background generator — it's cheap when the library
-        // is full (count check returns immediately) and ensures we have a
-        // buffer ready the moment the user enables practice.
-        startBackgroundGenerator()
-
         guard intervalMinutes > 0 else { return }
         scheduleNextNotification()
     }
@@ -91,8 +47,6 @@ final class PracticeScheduler: NSObject, ObservableObject {
     func stop() {
         notificationTimer?.invalidate()
         notificationTimer = nil
-        generatorTimer?.invalidate()
-        generatorTimer = nil
     }
 
     func requestNotificationPermissionIfNeeded() {
@@ -101,103 +55,94 @@ final class PracticeScheduler: NSObject, ObservableObject {
         registerNotificationCategory()
     }
 
-    /// Trigger one notification immediately. Used by the "Send a practice
-    /// notification now" button in Settings → Practice and by the
-    /// notification timer when it fires.
-    ///
-    /// If the library has fewer than `questionCount` questions ready, we
-    /// generate enough on the spot so the user always sees a banner.
-    /// Previously this silently returned for empty libraries — looked like
-    /// the button was broken.
+    /// Post one reminder banner immediately. Used by the "Send a
+    /// reminder now" button in Settings → Practice as a test path,
+    /// and by the notification timer when it fires on schedule.
     func fireSessionNow() async {
-        // Make sure there's at least one question to send. Generate
-        // synchronously so the test button always produces a visible result.
-        if QuizLibrary.shared.count == 0 {
-            await generateOneSync()
-        }
-
-        let batch = QuizLibrary.shared.pickRandom(count: questionCount)
-        guard !batch.isEmpty else {
-            // Generation failed (no LLM provider, network error, etc.). Post
-            // a fallback notification so the user knows we tried.
-            await postFallbackNotification()
-            return
-        }
-        pendingBatch = batch
-        await postNotification(forBatchSize: batch.count)
-    }
-
-    /// Synchronous single-question generation for the test-button path.
-    /// Sets `isGenerating` so the Settings UI can show a progress spinner.
-    private func generateOneSync() async {
-        isGenerating = true
-        defer { isGenerating = false }
-        if let q = await generateOneQuestion() {
-            QuizLibrary.shared.add(q)
-        }
-    }
-
-    /// Kick off an on-demand fill, stored as `fillTask` so the user can stop
-    /// it via `cancelFill()`. No-op if a fill is already running.
-    func startFillLibrary() {
-        guard fillTask == nil, !isGenerating else { return }
-        fillTask = Task { @MainActor [weak self] in
-            await self?.fillLibraryOnDemand()
-            self?.fillTask = nil
-        }
-    }
-
-    /// Stop an in-flight fill. The current LLM call returns nil on cancel
-    /// (its stream throws CancellationError, caught downstream), and the
-    /// fill loop sees `Task.isCancelled` on the next iteration and exits.
-    func cancelFill() {
-        fillTask?.cancel()
-        fillTask = nil
-    }
-
-    /// Fill the library up to `QuizLibrary.targetSize`. Each question is
-    /// generated and persisted as it arrives, so the user sees the count
-    /// tick up while this runs. No-op when generation is already in flight
-    /// (background tick or another fill). Stops early if a generation call
-    /// fails (no provider, network error) or if the surrounding Task is
-    /// cancelled via `cancelFill()`.
-    func fillLibraryOnDemand() async {
-        guard !isGenerating else { return }
-        isGenerating = true
-        defer { isGenerating = false }
-
-        while QuizLibrary.shared.count < QuizLibrary.targetSize {
-            if Task.isCancelled { return }
-            guard let q = await generateOneQuestion() else { return }
-            QuizLibrary.shared.add(q)
-        }
-    }
-
-    /// Drain whatever the scheduler has queued. Returns an empty array if no
-    /// batch is pending. The popup calls this when it opens.
-    func takePendingBatch() -> [QuizQuestion] {
-        let batch = pendingBatch
-        pendingBatch = []
-        return batch
+        await postNotification()
     }
 
     // MARK: - Notification timer
 
-    private func scheduleNextNotification() {
-        let secs = TimeInterval(intervalMinutes * 60)
-        notificationTimer = Timer.scheduledTimer(withTimeInterval: secs, repeats: false) { [weak self] _ in
-            Task { @MainActor in
-                await self?.fireSessionNow()
-                self?.scheduleNextNotification()
-            }
+    /// Latest "reference instant" the scheduler waits one full
+    /// interval after. Bumped to `now` whenever:
+    ///   - a notification is successfully posted (next nudge waits
+    ///     a full interval from then),
+    ///   - a fire is skipped because the chat is open (pretend
+    ///     activity just happened so the next try also waits a full
+    ///     interval, instead of busy-spinning while the user sits
+    ///     idle inside an open chat).
+    /// `ChatStore.lastActivity()` is consulted as a fallback so
+    /// real chat activity since app launch also pushes the schedule.
+    private var lastReferenceTime: Date?
+
+    private func currentReferenceTime() -> Date {
+        let storeActivity = ChatStore.shared.lastActivity()
+        switch (lastReferenceTime, storeActivity) {
+        case (nil, nil):           return Date()
+        case (let r?, nil):        return r
+        case (nil, let a?):        return a
+        case (let r?, let a?):     return max(r, a)
         }
     }
 
-    private func postNotification(forBatchSize size: Int) async {
+    /// Schedule the next fire for exactly `intervalMinutes` after the
+    /// latest reference instant (real chat activity OR the last
+    /// successful/skipped fire). User explicitly asked: "always use
+    /// the setting value, wait 1 hour after chat is inactive" — no
+    /// short-interval re-check floor.
+    private func scheduleNextNotification() {
+        let intervalSec = TimeInterval(intervalMinutes * 60)
+        let reference = currentReferenceTime()
+        let fireAt = reference.addingTimeInterval(intervalSec)
+        // 60s minimum prevents the timer firing in the past (which
+        // some Timer implementations no-op on). Doesn't compromise
+        // "always wait the full interval": this branch only kicks
+        // in when `fireAt` already elapsed, which means we're past
+        // the desired schedule anyway.
+        let delay = max(fireAt.timeIntervalSince(Date()), 60)
+        notificationTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) { [weak self] _ in
+            Task { @MainActor in await self?.tickAndMaybeFire() }
+        }
+    }
+
+    /// Run once when the timer fires. Re-checks both preconditions
+    /// (chat closed, idle long enough) before posting, then re-arms
+    /// the timer either way.
+    private func tickAndMaybeFire() async {
+        defer { scheduleNextNotification() }
+
+        // Precondition 1: user must not be actively chatting.
+        // Interrupting a live conversation reads as a bug. Bump
+        // the reference so the next attempt waits a full interval
+        // — the user is presumably going to keep chatting.
+        if PopupController.shared.hasOpenChatPopup() {
+            lastReferenceTime = Date()
+            return
+        }
+
+        // Precondition 2: real idle time must exceed the user's
+        // interval setting. Belt-and-suspenders — scheduling
+        // already accounts for this; this catches activity that
+        // landed between scheduling and firing.
+        let intervalSec = TimeInterval(intervalMinutes * 60)
+        if let lastActivity = ChatStore.shared.lastActivity(),
+           Date().timeIntervalSince(lastActivity) < intervalSec {
+            return
+        }
+
+        await fireSessionNow()
+        lastReferenceTime = Date()
+    }
+
+    private func postNotification() async {
+        let persona = GlottyPersona.current()
+        let hook = await generateHook(persona: persona)
+
         let center = UNUserNotificationCenter.current()
         let content = UNMutableNotificationContent()
-        content.title = "Practice time"
-        content.body  = "Quick \(size)-question quiz on your recent mistakes — ready when you are."
+        content.title = persona.name
+        content.body  = hook
         content.sound = .default
         content.categoryIdentifier = Self.notificationCategory
         content.userInfo = ["kind": "practice-session"]
@@ -210,28 +155,54 @@ final class PracticeScheduler: NSObject, ObservableObject {
         try? await center.add(request)
     }
 
-    private func postFallbackNotification() async {
-        let center = UNUserNotificationCenter.current()
-        let content = UNMutableNotificationContent()
-        content.title = "Question library is filling"
-        content.body  = "Glotty is generating questions in the background — try again in a minute."
-        content.sound = .default
-        // Tag with a kind so the click handler in AppDelegate still routes
-        // this to the popup (which will open and show its empty / generating
-        // state — better than a dead-click on an unresponsive banner).
-        content.userInfo = ["kind": "practice-empty"]
-        let request = UNNotificationRequest(
-            identifier: "glotty.practice.empty.\(UUID().uuidString)",
-            content: content,
-            trigger: nil
-        )
-        try? await center.add(request)
+    /// Build the notification body. Asks the LLM for a one-sentence
+    /// hook in the user's target language that picks up on something
+    /// from their accepted memories (a project, a recurring topic).
+    /// Falls back to a friendly generic line if the LLM is unavailable
+    /// or returns nothing usable — notifications must always post.
+    private func generateHook(persona: GlottyPersona) async -> String {
+        let fallback = "I was just thinking about you \u{2014} got a minute to chat?"
+        guard let provider = LLMRegistry.current() else { return fallback }
+        let rawTarget = UserDefaults.standard.string(forKey: "glotty.polishLang")?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let target = rawTarget.isEmpty ? "en" : rawTarget
+        let targetName = PolishPrompt.englishName(for: target)
+        // contextBlock returns "About the user:\n…" — pass through any
+        // source text we know the user is likely thinking about. There's
+        // none at notification time, so an empty string still pulls in
+        // profile-style memories (always-on facts/preferences/projects).
+        let userContext = LearnedMemoryStore.shared.contextBlock(for: "")
+        let prompt = """
+        You are \(persona.name), a \(persona.manner.promptHint) chat partner. Write ONE friendly, casual sentence in \(targetName) inviting the user to open a chat with you — like a text from a friend who wants to catch up.
+
+        Guidelines:
+        - One sentence. No greeting like "Hi!" — go straight to the hook.
+        - If the context below mentions something the user has been working on or talking about, tie the invitation to that ("How's [project] going? Got a sec to vent?"). Otherwise just be warmly curious about their day.
+        - Do NOT mention that you've been "tracking", "noticing", or "saved notes". Speak like a friend who remembers from a previous conversation.
+        - Output ONLY the sentence — no quotes, no preamble, no extra text.
+
+        \(userContext.isEmpty ? "(No prior notes about the user yet.)" : userContext)
+        """
+
+        var raw = ""
+        do {
+            try await UsageContext.$mode.withValue(.chat) {
+                for try await chunk in provider.chatCompletionStream(prompt: prompt) {
+                    raw = chunk
+                }
+            }
+        } catch {
+            return fallback
+        }
+        let cleaned = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\"\u{201C}\u{201D}\u{2018}\u{2019}"))
+        return cleaned.isEmpty ? fallback : cleaned
     }
 
     private func registerNotificationCategory() {
         let start = UNNotificationAction(
             identifier: Self.notificationActionStart,
-            title: "Start Practice",
+            title: "Chat",
             options: [.foreground]
         )
         let category = UNNotificationCategory(
@@ -242,58 +213,4 @@ final class PracticeScheduler: NSObject, ObservableObject {
         )
         UNUserNotificationCenter.current().setNotificationCategories([category])
     }
-
-    // MARK: - Background generator
-
-    private func startBackgroundGenerator() {
-        // Top off immediately on start (e.g. fresh install or app launch).
-        Task { @MainActor in await topOffLibrary() }
-        // Then periodically at the user-configured cadence.
-        let secs = TimeInterval(generatorIntervalMinutes * 60)
-        generatorTimer = Timer.scheduledTimer(withTimeInterval: secs, repeats: true) { [weak self] _ in
-            Task { @MainActor in await self?.topOffLibrary() }
-        }
-    }
-
-    /// Generate up to 2 new questions per tick if the library is below
-    /// target. Two is a balance: enough to refill quickly after a session,
-    /// not so many that a single tick blocks for minutes.
-    private func topOffLibrary() async {
-        guard !isGenerating else { return }
-        let shortfall = QuizLibrary.targetSize - QuizLibrary.shared.count
-        guard shortfall > 0 else { return }
-        isGenerating = true
-        defer { isGenerating = false }
-
-        let toGenerate = min(2, shortfall)
-        for _ in 0..<toGenerate {
-            if let q = await generateOneQuestion() {
-                QuizLibrary.shared.add(q)
-            }
-        }
-    }
-
-    private func generateOneQuestion() async -> QuizQuestion? {
-        guard let provider = LLMRegistry.current() else { return nil }
-        let categories = MemoryStore.shared.topGrammarIssues(limit: 5).map(\.key)
-        let lang = UserDefaults.standard.string(forKey: "glotty.polishLang")?
-            .trimmingCharacters(in: .whitespacesAndNewlines).nonEmpty ?? "en"
-        let prompt = QuizPrompt.build(categories: categories, targetLanguage: lang)
-
-        var raw = ""
-        do {
-            try await UsageContext.$mode.withValue(.practiceGenerate) {
-                for try await chunk in provider.chatCompletionStream(prompt: prompt) {
-                    raw = chunk
-                }
-            }
-        } catch {
-            return nil
-        }
-        return QuizPrompt.parse(raw)
-    }
-}
-
-private extension String {
-    var nonEmpty: String? { isEmpty ? nil : self }
 }

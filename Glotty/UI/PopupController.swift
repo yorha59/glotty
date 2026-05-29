@@ -33,6 +33,19 @@ final class PopupPanel: NSPanel {
         onCancel?()
     }
 
+    /// Allow the user to drag the panel to any position, including ones
+    /// where the title bar is off-screen. AppKit's default
+    /// `constrainFrameRect` keeps the title bar visible — fine for
+    /// most windows, but answer panels can grow taller than the screen
+    /// (long selection → long polished response + chat). When that
+    /// happens the user needs to "scroll" the panel by dragging it so
+    /// the hidden top or bottom comes into view; the default constraint
+    /// snaps it back. Returning the proposed frame unchanged lets the
+    /// drag stick.
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        return frameRect
+    }
+
     /// True if any responder up the chain from `start` reports a non-zero
     /// marked text range. `NSTextField`s host their editor lazily as the
     /// field editor (an `NSTextView`), so we check both the responder
@@ -68,6 +81,14 @@ final class PopupController {
     /// alongside the panel to keep the SwiftUI view alive for streaming
     /// updates. Removed in lockstep with `panels`.
     private var hosts: [ObjectIdentifier: NSHostingController<PopupView>] = [:]
+    /// Per-panel extraction trigger registered by `PopupView`. PopupView
+    /// re-registers on every relevant @State change so the closure
+    /// captures the latest chat thread / event id. Invoked from
+    /// `dismiss(_:)` and the willClose observer so post-dismiss
+    /// memory extraction always sees the freshest state — more
+    /// reliable than SwiftUI's `.onDisappear`, which doesn't fire
+    /// consistently when an NSPanel is dismissed via `orderOut`.
+    private var extractionTriggers: [ObjectIdentifier: () -> Void] = [:]
 
     /// Initial size for any popup before SwiftUI reports its intrinsic height.
     /// The hosting controller's `preferredContentSize` takes over right after
@@ -75,10 +96,68 @@ final class PopupController {
     /// flash at zero-size.
     private static let initialSize = NSSize(width: 460, height: 240)
 
-    func show(sourceText: String, mode: PopupMode = .translate, replay: PopupReplayPayload? = nil) {
+    /// Distributed-notification name the dev/agent posts to replay
+    /// the most-recent stored history event of a given kind into a
+    /// fresh popup window. `userInfo["kind"]` ∈ `translate / explain /
+    /// polish`; omitted defaults to `polish` (the richest popup to
+    /// eyeball for sizing). Used for screen-snapshot debugging of
+    /// the popup layout without manually triggering Fn-key flows.
+    static let replayLastNotificationName = Notification.Name("com.ruojunye.glotty.replayLast")
+
+    /// One-time install — call from AppDelegate.
+    nonisolated static func installReplayObserver() {
+        DistributedNotificationCenter.default().addObserver(
+            forName: replayLastNotificationName,
+            object: nil,
+            queue: .main,
+            using: { note in
+                let kindRaw = (note.userInfo?["kind"] as? String) ?? "polish"
+                let kind: MemoryEventKind = {
+                    switch kindRaw {
+                    case "translate": return .translate
+                    case "explain":   return .explain
+                    default:          return .polish
+                    }
+                }()
+                Task { @MainActor in
+                    PopupController.shared.replayLast(kind: kind)
+                }
+            }
+        )
+    }
+
+    /// Find the most-recent event of the given kind in MemoryStore
+    /// and re-open its popup. No-op if no matching event exists.
+    @MainActor
+    func replayLast(kind: MemoryEventKind) {
+        let all = MemoryStore.shared.allEvents()
+        // Walk newest-first to find the latest of the requested kind.
+        guard let event = all.reversed().first(where: { $0.kind == kind }) else { return }
+        guard let payload = PopupReplayPayload.from(event) else { return }
+        let mode: PopupMode = {
+            switch kind {
+            case .translate: return .translate
+            case .explain:   return .explain
+            case .polish:    return .polish
+            }
+        }()
+        show(sourceText: event.sourceText, mode: mode, replay: payload)
+    }
+
+    func show(sourceText: String,
+              mode: PopupMode = .translate,
+              replay: PopupReplayPayload? = nil,
+              proactive: Bool = false) {
         let mouse = NSEvent.mouseLocation
         let screenFrame = (NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main)?.visibleFrame
             ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+
+        // Rescue any existing panels the user dragged off-screen. With
+        // `constrainFrameRect` disabled on PopupPanel they can end up
+        // entirely outside every screen's frame and unreachable. Each
+        // new action is a natural moment to bring lost panels back —
+        // the user is asking for the popup anyway.
+        rescueOffscreenPanels(targetScreenFrame: screenFrame)
 
         // All modes use translate's panel config — non-activating overlay
         // at `.floating` level with `.fullScreenAuxiliary` collection
@@ -101,6 +180,7 @@ final class PopupController {
             sourceText: sourceText,
             mode: mode,
             replay: replay,
+            proactive: proactive,
             onClose: { [weak self, weak panelRef] in
                 guard let panelRef else { return }
                 self?.dismiss(panelRef)
@@ -115,6 +195,10 @@ final class PopupController {
                 guard let panelRef, !didGrowForChat else { return }
                 didGrowForChat = true
                 Self.growPanelForChat(panelRef)
+            },
+            registerExtractionTrigger: { [weak self, weak panelRef] hook in
+                guard let self, let panelRef else { return }
+                self.extractionTriggers[ObjectIdentifier(panelRef)] = hook
             }
         )
         // ESC routes through `PopupPanel.cancelOperation`, which checks
@@ -124,14 +208,21 @@ final class PopupController {
             self?.dismiss(panelRef)
         }
 
-        // Auto-fit for translate/explain via sizingOptions = .preferredContentSize.
-        // For polish we skip that — the user controls the size via the
-        // resize handle — and instead pick a sensible starting size from
-        // the first layout pass.
+        // Auto-fit for ALL modes via sizingOptions = .preferredContentSize.
+        // SwiftUI body's outer `.frame(maxHeight: maxPanelHeight)`
+        // clamps the reported preferredContentSize at the screen
+        // (minus margin), so a long selection caps the panel
+        // height and the inner ScrollView takes over for overflow.
+        //
+        // Previously polish skipped this (so the user's drag-resize
+        // wouldn't be fought by auto-sync). The cost was that polish
+        // popups always opened at the 560×480 fallback regardless of
+        // content — visibly a "fixed window size." We now sync for
+        // polish too; the user can still resize via the .resizable
+        // styleMask, and the auto-sync just gives them a better
+        // starting size.
         let host = NSHostingController(rootView: rootView)
-        if mode != .polish {
-            host.sizingOptions = [.preferredContentSize]
-        }
+        host.sizingOptions = [.preferredContentSize]
         panel.contentViewController = host
         hosts[ObjectIdentifier(panel)] = host
         host.view.layoutSubtreeIfNeeded()
@@ -153,7 +244,23 @@ final class PopupController {
                 ? preferred
                 : Self.initialSize
         }
-        panel.setContentSize(initialSize)
+        // Cap the panel content area at the available screen height
+        // (minus chrome). With `sizingOptions = .preferredContentSize`
+        // the panel auto-resizes to whatever SwiftUI reports as its
+        // ideal — and a very long source selection's ideal IS huge.
+        // `contentMaxSize` clamps the upward growth; SwiftUI gets
+        // less space than it asked for and the inner ScrollView
+        // takes over.
+        let screenCap = max(screenFrame.height - 120, 320)
+        if initialSize.height > screenCap {
+            panel.setContentSize(NSSize(width: initialSize.width, height: screenCap))
+        } else {
+            panel.setContentSize(initialSize)
+        }
+        panel.contentMaxSize = NSSize(
+            width: .greatestFiniteMagnitude,
+            height: screenCap
+        )
 
         // Cascade subsequent windows so they don't perfectly stack on the
         // first. AppKit's window-cascading convention is 20pt × 20pt; we use
@@ -185,8 +292,25 @@ final class PopupController {
     }
 
     func dismiss(_ panel: PopupPanel) {
+        // Fire post-dismiss memory extraction BEFORE we tear down
+        // the host. Use removeValue so removeFromTracking below
+        // doesn't double-fire — the X-button (willClose) path goes
+        // directly through removeFromTracking without dismiss.
+        extractionTriggers.removeValue(forKey: ObjectIdentifier(panel))?()
         panel.orderOut(nil)
         removeFromTracking(panel)
+    }
+
+    /// True if at least one chat-mode popup is currently visible.
+    /// Used by `PracticeScheduler` to skip proactive notifications
+    /// while the user is mid-conversation — interrupting a live
+    /// chat with a "want to chat?" banner reads as broken.
+    func hasOpenChatPopup() -> Bool {
+        for panel in panels {
+            guard let host = hosts[ObjectIdentifier(panel)] else { continue }
+            if host.rootView.mode == .chat { return true }
+        }
+        return false
     }
 
     /// Close every popup. Not currently wired to a hotkey but useful as a
@@ -198,8 +322,40 @@ final class PopupController {
     }
 
     private func removeFromTracking(_ panel: PopupPanel) {
-        hosts.removeValue(forKey: ObjectIdentifier(panel))
+        let id = ObjectIdentifier(panel)
+        // Belt-and-suspenders: if dismiss(_:) didn't run (e.g.
+        // user clicked the X button — willClose path goes straight
+        // here without dismiss), still fire the trigger once before
+        // forgetting the closure.
+        extractionTriggers.removeValue(forKey: id)?()
+        hosts.removeValue(forKey: id)
         panels.removeAll { $0 === panel }
+    }
+
+    /// Nudge any panel that ended up entirely outside every screen
+    /// back into view. We require a meaningful overlap (not just a
+    /// pixel) so a panel intentionally placed at the screen edge isn't
+    /// repositioned. Off-screen panels are recentered on the screen
+    /// the user is currently working on.
+    private func rescueOffscreenPanels(targetScreenFrame: NSRect) {
+        let minVisible: CGFloat = 80
+        for panel in panels {
+            let frame = panel.frame
+            let stillReachable = NSScreen.screens.contains { screen in
+                let intersection = frame.intersection(screen.visibleFrame)
+                return intersection.width >= minVisible && intersection.height >= minVisible
+            }
+            if stillReachable { continue }
+            var newFrame = frame
+            newFrame.origin.x = targetScreenFrame.midX - frame.width / 2
+            newFrame.origin.y = targetScreenFrame.midY - frame.height / 2
+            // Clamp X so the panel doesn't extend past the screen sides
+            // when it's wider than expected. Y is left alone — tall
+            // panels intentionally extend beyond the screen.
+            newFrame.origin.x = min(max(newFrame.origin.x, targetScreenFrame.minX),
+                                    max(targetScreenFrame.maxX - frame.width, targetScreenFrame.minX))
+            panel.setFrame(newFrame, display: true, animate: true)
+        }
     }
 
     /// Add ~220pt of vertical room when the user expands the polish chat

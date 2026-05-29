@@ -43,7 +43,7 @@ final class MistakeTypeWindowController {
         if let window {
             Self.diag("show REUSE existing window")
             window.contentViewController = host
-            window.title = "Mistake type — \(category)"
+            window.title = "\(String(localized: "Mistake type")) — \(category)"
             // Already hold an activation slot — just nudge to the front.
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
@@ -52,7 +52,7 @@ final class MistakeTypeWindowController {
         }
 
         let w = NSWindow(contentViewController: host)
-        w.title = "Mistake type — \(category)"
+        w.title = "\(String(localized: "Mistake type")) — \(category)"
         w.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         w.isReleasedWhenClosed = false
         host.view.layoutSubtreeIfNeeded()
@@ -178,6 +178,7 @@ struct MistakeTypeView: View {
         }
         .frame(width: contentWidth)
         .fixedSize(horizontal: false, vertical: true)
+        .localizationAware()
     }
 
     private func openEvent(_ event: MemoryEvent) {

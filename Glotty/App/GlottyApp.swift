@@ -42,12 +42,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hud: HUDController!
     private let grabber = SelectionGrabber()
     private let permissionsWindow = PermissionsWindowController()
-    private let settingsWindow = SettingsWindowController()
+    private let settingsWindow = SettingsWindowController.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         dbg("applicationDidFinishLaunching START")
+        // Write the user's UI-language preference into AppleLanguages
+        // before any view renders — Foundation reads it once during
+        // bundle resolution on launch.
+        SystemLanguageManager.applyAtLaunch()
+        // Intercept Bundle.localizedString so LLM-translated UI
+        // strings (cached in Application Support) override the
+        // bundled catalog. Idempotent — second call no-ops.
+        BundleSwizzle.installOnce()
+        // Lets the dev / agent trigger the settings snapshotter
+        // from outside the app (no Accessibility needed) by posting
+        // a distributed notification — see SettingsSnapshotter for
+        // the exact name.
+        SettingsSnapshotter.installRemoteTriggerObserver()
+        PopupController.installReplayObserver()
         popup = .shared
-        hud = HUDController()
+        hud = HUDController.shared
         dbg("popup + hud created")
         setupStatusItem()
         dbg("status item created")
@@ -91,6 +105,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         PracticeScheduler.shared.requestNotificationPermissionIfNeeded()
         PracticeScheduler.shared.start()
 
+        // Honor the "reopen chat after relaunch" flag set by the
+        // settings-via-chat relaunch button (see SystemLanguageManager).
+        // We consume + clear the flag before opening so a crash during
+        // chat hydration doesn't trigger an open loop next launch.
+        let defaults = UserDefaults.standard
+        if defaults.bool(forKey: SystemLanguageManager.reopenChatOnLaunchKey) {
+            defaults.removeObject(forKey: SystemLanguageManager.reopenChatOnLaunchKey)
+            dbg("relaunch flag found — reopening chat popup")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.handleFire(mode: .chat)
+            }
+        }
+
         dbg("applicationDidFinishLaunching END")
     }
 
@@ -127,19 +154,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         dbg("status item — visible=\(statusItem.isVisible) length=\(statusItem.length) hasButton=\(statusItem.button != nil)")
 
         let menu = NSMenu()
-
-        let settings = NSMenuItem(title: "Settings…",
-                                  action: #selector(openSettings),
-                                  keyEquivalent: ",")
-        settings.target = self
-        menu.addItem(settings)
-
-        menu.addItem(.separator())
-
-        menu.addItem(NSMenuItem(title: "Quit Glotty",
-                                action: #selector(NSApplication.terminate(_:)),
-                                keyEquivalent: "q"))
+        // Rebuild the menu lazily on each open so the Context
+        // submenu reflects the current store/active state (contexts
+        // may have been added/renamed/deleted since last open).
+        menu.delegate = self
         statusItem.menu = menu
+
+        rebuildStatusMenu(menu)
         print("[Glotty] status item created")
     }
 
@@ -148,11 +169,120 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindow.show()
     }
 
+    @objc private func openMemorySettings() {
+        settingsWindow.show(selecting: .memory)
+    }
+
+    @objc private func setActiveContext(_ sender: NSMenuItem) {
+        // representedObject is either a UUID (specific context) or
+        // nil (selecting "None — Global only"). Both are encoded the
+        // same way the active-context store expects.
+        let id = sender.representedObject as? UUID
+        MemoryContextStore.shared.activeContextID = id
+    }
+
+    /// Rebuild the status-bar menu in place. Called on every menu
+    /// open so the Context submenu reflects current state — adding a
+    /// new context in Settings should show up the next time the user
+    /// clicks the mascot, without an app restart.
+    private func rebuildStatusMenu(_ menu: NSMenu) {
+        menu.removeAllItems()
+
+        let settings = NSMenuItem(title: String(localized: "Settings…"),
+                                  action: #selector(openSettings),
+                                  keyEquivalent: ",")
+        settings.target = self
+        menu.addItem(settings)
+
+        menu.addItem(.separator())
+
+        // Context submenu — shows the active context inline and lets
+        // the user switch with one click. "None" maps to global-only.
+        let contexts = MemoryContextStore.shared.all()
+        let activeID = MemoryContextStore.shared.activeContextID
+        let contextLabel = String(localized: "Context")
+        let contextTitle: String
+        if let active = contexts.first(where: { $0.id == activeID }) {
+            contextTitle = "\(contextLabel): \(active.name)"
+        } else {
+            contextTitle = "\(contextLabel): \(String(localized: "None"))"
+        }
+        let contextItem = NSMenuItem(title: contextTitle, action: nil, keyEquivalent: "")
+        let contextSubmenu = NSMenu()
+        let noneItem = NSMenuItem(title: String(localized: "None (global only)"),
+                                  action: #selector(setActiveContext(_:)),
+                                  keyEquivalent: "")
+        noneItem.target = self
+        noneItem.state = activeID == nil ? .on : .off
+        contextSubmenu.addItem(noneItem)
+        if !contexts.isEmpty {
+            contextSubmenu.addItem(.separator())
+            for ctx in contexts {
+                let item = NSMenuItem(title: ctx.name,
+                                      action: #selector(setActiveContext(_:)),
+                                      keyEquivalent: "")
+                item.target = self
+                item.representedObject = ctx.id
+                item.state = ctx.id == activeID ? .on : .off
+                contextSubmenu.addItem(item)
+            }
+        }
+        contextSubmenu.addItem(.separator())
+        let manage = NSMenuItem(title: String(localized: "Manage contexts…"),
+                                action: #selector(openMemorySettings),
+                                keyEquivalent: "")
+        manage.target = self
+        contextSubmenu.addItem(manage)
+        contextItem.submenu = contextSubmenu
+        menu.addItem(contextItem)
+
+        menu.addItem(.separator())
+
+        menu.addItem(NSMenuItem(title: String(localized: "Quit Glotty"),
+                                action: #selector(NSApplication.terminate(_:)),
+                                keyEquivalent: "q"))
+    }
+
+    /// True if the currently-frontmost app has at least one window
+    /// in full-screen mode (kAXFullScreenAttribute). Detection is
+    /// best-effort: apps that don't expose AX or hide the attribute
+    /// return false, which biases us toward NOT closing Settings —
+    /// matching the user preference "only close when other apps
+    /// hold the space". Worst case of a false negative: the IME bug
+    /// returns for that one popup; the user can dismiss Settings
+    /// manually if they need to.
+    private static func frontmostAppHasFullScreenWindow() -> Bool {
+        guard let frontmost = NSWorkspace.shared.frontmostApplication else { return false }
+        // Glotty itself can't be in true full-screen (it's an agent
+        // app). If we're frontmost, the user is interacting with
+        // Settings or a popup and there's no other-space conflict.
+        if frontmost.bundleIdentifier == Bundle.main.bundleIdentifier { return false }
+
+        let axApp = AXUIElementCreateApplication(frontmost.processIdentifier)
+        var windowsRef: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &windowsRef)
+        guard result == .success, let windows = windowsRef as? [AXUIElement] else { return false }
+
+        for window in windows {
+            var fullscreenRef: CFTypeRef?
+            // `AXFullScreen` isn't in the public AX constants header
+            // but is widely supported by AppKit windows. Apps that
+            // don't expose it just produce a not-supported error and
+            // we move on.
+            let attr = AXUIElementCopyAttributeValue(window, "AXFullScreen" as CFString, &fullscreenRef)
+            if attr == .success, let isFull = fullscreenRef as? Bool, isFull {
+                return true
+            }
+        }
+        return false
+    }
+
     private func installHotkey() {
         let hk = FnLeaderHotkey()
         hk.onFire = { [weak self] in self?.handleFire(mode: .translate) }
         hk.onExplainFire = { [weak self] in self?.handleFire(mode: .explain) }
         hk.onPolishFire = { [weak self] in self?.handleFire(mode: .polish) }
+        hk.onChatFire = { [weak self] in self?.handleFire(mode: .chat) }
         hk.onShowHUD = { [weak self] in self?.hud.show() }
         hk.onHideHUD = { [weak self] in self?.hud.hide() }
         do {
@@ -165,15 +295,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleFire(mode: PopupMode) {
-        // Raycast-style: if Settings or a Mistake-type drill-in is open,
-        // close it before showing the popup. Those windows hold an
-        // `AppActivation` slot (.regular policy), and a popup launched
-        // while we're .regular won't receive IME candidates over a
-        // full-screen overlay — reads as a bug to the user.
-        // `dismissAllRegistered` runs synchronously and resets the
-        // activation policy back to .accessory before this function
-        // returns, so the popup below opens in agent mode.
-        AppActivation.dismissAllRegistered()
+        // Raycast-style auto-close: when the popup is about to overlay
+        // another app's full-screen space, Settings/drill-in windows
+        // need to come down first so the app drops back to .accessory
+        // — otherwise the popup launches in .regular and the IME
+        // candidate window is suppressed (the original full-screen
+        // IME bug). On regular desktops there's no such conflict and
+        // we leave Settings alone, so the user can keep referencing
+        // it alongside a popup.
+        if Self.frontmostAppHasFullScreenWindow() {
+            AppActivation.dismissAllRegistered()
+        }
         Task { @MainActor in
             // Chat mode doesn't need a selection — it pulls practice topics
             // from MemoryStore instead, so the popup opens with an empty
@@ -191,6 +323,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             print("Glotty: grabbed \(text.count) chars in \(String(format: "%.0f", elapsed))ms (mode=\(mode))")
             popup.show(sourceText: text, mode: mode)
         }
+    }
+}
+
+// MARK: - Status menu rebuild
+
+extension AppDelegate: NSMenuDelegate {
+    /// Rebuild the status-bar menu just before it opens so the
+    /// Context submenu always reflects the latest state — contexts
+    /// added/renamed/deleted in Settings show up immediately.
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        guard menu === statusItem.menu else { return }
+        rebuildStatusMenu(menu)
     }
 }
 
@@ -227,7 +371,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
             // Hop to the main queue explicitly — UN delegate callbacks come
             // from a worker thread, and `popup` is main-actor-isolated.
             DispatchQueue.main.async { [weak self] in
-                self?.popup?.show(sourceText: "", mode: .chat)
+                self?.popup?.show(sourceText: "", mode: .chat, proactive: true)
             }
         }
         completionHandler()

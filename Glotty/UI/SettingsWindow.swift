@@ -6,7 +6,16 @@ import SwiftUI
 /// so we manage the window ourselves — same pattern as `PermissionsWindowController`.
 @MainActor
 final class SettingsWindowController {
+    /// Process-wide instance. The Settings window is a singleton —
+    /// re-opening just brings the existing one forward — so a
+    /// shared accessor keeps consumers (menu bar, snapshotter,
+    /// debug tools) on the same controller.
+    static let shared = SettingsWindowController()
+
     private var window: NSWindow?
+    /// Exposed for the debug snapshotter — it needs the live
+    /// NSWindow to capture pixels from. Read-only.
+    var currentWindow: NSWindow? { window }
     /// Token from `AppActivation.register` for the currently-open
     /// window. nil when no window is shown. Released on willClose so
     /// closing Settings drops the app back to `.accessory`.
@@ -52,7 +61,7 @@ final class SettingsWindowController {
         // scrolling lists). We pick a sensible initial content size instead and
         // keep the window resizable so the user can adjust.
         let w = NSWindow(contentViewController: host)
-        w.title = "Glotty Settings"
+        w.title = String(localized: "Glotty Settings")
         w.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         w.isReleasedWhenClosed = false
         w.setContentSize(initialContentSize())

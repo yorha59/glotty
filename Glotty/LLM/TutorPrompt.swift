@@ -1,0 +1,435 @@
+import Foundation
+
+/// One turn in a tutor session. User turns carry just the user's
+/// text. Tutor turns carry the conversational reply plus, when the
+/// user's previous message had any awkwardness, the natural rewrite
+/// (`correctedText`) and a brief native-language note explaining
+/// what was off (`correctionNote`).
+struct TutorTurn: Identifiable, Equatable, Sendable {
+    enum Role: String, Equatable, Sendable {
+        case user
+        case tutor
+        /// A "system" turn injected by the app itself to record
+        /// confirmed / declined tool-call outcomes. Rendered with a
+        /// subtle background, no avatar; the LLM treats these as
+        /// authoritative status notes about what just happened.
+        case system
+    }
+    let id: UUID
+    let role: Role
+    var reply: String
+    /// The most natural / idiomatic way a native speaker would
+    /// express what the user just said. Nil when the user's message
+    /// was already fluent.
+    var correctedText: String?
+    /// One short native-language sentence on what was off. Nil when
+    /// the user's message was already fluent.
+    var correctionNote: String?
+    /// Tool-call attached to this tutor turn (e.g. a `set_setting`
+    /// request awaiting user confirmation). Only ever non-nil on
+    /// `.tutor` turns. After the user confirms / declines, `outcome`
+    /// flips and the turn re-renders as a collapsed badge.
+    var toolCall: PendingToolCall?
+
+    init(id: UUID = UUID(),
+         role: Role,
+         reply: String,
+         correctedText: String? = nil,
+         correctionNote: String? = nil,
+         toolCall: PendingToolCall? = nil) {
+        self.id = id
+        self.role = role
+        self.reply = reply
+        self.correctedText = correctedText
+        self.correctionNote = correctionNote
+        self.toolCall = toolCall
+    }
+}
+
+/// One pending / resolved tool invocation attached to a tutor turn.
+/// MCP-shaped on purpose: `name` is the tool id, `args` is a string-
+/// keyed dictionary that serialises trivially to JSON. When we later
+/// expose Glotty as an MCP server, this struct maps 1-to-1 onto an
+/// MCP `tools/call` payload.
+struct PendingToolCall: Codable, Hashable, Sendable {
+    enum Outcome: String, Codable, Hashable, Sendable {
+        case pending
+        case confirmed
+        case declined
+        /// Validator rejected the request (unknown setting, blocked,
+        /// invalid value). The card shows the reason and the
+        /// outcome is final — user can't retry from the card,
+        /// they'd ask in chat again.
+        case rejected
+    }
+    let name: String
+    let args: [String: String]
+    var outcome: Outcome
+    /// Free-form reason when `outcome == .rejected`. Shown on the
+    /// collapsed card and replayed into the LLM's history so the
+    /// model knows why the call failed.
+    var rejectionReason: String?
+}
+
+/// Parsed structured response from the tutor LLM. Streams as plain
+/// text; we only parse once the full JSON has arrived.
+struct TutorResponse: Equatable {
+    let reply: String
+    let correctedText: String?
+    let correctionNote: String?
+    /// Optional list of tool calls the LLM wants to issue alongside
+    /// its reply. For v1 we honour at most one entry — multi-tool
+    /// confirmation UX adds complexity that hasn't proven necessary.
+    let toolCalls: [PendingToolCall]
+}
+
+/// Prompt builder for the conversational practice tutor (replaces
+/// the legacy Fn → C multiple-choice flow). The tutor picks a topic
+/// from what it knows about the user (memory context) and holds a
+/// natural conversation in the target language, gently correcting
+/// errors inline as it goes.
+enum TutorPrompt {
+    /// Build the system + history prompt. `targetLanguage` is the
+    /// language Glotty rewrites into (the user's practice target).
+    /// `nativeLanguage` is what the user thinks in — used for
+    /// correction explanations so a learner can actually understand
+    /// the fix. `userContextBlock` is the same "About the user"
+    /// block prepended elsewhere (notes + glossary + memory).
+    /// `history` is `[(role, text)]` so we don't import the popup's
+    /// `TutorTurn` type into this module.
+    static func build(
+        history: [(role: String, text: String)],
+        targetLanguage: String,
+        nativeLanguage: String,
+        userContextBlock: String,
+        isFirstTurn: Bool,
+        proactive: Bool = false,
+        recentTopics: [String] = [],
+        allowToolCalls: Bool = false,
+        persona: GlottyPersona = .current()
+    ) -> String {
+        let targetName = PolishPrompt.englishName(for: targetLanguage)
+        let nativeName = PolishPrompt.englishName(for: nativeLanguage)
+
+        let context = userContextBlock.isEmpty
+            ? "(No prior notes about the user yet.)"
+            : userContextBlock
+
+        // Recently-discussed topics from prior daily threads. Goes
+        // into the prompt as a "don't re-pitch" instruction so the
+        // opening turn picks something fresh instead of asking
+        // about the polish feature every single day.
+        let recentTopicsBlock: String
+        if recentTopics.isEmpty {
+            recentTopicsBlock = ""
+        } else {
+            let bullets = recentTopics.map { "        - \($0)" }.joined(separator: "\n")
+            recentTopicsBlock = """
+
+            RECENT TOPICS — you brought these up with this user in the last week. \
+            Treat them as off-limits for the opening turn unless you have a \
+            specific concrete follow-up ("How did the interview go?", \
+            "Did that build pass?"). Generic "how's that going?" check-ins on \
+            these topics will feel repetitive and surveillance-y — the user \
+            already told you the chat felt unnatural last time. Default to \
+            small talk or a brand new topic instead.
+            \(bullets)
+            """
+        }
+
+        let historyBlock: String
+        if history.isEmpty {
+            historyBlock = "(no messages yet)"
+        } else {
+            historyBlock = history
+                .map { "\($0.role.capitalized): \($0.text)" }
+                .joined(separator: "\n\n")
+        }
+
+        // Tool block: capabilities + every setting the agent can
+        // change. Only included when the user has explicitly enabled
+        // the Tools toggle in the chat header — that IS the consent
+        // signal, so the LLM doesn't have to second-guess whether
+        // a "change polish to ja" message is a real request or
+        // hypothetical chatter. Toggle off ⇒ block is empty, the
+        // LLM has no tool schemas to invoke at all.
+        // Tool capability + state blocks both touch main-actor state
+        // (SettingsRegistry, UsageStore, MemoryStore). Build() itself
+        // is nonisolated; PopupView.runTutorTurn (the only caller) is
+        // on main, so `assumeIsolated` is safe — same pattern as
+        // `prependedWithUserContext` in PolishPrompt.
+        let toolBlock: String
+        let stateBlock: String
+        if allowToolCalls {
+            (toolBlock, stateBlock) = MainActor.assumeIsolated {
+                (Self.toolCapabilityBlock(), Self.glottyStateSnapshot())
+            }
+        } else {
+            toolBlock = ""
+            stateBlock = ""
+        }
+
+        let firstTurnHint: String
+        if isFirstTurn && proactive {
+            firstTurnHint = """
+            This is the FIRST turn of TODAY'S chat, and YOU initiated it (the user clicked a reminder notification). Two short sentences max in \(targetName). Set `corrected_text` and `correction_note` to null.
+
+            How real friends open conversations — pick one of these styles, NOT a "let's check on your project" check-in:
+              - A random thought or curiosity ("Random — do you think pineapple on pizza is fine?", "Was just wondering — what's your go-to comfort food?")
+              - Something time / weather / day-related ("Long week, huh?", "Whoever invented Monday mornings owes us an apology", "It's that 3pm slump time")
+              - Sharing a tiny thing of YOUR own ("Just spilled coffee on my keyboard, again 😅", "Been thinking about how weird it is that we say 'on accident'")
+              - A specific, NEW follow-up — ONLY if you have something concrete and recent to follow up on ("How did the Berlin interview go?") AND you haven't asked about that topic in the last week
+              - Generic friendly opener if nothing else fits ("Hey, how's it going?")
+
+            STRICT anti-patterns — never do these:
+              - "I noticed you've been working on X" / "I see you mentioned Y" → reads as surveillance
+              - Asking about the same project / topic two days in a row, or any topic in the recent-topics list below
+              - Recapping what's in your saved notes back at the user
+              - Pitching a topic from saved notes just because it's there — only pull from notes when there's a NEW thread to extend, not when you just want something to talk about
+            """
+        } else if isFirstTurn {
+            firstTurnHint = """
+            This is the FIRST turn of TODAY'S chat. One or two sentences in \(targetName). Set `corrected_text` and `correction_note` to null.
+
+            Open like a friend would, NOT like a tutor checking in. Default to small talk or a random thought; only reference a topic from the saved notes if there's a SPECIFIC concrete follow-up to make (e.g. you remember they had a deadline yesterday and you want to ask how it went). If nothing concrete to follow up on, just open generically — "Hey, how's it going?" / "Late one tonight?" / a random light question.
+
+            STRICT anti-patterns — never do these:
+              - "I noticed you mentioned X" / "I see you've been working on Y" — reads as surveillance
+              - Asking about the same project / topic you brought up recently (see recent-topics list below)
+              - Listing or paraphrasing the saved notes back to the user
+              - Pulling out a profile topic just because it's there — pulling from notes is ONLY for genuine follow-ups, not for finding something to talk about
+            """
+        } else {
+            firstTurnHint = "Continue the conversation naturally. Stay on the current topic unless the user shifts it."
+        }
+
+        return """
+        \(persona.systemDescription) You are chatting with the user in \(targetName).
+
+        Tone guardrails (important):
+        - You are a friend, not a tutor or a study buddy. Do NOT turn the `reply` field into a lesson — corrections live in the dedicated fields below, not in the chat reply.
+        - The saved notes below are BACKGROUND about the user, not a topic queue. Real friends don't open every chat with "how's that project going" — they react to right now (weather, day-of-week, random thoughts), and only bring up a known topic when there's something specific and fresh to follow up on. Default to NOT pulling from the notes.
+        - If you do reference something from the notes, do it implicitly — like you remembered from chatting before, not from a profile. NEVER say "I see you've been working on X" or "I noticed you mentioned Y". And never lead with the same topic two chats in a row.
+
+        Output STRICT JSON only — no markdown fences, no preamble:
+
+        \(jsonSchemaSnippet(targetName: targetName,
+                            nativeName: nativeName,
+                            allowToolCalls: allowToolCalls))
+
+        Correction policy — apply to EVERY user message:
+        - If the user's most recent message contains any grammar issue, awkward phrasing, word-choice problem, missing article, wrong tense, or non-idiomatic expression — even a small one — populate BOTH:
+          - `corrected_text`: rewrite their sentence the way a native speaker would naturally say the same thing. Preserve their meaning and tone. Keep changes minimal — don't restructure if you don't need to.
+          - `correction_note`: one short \(nativeName) sentence explaining what was off (e.g. "should be 'have been', not 'have being'").
+        - Only set both fields to null when the message is genuinely fluent and idiomatic.
+        - Match the user's level. If they write simple sentences, stay simple in both `reply` and `corrected_text`.
+        - The `reply` field is your in-character chat message responding to what the user said. Do not include any correction in the reply itself.
+
+        \(firstTurnHint)
+
+        \(toolBlock)
+
+        \(stateBlock)
+
+        \(context)
+        \(recentTopicsBlock)
+
+        Conversation so far:
+        \(historyBlock)
+        """
+    }
+
+    /// Compact "what's going on inside Glotty right now" snapshot
+    /// the LLM can answer questions from without round-tripping a
+    /// `get_*` tool call. Numbers come straight from the on-device
+    /// stores — UsageStore, ChatStore, MemoryStore — so they reflect
+    /// the actual session state at prompt build time.
+    @MainActor
+    private static func glottyStateSnapshot() -> String {
+        let usage = UsageStore.shared
+        let today = usage.totals(since: UsageStore.startOfToday())
+        let week = usage.totals(since: UsageStore.startOfWeek())
+        let byMode = usage.byMode(since: UsageStore.startOfWeek())
+
+        let modeBreakdown = byMode
+            .sorted { $0.totals.total > $1.totals.total }
+            .prefix(4)
+            .map { "\($0.mode.displayName) \($0.totals.total)" }
+            .joined(separator: ", ")
+
+        let threads = ChatStore.shared.allThreads()
+        let weekAgo = Date().addingTimeInterval(-7 * 86_400)
+        let recentThreadCount = threads.filter { $0.updatedAt >= weekAgo }.count
+        let lastActivityLine: String
+        if let last = ChatStore.shared.lastActivity() {
+            let f = RelativeDateTimeFormatter()
+            f.unitsStyle = .full
+            lastActivityLine = "last chat \(f.localizedString(for: last, relativeTo: Date()))"
+        } else {
+            lastActivityLine = "no chats yet"
+        }
+
+        let polishLang = UserDefaults.standard.string(forKey: "glotty.polishLang") ?? "en"
+        let topMistakes = MemoryStore.shared
+            .topGrammarIssues(limit: 3, since: weekAgo, language: polishLang)
+            .map { "\($0.key) (\($0.count))" }
+            .joined(separator: ", ")
+        let mistakesLine = topMistakes.isEmpty
+            ? "no polish mistakes recorded for \(polishLang) this week"
+            : "top mistake types in \(polishLang) this week: \(topMistakes)"
+
+        return """
+        GLOTTY STATE (for answering quick info questions — token usage, chat history, common mistakes):
+          - Tokens today: \(today.total) (prompt \(today.prompt) / completion \(today.completion))
+          - Tokens this week: \(week.total)
+          - This week by feature: \(modeBreakdown.isEmpty ? "(no usage yet)" : modeBreakdown)
+          - Chat threads in the last 7 days: \(recentThreadCount); \(lastActivityLine)
+          - \(mistakesLine)
+
+        Use these numbers directly when the user asks a usage / history / mistakes question — don't pretend you can't see them. Keep the answer brief (1-3 sentences). For deeper drill-down, suggest the relevant Settings tab (Usage, History, Polish) and emit `open_settings_tab` if they want to look at it.
+        """
+    }
+
+    /// JSON output schema shown to the LLM. The `tool_calls` field
+    /// only appears when the user has the Tools toggle on — keeps
+    /// the prompt clean and removes any temptation for the model
+    /// to invent tool calls in chat-only mode.
+    private static func jsonSchemaSnippet(targetName: String,
+                                          nativeName: String,
+                                          allowToolCalls: Bool) -> String {
+        if allowToolCalls {
+            return """
+            {
+              "reply": "<your conversational message in \(targetName)>",
+              "corrected_text": "<the most natural way to say what the user just said, in \(targetName), or null>",
+              "correction_note": "<one short \(nativeName) sentence on what was off, or null>",
+              "tool_calls": [
+                {"name": "<tool id>", "args": {"<arg>": "<value>"}}
+              ]
+            }
+            """
+        } else {
+            return """
+            {
+              "reply": "<your conversational message in \(targetName)>",
+              "corrected_text": "<the most natural way to say what the user just said, in \(targetName), or null>",
+              "correction_note": "<one short \(nativeName) sentence on what was off, or null>"
+            }
+            """
+        }
+    }
+
+    /// Compact tool capability block. One line per setting plus a
+    /// worked example — LLMs comply with tool-call formats far more
+    /// reliably when shown an example rather than just told the
+    /// schema in prose. `@MainActor` because it reads
+    /// `SettingsRegistry`, which touches main-isolated stores.
+    @MainActor
+    private static func toolCapabilityBlock() -> String {
+        let snapshot = SettingsRegistry.snapshotForPrompt()
+        let lines = snapshot.map { entry, current in
+            let now = current.flatMap { $0.isEmpty ? nil : $0 } ?? "unset"
+            let schema = SettingsRegistry.describe(kind: entry.kind)
+            return "  \(entry.id) (\(schema)) = \(now)"
+        }
+        let settingsList = lines.joined(separator: "\n")
+
+        return """
+        TOOLS MODE IS ON. The user has explicitly enabled the Modify Settings toggle, which means messages that look like requests to change something in Glotty ARE requests. Don't second-guess — emit the appropriate tool call.
+
+        Two tools are available. Pick exactly one per turn:
+
+        1. set_setting(key, value) — change one of the settings below directly.
+
+        SETTINGS YOU CAN CHANGE (id (accepts) = current value):
+        \(settingsList)
+
+        2. open_settings_tab(tab) — open one Settings tab for the user when they're asking about something you can't change with `set_setting`. Use this for: dictionaries, API key, LLM provider, hotkeys, backup, permissions, anything else not in the list above.
+
+        Available tab ids: profile, translation, dictionaries, languageModel, polish, hotkey, history, memory, practice, usage, backup, system, permissions.
+
+        Rules:
+          - Emit at most one `tool_calls` entry per turn.
+          - The reply must describe what you're about to change / open in plain language; do NOT claim it's done — the app shows a Confirm card and tells you the outcome next turn via a `[bracketed system note]`.
+          - Use BCP-47 codes for language ids (`en`, `zh-Hans`, `ja`, ...).
+
+        Examples:
+
+        User says "Switch polish to Japanese":
+        {
+          "reply": "Switching polish target to Japanese. Confirm to apply?",
+          "tool_calls": [{"name": "set_setting", "args": {"key": "polish_output_language", "value": "ja"}}]
+        }
+
+        User says "I want to change my dictionaries":
+        {
+          "reply": "I can't reorder dictionaries directly, but I can open the Dictionaries tab for you. Confirm?",
+          "tool_calls": [{"name": "open_settings_tab", "args": {"tab": "dictionaries"}}]
+        }
+
+        For ordinary chat turns where the user isn't asking to change anything, OMIT `tool_calls` (or set it to []).
+        """
+    }
+
+    /// Parse the LLM's JSON response into a `TutorResponse`. Lenient:
+    /// trims code fences if the model emitted them, treats missing /
+    /// "null" / empty correction fields as nil. Returns nil only if
+    /// the JSON is unrecoverable or `reply` is empty.
+    static func parse(_ raw: String) -> TutorResponse? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let firstBrace = trimmed.firstIndex(of: "{"),
+              let lastBrace = trimmed.lastIndex(of: "}"),
+              firstBrace < lastBrace else { return nil }
+        let body = String(trimmed[firstBrace...lastBrace])
+        guard let data = body.data(using: .utf8) else { return nil }
+        guard let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        let reply = (dict["reply"] as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !reply.isEmpty else { return nil }
+        // Accept both the new pair (`corrected_text` + `correction_note`)
+        // and the legacy single `correction` key — older builds emitted
+        // the latter, and we don't want one stale prompt cache to break
+        // parsing for in-flight replies.
+        let correctedText = optionalString(dict["corrected_text"])
+        let correctionNote = optionalString(dict["correction_note"])
+            ?? optionalString(dict["correction"])
+        // Parse optional `tool_calls`. Only `set_setting` is honoured
+        // today; anything else gets dropped at the validation layer
+        // (PopupView.handleTutorResponse) which posts a system turn
+        // back. Cap at one call per turn — multi-tool UX would need
+        // a more elaborate confirmation card.
+        var toolCalls: [PendingToolCall] = []
+        if let rawCalls = dict["tool_calls"] as? [[String: Any]] {
+            for entry in rawCalls.prefix(1) {
+                guard let name = (entry["name"] as? String)?
+                        .trimmingCharacters(in: .whitespacesAndNewlines),
+                      !name.isEmpty else { continue }
+                let rawArgs = (entry["args"] as? [String: Any]) ?? [:]
+                var args: [String: String] = [:]
+                for (k, v) in rawArgs {
+                    if let s = v as? String { args[k] = s }
+                    else if let n = v as? NSNumber { args[k] = n.stringValue }
+                }
+                toolCalls.append(PendingToolCall(
+                    name: name,
+                    args: args,
+                    outcome: .pending,
+                    rejectionReason: nil
+                ))
+            }
+        }
+        return TutorResponse(
+            reply: reply,
+            correctedText: correctedText,
+            correctionNote: correctionNote,
+            toolCalls: toolCalls
+        )
+    }
+
+    private static func optionalString(_ value: Any?) -> String? {
+        guard let s = value as? String else { return nil }
+        let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.lowercased() != "null" else { return nil }
+        return trimmed
+    }
+}

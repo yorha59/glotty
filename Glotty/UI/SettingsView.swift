@@ -12,8 +12,11 @@ enum SettingsTab: String, Hashable, CaseIterable, Identifiable {
     case polish
     case hotkey
     case history
+    case memory
     case practice
     case usage
+    case backup
+    case system
     case permissions
 
     var id: String { rawValue }
@@ -27,8 +30,11 @@ enum SettingsTab: String, Hashable, CaseIterable, Identifiable {
         case .polish:        return "Polish"
         case .hotkey:        return "Hotkey"
         case .history:       return "History"
-        case .practice:      return "Practice"
+        case .memory:        return "Memory"
+        case .practice:      return "Chat"
         case .usage:         return "Usage"
+        case .backup:        return "Backup"
+        case .system:        return "System"
         case .permissions:   return "Permissions"
         }
     }
@@ -45,8 +51,11 @@ enum SettingsTab: String, Hashable, CaseIterable, Identifiable {
         case .polish:        return "wand.and.stars"
         case .hotkey:        return "keyboard"
         case .history:       return "clock.arrow.circlepath"
-        case .practice:      return "graduationcap"
+        case .memory:        return "brain"
+        case .practice:      return "bubble.left.and.bubble.right"
         case .usage:         return "chart.bar"
+        case .backup:        return "externaldrive"
+        case .system:        return "gearshape.2"
         case .permissions:   return "lock.shield"
         }
     }
@@ -70,15 +79,16 @@ struct SettingsView: View {
         NavigationSplitView {
             List(SettingsTab.allCases, selection: $selection) { tab in
                 NavigationLink(value: tab) {
-                    Label(tab.label, systemImage: tab.icon)
+                    Label(tab.label.t, systemImage: tab.icon)
                 }
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
         } detail: {
             detailView(for: selection)
-                .navigationTitle(selection.label)
+                .navigationTitle(selection.label.t)
         }
         .frame(minWidth: 720, minHeight: 480)
+        .localizationAware()
     }
 
     @ViewBuilder
@@ -91,8 +101,11 @@ struct SettingsView: View {
         case .polish:        polishTab
         case .hotkey:        hotkeyTab
         case .history:       memoryTab
+        case .memory:        memoryDetailTab
         case .practice:      practiceTab
         case .usage:         usageTab
+        case .backup:        backupTab
+        case .system:        systemTab
         case .permissions:   permissionsTab
         }
     }
@@ -100,6 +113,17 @@ struct SettingsView: View {
     private var userProfileTab: some View {
         Form { UserProfileSection() }
             .formStyle(.grouped)
+    }
+
+    /// Settings → System: things that affect Glotty itself rather
+    /// than learning preferences. UI language picker (was under
+    /// Profile) and the dev-mode debug helpers (were under Backup).
+    private var systemTab: some View {
+        Form {
+            SystemLanguageSection()
+            SystemDebugSection()
+        }
+        .formStyle(.grouped)
     }
 
     private var translationTab: some View {
@@ -125,6 +149,7 @@ struct SettingsView: View {
     private var polishTab: some View {
         Form {
             PolishOutputLanguageSection()
+            PolishCommonMistakesSection()
         }
         .formStyle(.grouped)
     }
@@ -134,18 +159,31 @@ struct SettingsView: View {
             .formStyle(.grouped)
     }
 
+    private var memoryDetailTab: some View {
+        Form { LearnedMemorySettingsSection() }
+            .formStyle(.grouped)
+    }
+
     private var memoryTab: some View {
         Form { MemorySettingsSection() }
             .formStyle(.grouped)
     }
 
     private var practiceTab: some View {
-        Form { PracticeSettingsSection() }
-            .formStyle(.grouped)
+        Form {
+            GlottyPersonaSection()
+            PracticeSettingsSection()
+        }
+        .formStyle(.grouped)
     }
 
     private var usageTab: some View {
         Form { UsageSettingsSection() }
+            .formStyle(.grouped)
+    }
+
+    private var backupTab: some View {
+        Form { BackupSettingsSection() }
             .formStyle(.grouped)
     }
 
@@ -218,7 +256,7 @@ private struct LanguageModelSettingsSection: View {
 
         Picker("Model", selection: zaiModelBinding) {
             ForEach(ZAIProvider.supportedModels) { option in
-                Text(option.displayName).tag(option.id)
+                Text(option.displayName.t).tag(option.id)
             }
         }
         .pickerStyle(.menu)
@@ -267,7 +305,7 @@ private struct LanguageModelSettingsSection: View {
 
         Picker("Model", selection: kimiModelBinding) {
             ForEach(KimiCodingProvider.supportedModels) { option in
-                Text(option.displayName).tag(option.id)
+                Text(option.displayName.t).tag(option.id)
             }
         }
         .pickerStyle(.menu)
@@ -393,25 +431,9 @@ private struct UserProfileSection: View {
         ("she/her", "Female"),
     ]
 
-    /// Common native-language choices. Stored as a Locale identifier so other
-    /// features can read it as a `Locale.Language` later.
-    private let options: [(id: String, name: String)] = [
-        ("en", "English"),
-        ("zh-Hans", "Chinese (Simplified)"),
-        ("zh-Hant", "Chinese (Traditional)"),
-        ("ja", "Japanese"),
-        ("ko", "Korean"),
-        ("fr", "French"),
-        ("de", "German"),
-        ("es", "Spanish"),
-        ("it", "Italian"),
-        ("pt", "Portuguese"),
-        ("ru", "Russian"),
-        ("ar", "Arabic"),
-        ("hi", "Hindi"),
-        ("vi", "Vietnamese"),
-        ("th", "Thai"),
-    ]
+    /// Shared with every other "static" language picker — see
+    /// `LanguageOptions.all`.
+    private var options: [LanguageOptions.Option] { LanguageOptions.all }
 
     /// Picker binding: empty stored value means "use the system locale". The default
     /// shown in the picker becomes the user's macOS locale on first launch.
@@ -460,7 +482,7 @@ private struct UserProfileSection: View {
 
                 Picker("Gender", selection: $pronouns) {
                     ForEach(pronounOptions, id: \.id) { option in
-                        Text(option.label).tag(option.id)
+                        Text(option.label.t).tag(option.id)
                     }
                 }
                 .pickerStyle(.menu)
@@ -474,15 +496,15 @@ private struct UserProfileSection: View {
 
             Section {
                 Picker("Native language", selection: selection) {
-                    ForEach(options, id: \.id) { option in
-                        Text(option.name).tag(option.id)
+                    ForEach(options) { option in
+                        Text(LanguageOptions.localizedName(for: option.id)).tag(option.id)
                     }
                 }
                 .pickerStyle(.menu)
             } header: {
-                Text("Language")
+                Text("Your native language")
             } footer: {
-                Text("Your native language. Used to guide auto-detected source / target choices and to bias translation behavior toward what you're likely reading or writing.")
+                Text("The language you speak natively. Drives auto-detected source / target choices and biases translation behavior toward what you're likely reading or writing. Separate from Glotty's UI language below.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -522,7 +544,6 @@ private struct UserProfileSection: View {
 private struct TranslationSettingsSection: View {
     @AppStorage("glotty.sourceLang") private var sourceLang: String = ""
     @AppStorage("glotty.targetLang") private var targetLang: String = ""
-    @State private var availableLanguages: [Locale.Language] = []
     @State private var packStatus: PackStatus = .unknown
     @State private var downloadConfig: TranslationSession.Configuration?
     @State private var lastError: String?
@@ -541,18 +562,16 @@ private struct TranslationSettingsSection: View {
             Section {
                 Picker("Default source language", selection: $sourceLang) {
                     Text("Auto detect").tag("")
-                    ForEach(availableLanguages, id: \.minimalIdentifier) { lang in
-                        let id = lang.minimalIdentifier
-                        Text(localizedName(for: id)).tag(id)
+                    ForEach(LanguageOptions.all) { option in
+                        Text(LanguageOptions.localizedName(for: option.id)).tag(option.id)
                     }
                 }
                 .pickerStyle(.menu)
 
                 Picker("Default target language", selection: $targetLang) {
                     Text("Auto (based on source)").tag("")
-                    ForEach(availableLanguages, id: \.minimalIdentifier) { lang in
-                        let id = lang.minimalIdentifier
-                        Text(localizedName(for: id)).tag(id)
+                    ForEach(LanguageOptions.all) { option in
+                        Text(LanguageOptions.localizedName(for: option.id)).tag(option.id)
                     }
                 }
                 .pickerStyle(.menu)
@@ -569,7 +588,7 @@ private struct TranslationSettingsSection: View {
             }
 
             Section("Backend") {
-                LabeledContent("Translation engine", value: "Apple Translation (on-device)")
+                LabeledContent("Translation engine", value: String(localized: "Apple Translation (on-device)"))
                     .foregroundStyle(.secondary)
                 Text("Other engines (DeepL, Google, Claude, GPT) coming after the spike validates the core flow.")
                     .font(.caption)
@@ -580,7 +599,6 @@ private struct TranslationSettingsSection: View {
                 appleIntelligenceStatusRow
             }
         }
-        .task { await loadAvailableLanguages() }
         .task(id: "\(sourceLang)|\(targetLang)") {
             await refreshPackStatus()
         }
@@ -652,18 +670,6 @@ private struct TranslationSettingsSection: View {
         }
     }
 
-    private func loadAvailableLanguages() async {
-        let supported = await LanguageAvailability().supportedLanguages
-        guard !Task.isCancelled else { return }
-        var seen = Set<String>()
-        let unique = supported.filter { seen.insert($0.minimalIdentifier).inserted }
-        availableLanguages = unique.sorted {
-            localizedName(for: $0.minimalIdentifier)
-                .localizedCaseInsensitiveCompare(localizedName(for: $1.minimalIdentifier))
-                == .orderedAscending
-        }
-    }
-
     /// When source is pinned, check exactly that pair. When source is Auto, check
     /// English ↔ target as a representative pair (English is the most common source).
     private func refreshPackStatus() async {
@@ -722,14 +728,17 @@ private struct TranslationSettingsSection: View {
         }
     }
 
-    private func localizedName(for identifier: String) -> String {
-        Locale.current.localizedString(forIdentifier: identifier) ?? identifier
-    }
 }
 
 private struct DictionarySettingsSection: View {
     @AppStorage("glotty.sourceLang") private var sourceLang: String = ""
     @AppStorage("glotty.targetLang") private var targetLang: String = ""
+    /// When ON, the translation popup renders every enabled dict that
+    /// returned content (one card per dict, in priority order). When
+    /// OFF, only the top-priority dict in each kind is shown — more
+    /// compact but loses the per-dict comparison.
+    @AppStorage("glotty.dictionary.showAllMatches")
+    private var dictShowAll: Bool = true
     @State private var availableDictionaries: [DictionaryLookup.DictionaryInfo] = []
     @State private var availableLibraryDictionaries: [DictionaryLibraryItem] = []
     @State private var selectedDictionaryIDs: [String] = []
@@ -752,7 +761,7 @@ private struct DictionarySettingsSection: View {
     }
 
     private var bilingualDictionaryTitle: String {
-        "\(localizedName(for: effectivePair.source))-\(localizedName(for: effectivePair.target)) dictionaries"
+        "\(LanguageOptions.localizedName(for: effectivePair.source))-\(LanguageOptions.localizedName(for: effectivePair.target)) dictionaries"
     }
 
     private var visibleDictionaries: [DictionaryLookup.DictionaryInfo] {
@@ -824,6 +833,19 @@ private struct DictionarySettingsSection: View {
             }
 
             Section {
+                Toggle(isOn: $dictShowAll) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Show all matching dictionaries")
+                        Text("When off, only the top-priority dict in each kind (monolingual + bilingual) is shown in the translation popup.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } header: {
+                Text("Display")
+            }
+
+            Section {
                 if availableDictionaries.isEmpty {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
@@ -835,7 +857,7 @@ private struct DictionarySettingsSection: View {
                         .foregroundStyle(.secondary)
                 } else {
                     HStack {
-                        Text("Used for \(localizedName(for: effectivePair.source)) → \(localizedName(for: effectivePair.target))")
+                        Text("Used for \(LanguageOptions.localizedName(for: effectivePair.source)) → \(LanguageOptions.localizedName(for: effectivePair.target))")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Spacer()
@@ -848,8 +870,8 @@ private struct DictionarySettingsSection: View {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 8) {
                             dictionaryArea(title: bilingualDictionaryTitle, dictionaries: bilingualDictionaries)
-                            dictionaryArea(title: "\(localizedName(for: effectivePair.source)) dictionaries", dictionaries: sourceMonolingualDictionaries)
-                            dictionaryArea(title: "\(localizedName(for: effectivePair.target)) dictionaries", dictionaries: targetMonolingualDictionaries)
+                            dictionaryArea(title: "\(LanguageOptions.localizedName(for: effectivePair.source)) dictionaries", dictionaries: sourceMonolingualDictionaries)
+                            dictionaryArea(title: "\(LanguageOptions.localizedName(for: effectivePair.target)) dictionaries", dictionaries: targetMonolingualDictionaries)
                             dictionaryArea(title: "Other dictionaries", dictionaries: uncategorizedMonolingualDictionaries)
                         }
                     }
@@ -1383,7 +1405,7 @@ private struct DictionarySettingsSection: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Install Dictionary")
                         .font(.headline)
-                    Text("\(localizedName(for: effectivePair.source)) → \(localizedName(for: effectivePair.target))")
+                    Text("\(LanguageOptions.localizedName(for: effectivePair.source)) → \(LanguageOptions.localizedName(for: effectivePair.target))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -1407,8 +1429,8 @@ private struct DictionarySettingsSection: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         installDictionaryArea(title: bilingualDictionaryTitle, dictionaries: displayedBilingualInstallDictionaries)
-                        installDictionaryArea(title: "\(localizedName(for: effectivePair.source)) dictionaries", dictionaries: displayedSourceMonolingualInstallDictionaries)
-                        installDictionaryArea(title: "\(localizedName(for: effectivePair.target)) dictionaries", dictionaries: displayedTargetMonolingualInstallDictionaries)
+                        installDictionaryArea(title: "\(LanguageOptions.localizedName(for: effectivePair.source)) dictionaries", dictionaries: displayedSourceMonolingualInstallDictionaries)
+                        installDictionaryArea(title: "\(LanguageOptions.localizedName(for: effectivePair.target)) dictionaries", dictionaries: displayedTargetMonolingualInstallDictionaries)
                         installDictionaryArea(title: "Other dictionaries", dictionaries: displayedUncategorizedMonolingualInstallDictionaries)
                     }
                 }
@@ -1798,29 +1820,60 @@ private struct DictionarySettingsSection: View {
         )
     }
 
-    private func localizedName(for identifier: String) -> String {
-        Locale.current.localizedString(forIdentifier: identifier) ?? identifier
-    }
 }
 
 private struct PolishOutputLanguageSection: View {
     @AppStorage("glotty.polishLang") private var polishLang: String = "en"
+    /// Shown inline under the picker while the LLM is generating the
+    /// mistake-category starter list for a freshly-picked language.
+    /// Driven by `bootstrappingLanguage`; nil when nothing is running.
+    @State private var bootstrappingLanguage: String?
 
     var body: some View {
         Section {
             Picker("Polish output language", selection: $polishLang) {
-                // Shared list — also drives the per-chat "Reply in" picker
-                // on the polish popup. Edit PolishPrompt.outputLanguageOptions
-                // to add/remove languages everywhere at once.
-                ForEach(PolishPrompt.outputLanguageOptions, id: \.id) { option in
-                    Text(option.name).tag(option.id)
+                // Same list every Glotty language picker uses — see
+                // `LanguageOptions.all`. Single source of truth for
+                // dropdown items app-wide.
+                ForEach(LanguageOptions.all) { option in
+                    Text(LanguageOptions.localizedName(for: option.id)).tag(option.id)
                 }
             }
             .pickerStyle(.menu)
+            // Pre-warm mistake categories the moment the user commits
+            // to a new polish target. One LLM call per language ever
+            // (cached to disk). Lazy bootstrap in `runPolish` still
+            // covers users who never visit Settings, but most polishes
+            // will hit a warm cache thanks to this trigger.
+            .onChange(of: polishLang) { _, newValue in
+                primeCategoriesIfNeeded(for: newValue)
+            }
+            .onAppear { primeCategoriesIfNeeded(for: polishLang) }
+
+            if let lang = bootstrappingLanguage {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Preparing mistake categories for \(LanguageOptions.localizedName(for: lang))…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         } footer: {
             Text("The language Fn → R rewrites your selection into. Not the same as Translation's target.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    @MainActor
+    private func primeCategoriesIfNeeded(for language: String) {
+        guard PolishCategoryBootstrap.cached(for: language) == nil else { return }
+        bootstrappingLanguage = language
+        Task { @MainActor in
+            _ = await PolishCategoryBootstrap.bootstrap(for: language)
+            if bootstrappingLanguage == language {
+                bootstrappingLanguage = nil
+            }
         }
     }
 }
@@ -1900,6 +1953,7 @@ private struct HotkeySettingsSection: View {
     @AppStorage(Keycode.translateDefaultsKey) private var translateKey: Int = Keycode.defaultTranslate
     @AppStorage(Keycode.explainDefaultsKey)   private var explainKey:   Int = Keycode.defaultExplain
     @AppStorage(Keycode.polishDefaultsKey)    private var polishKey:    Int = Keycode.defaultPolish
+    @AppStorage(Keycode.chatDefaultsKey)      private var chatKey:      Int = Keycode.defaultChat
     @AppStorage(Keycode.leaderDefaultsKey)    private var leaderRaw:    String = Keycode.defaultLeader.rawValue
 
     private var leaderBinding: Binding<LeaderKey> {
@@ -1910,7 +1964,7 @@ private struct HotkeySettingsSection: View {
     }
 
     private var hasCollision: Bool {
-        let codes = [translateKey, explainKey, polishKey]
+        let codes = [translateKey, explainKey, polishKey, chatKey]
         return Set(codes).count < codes.count
     }
 
@@ -1938,6 +1992,13 @@ private struct HotkeySettingsSection: View {
                 prefix: "\(leaderBinding.wrappedValue.label) →",
                 keycode: $polishKey,
                 defaultKeycode: Keycode.defaultPolish
+            )
+
+            KeyRecorderRow(
+                title: "Chat with Glotty",
+                prefix: "\(leaderBinding.wrappedValue.label) →",
+                keycode: $chatKey,
+                defaultKeycode: Keycode.defaultChat
             )
 
             if hasCollision {
@@ -2041,7 +2102,7 @@ private struct KeyRecorderRow: View {
     @State private var monitor: Any?
 
     var body: some View {
-        LabeledContent(title) {
+        LabeledContent(title.t) {
             HStack(spacing: 8) {
                 Text("\(prefix) \(displayLabel)")
                     .font(.system(.body, design: .monospaced))
@@ -2168,28 +2229,10 @@ private struct MemorySettingsSection: View {
                     .foregroundStyle(.secondary)
             }
 
-            Section {
-                if topIssues.isEmpty {
-                    Text("No mistake patterns yet. Polish will tag your drafts with categories (verb tense, articles, word choice, …) once it has rewritten a few.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(topIssues) { row in
-                        memoryRow(key: row.key, count: row.count, lastSeen: row.lastSeen)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                MistakeTypeWindowController.shared.show(category: row.key, range: range)
-                            }
-                    }
-                }
-            } header: {
-                Text("Common mistake types")
-            } footer: {
-                Text("Click a row to reopen the most recent polish run that flagged this category.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            // Common mistake types section moved to Settings → Polish
+            // (PolishCommonMistakesSection) — the data is polish-
+            // specific so it lives next to the polish output language
+            // picker now.
 
             Section {
                 Button(role: .destructive) {
@@ -2316,24 +2359,15 @@ private struct MemorySettingsSection: View {
 }
 
 
-/// Practice tab — controls Glotty's proactive practice nudges. The scheduler
-/// posts a macOS notification at the configured interval; clicking it opens
-/// a quiz drawn from the user's recurring mistake categories. Default is
-/// off, so Glotty only becomes proactive if the user opts in.
+/// Practice tab — controls Glotty's proactive chat-reminder nudges.
+/// The scheduler posts a macOS notification at the configured
+/// interval; clicking it opens a fresh chat with Glotty (same surface
+/// as Fn → C). Default is off, so Glotty only becomes proactive if
+/// the user opts in.
 @MainActor
 private struct PracticeSettingsSection: View {
-    @ObservedObject private var scheduler = PracticeScheduler.shared
-    @ObservedObject private var library = QuizLibrary.shared
     @AppStorage(PracticeScheduler.intervalKey)
     private var intervalMinutes: Int = PracticeScheduler.defaultIntervalMinutes
-    @AppStorage(PracticeScheduler.questionCountKey)
-    private var questionCount: Int = PracticeScheduler.defaultQuestionCount
-    @AppStorage(PracticeScheduler.generatorIntervalKey)
-    private var generatorIntervalMinutes: Int = PracticeScheduler.defaultGeneratorIntervalMinutes
-    /// Toggle to reveal the correct answer + explanation for one specific
-    /// entry. Nil = nothing expanded. Tapping a row flips this; tapping
-    /// again collapses.
-    @State private var expandedEntryId: UUID?
 
     private struct Frequency: Hashable, Identifiable {
         let label: String
@@ -2341,211 +2375,123 @@ private struct PracticeSettingsSection: View {
         var id: Int { minutes }
     }
     private let frequencies: [Frequency] = [
-        .init(label: "Off",       minutes: 0),
-        .init(label: "Every hour", minutes: 60),
+        .init(label: "Off",           minutes: 0),
+        .init(label: "Every hour",    minutes: 60),
         .init(label: "Every 4 hours", minutes: 240),
-        .init(label: "Daily",     minutes: 1440),
-        .init(label: "Weekly",    minutes: 10080),
+        .init(label: "Daily",         minutes: 1440),
+        .init(label: "Weekly",        minutes: 10080),
     ]
 
-    private let questionChoices: [Int] = [3, 5, 10]
-
-    /// Background generator cadence options. Tighter than the notification
-    /// frequencies — the goal here is "how often do we top off the buffer",
-    /// not "how often do we nag the user".
-    private let generatorFrequencies: [Frequency] = [
-        .init(label: "Every 5 minutes",  minutes: 5),
-        .init(label: "Every 10 minutes", minutes: 10),
-        .init(label: "Every 30 minutes", minutes: 30),
-        .init(label: "Every hour",       minutes: 60),
-        .init(label: "Every 4 hours",    minutes: 240),
-    ]
+    @State private var historyRefreshToken = 0
 
     var body: some View {
         Group {
             Section {
-                Picker("Practice frequency", selection: $intervalMinutes) {
+                Picker("Reminder frequency", selection: $intervalMinutes) {
                     ForEach(frequencies) { f in
-                        Text(f.label).tag(f.minutes)
+                        Text(f.label.t).tag(f.minutes)
                     }
                 }
                 .pickerStyle(.menu)
                 .onChange(of: intervalMinutes) { _, _ in PracticeScheduler.shared.start() }
 
-                Picker("Questions per session", selection: $questionCount) {
-                    ForEach(questionChoices, id: \.self) { n in
-                        Text("\(n)").tag(n)
-                    }
-                }
-                .pickerStyle(.menu)
-
-                Button("Send a practice notification now") {
+                Button("Send a chat reminder now") {
                     Task { await PracticeScheduler.shared.fireSessionNow() }
                 }
             } header: {
-                Text("Proactive practice")
+                Text("Proactive chat reminders")
             } footer: {
-                Text("Glotty quietly checks the mistakes you've made (recorded by Polish) and nudges you with a quick quiz at the interval you pick. Click the notification when it appears to start a session.")
+                Text("Glotty posts a notification at the cadence you pick. Click the notification to open a chat in your target language. Same as triggering Fn → C manually.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section {
-                Picker("Generate every", selection: $generatorIntervalMinutes) {
-                    ForEach(generatorFrequencies) { f in
-                        Text(f.label).tag(f.minutes)
-                    }
-                }
-                .pickerStyle(.menu)
-                .onChange(of: generatorIntervalMinutes) { _, _ in PracticeScheduler.shared.start() }
-
-                LabeledContent("Questions ready") {
-                    Text("\(library.count) / \(QuizLibrary.targetSize)")
-                        .font(.system(.body, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                }
-                // Only show progress UI while we're actually generating —
-                // a static fill-bar reflecting library size carries no new
-                // information beyond the "Questions ready" line above.
-                if scheduler.isGenerating {
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 6) {
-                            ProgressView().controlSize(.small)
-                            Text("Generating…")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        ProgressView()
-                            .progressViewStyle(.linear)
-                    }
-                }
-
-                HStack {
-                    if scheduler.isGenerating {
-                        Button {
-                            PracticeScheduler.shared.cancelFill()
-                        } label: {
-                            Label("Stop", systemImage: "stop.circle")
-                        }
-                    } else {
-                        Button {
-                            PracticeScheduler.shared.startFillLibrary()
-                        } label: {
-                            Label("Fill library now", systemImage: "sparkles")
-                        }
-                        .disabled(library.count >= QuizLibrary.targetSize)
-                    }
-
-                    Spacer()
-
-                    Button(role: .destructive) {
-                        QuizLibrary.shared.clear()
-                    } label: {
-                        Label("Clear", systemImage: "trash")
-                    }
-                }
-            } header: {
-                Text("Question library")
-            } footer: {
-                Text("Glotty generates practice questions in the background and stores them here, so the notification fires instantly with no LLM wait. When you answer a question it's removed from the library; the background generator tops it back up to \(QuizLibrary.targetSize).")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if !sortedEntries.isEmpty {
-                Section {
-                    ForEach(sortedEntries) { entry in
-                        libraryRow(entry)
-                    }
-                } header: {
-                    Text("Queued questions")
-                } footer: {
-                    Text("Click a row to reveal the correct answer and explanation. The trash icon drops just that question — Glotty will generate a replacement in the background.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
+            chatHistorySection
+        }
+        .onReceive(NotificationCenter.default.publisher(for: ChatStore.didChangeNotification)) { _ in
+            historyRefreshToken &+= 1
         }
     }
 
-    private var sortedEntries: [QuizLibrary.Entry] {
-        library.entries.sorted { $0.createdAt > $1.createdAt }
+    private var chatHistorySection: some View {
+        let threads = readThreads()
+        return Section {
+            if threads.isEmpty {
+                Text("No chats yet. Trigger Fn → C to start one.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+            } else {
+                ForEach(threads) { thread in
+                    chatHistoryRow(thread)
+                }
+                HStack {
+                    Spacer()
+                    Button("Clear all", role: .destructive) {
+                        ChatStore.shared.clearAll()
+                    }
+                    .controlSize(.small)
+                }
+            }
+        } header: {
+            HStack {
+                Text("History")
+                if !threads.isEmpty {
+                    Text("\(threads.count)")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.secondary.opacity(0.15)))
+                }
+            }
+        } footer: {
+            Text("One thread per day (boundary 4 AM local). Click a row to open a read-only view of that conversation. Today's chat resumes on Fn → C until 4 AM rollover.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 
-    @ViewBuilder
-    private func libraryRow(_ entry: QuizLibrary.Entry) -> some View {
-        let expanded = expandedEntryId == entry.id
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 10) {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
-                        Text("Tests:")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(.tertiary)
-                            .textCase(.uppercase)
-                        Text(entry.question.category)
-                            .font(.system(size: 12, weight: .semibold))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 2)
-                            .background(
-                                Capsule().fill(Color.accentColor.opacity(0.18))
-                            )
-                            .foregroundStyle(Color.accentColor)
-                        Spacer(minLength: 6)
-                        Text(entry.createdAt, format: .relative(presentation: .named))
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
-                    Text(entry.question.question)
-                        .font(.callout)
-                        .foregroundStyle(.primary)
-                        .lineLimit(expanded ? nil : 2)
-                        .textSelection(.enabled)
-                }
-                Spacer(minLength: 8)
-                Button(role: .destructive) {
-                    QuizLibrary.shared.remove(id: entry.id)
-                } label: {
-                    Image(systemName: "trash")
-                }
-                .buttonStyle(.borderless)
-                .help("Drop this question")
-            }
-            if expanded {
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(Array(entry.question.options.enumerated()), id: \.offset) { idx, option in
-                        HStack(spacing: 6) {
-                            Text(["A", "B", "C", "D"][idx])
-                                .font(.system(.caption, design: .monospaced))
-                                .foregroundStyle(.tertiary)
-                            Text(option)
-                                .font(.caption)
-                                .foregroundStyle(idx == entry.question.correctIndex
-                                                 ? Color.green : .secondary)
-                            if idx == entry.question.correctIndex {
-                                Image(systemName: "checkmark")
-                                    .font(.caption2)
-                                    .foregroundStyle(.green)
-                            }
-                            Spacer(minLength: 0)
-                        }
-                    }
-                    Text(entry.question.explanation)
+    private func chatHistoryRow(_ thread: DailyChatThread) -> some View {
+        let preview = thread.turns.first(where: { $0.role == .user })?.reply
+            ?? thread.turns.first?.reply
+            ?? "(no messages)"
+        let userTurns = thread.turns.filter { $0.role == .user }.count
+        return HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(ChatDay.displayLabel(for: thread.dayKey))
+                        .font(.callout.bold())
+                    Text("\(userTurns) from you")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 4)
-                        .textSelection(.enabled)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(.tertiary)
+                    Spacer()
                 }
-                .padding(.leading, 4)
+                Text(preview)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
+            Spacer()
+            Button {
+                ChatStore.shared.delete(id: thread.id)
+            } label: {
+                Image(systemName: "trash")
+                    .foregroundStyle(.red)
+            }
+            .buttonStyle(.borderless)
+            .help("Delete this day's chat")
         }
         .contentShape(Rectangle())
         .onTapGesture {
-            withAnimation(.easeInOut(duration: 0.15)) {
-                expandedEntryId = expanded ? nil : entry.id
-            }
+            ChatHistoryWindowController.shared.show(threadID: thread.id)
         }
+    }
+
+    private func readThreads() -> [DailyChatThread] {
+        _ = historyRefreshToken
+        return ChatStore.shared.allThreads()
     }
 }
 
@@ -2565,10 +2511,10 @@ private struct UsageSettingsSection: View {
         var id: String { rawValue }
         var label: String {
             switch self {
-            case .today: return "Today"
-            case .week:  return "This week"
-            case .month: return "This month"
-            case .all:   return "All time"
+            case .today: return String(localized: "Today")
+            case .week:  return String(localized: "This week")
+            case .month: return String(localized: "This month")
+            case .all:   return String(localized: "All time")
             }
         }
         var cutoff: Date? {
