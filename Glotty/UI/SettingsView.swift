@@ -160,13 +160,18 @@ struct SettingsView: View {
 
 private struct LanguageModelSettingsSection: View {
     @AppStorage("glotty.llmProvider") private var providerID: String = "zai"
-    @AppStorage("glotty.zai.endpoint") private var zaiEndpoint: String = ""
-    @AppStorage("glotty.zai.model") private var zaiModel: String = ""
     @AppStorage("glotty.kimi.endpoint") private var kimiEndpoint: String = ""
     @AppStorage("glotty.kimi.model") private var kimiModel: String = ""
+    @AppStorage("glotty.deepseek.endpoint") private var deepseekEndpoint: String = ""
+    @AppStorage("glotty.deepseek.model") private var deepseekModel: String = ""
     @State private var apiKey: String = ""
     @State private var apiKeyPlaceholder: String = ""
     @State private var testStatus: TestStatus = .idle
+    /// Bumped on CustomProviderStore changes so the picker re-reads the list.
+    @State private var customRefreshToken: Int = 0
+    /// Set to a non-nil config when the user taps "Add custom" or "Edit" on a
+    /// custom entry — drives the sheet.
+    @State private var customEditorSeed: CustomProviderEditorSeed?
 
     enum TestStatus: Equatable {
         case idle
@@ -178,69 +183,237 @@ private struct LanguageModelSettingsSection: View {
     var body: some View {
         Section {
             Picker("Provider", selection: $providerID) {
-                ForEach(LLMRegistry.all, id: \.id) { provider in
-                    Text(provider.displayName).tag(provider.id)
-                }
+                providerPickerOptions
             }
             .pickerStyle(.menu)
             .onChange(of: providerID) { _, _ in loadKey() }
+            .id(customRefreshToken)   // re-evaluate options when custom list changes
 
-            switch providerID {
-            case "zai":           zaiFields
-            case "kimi-coding":   kimiFields
-            default:              EmptyView()
+            providerFields
+
+            HStack {
+                Spacer()
+                Button {
+                    customEditorSeed = .new
+                } label: {
+                    Label("Add custom provider", systemImage: "plus.circle")
+                }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
             }
         } header: {
             Text("Language Model")
         } footer: {
-            Text("The engine that powers Fn → R polish. API keys are stored in macOS Keychain. Polish output language and prompt templates live in the Polish tab.")
+            Text("The engine that powers Fn → R polish. API keys are stored in macOS Keychain. OpenAI-compatible providers (OpenAI, DeepSeek, OpenRouter, Z.AI, plus any custom endpoint you add) share the same wire format. Polish output language and prompt templates live in the Polish tab.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .onAppear { loadKey() }
-    }
-
-    @ViewBuilder
-    private var zaiFields: some View {
-        HStack {
-            SecureField("API key", text: $apiKey, prompt: Text(apiKeyPlaceholder.isEmpty ? "Paste your Z.AI API key" : apiKeyPlaceholder))
-            Button("Save") { saveKey() }
-                .disabled(apiKey.isEmpty)
-            if !apiKeyPlaceholder.isEmpty {
-                Button("Clear", role: .destructive) { clearKey() }
+        .onReceive(NotificationCenter.default.publisher(for: CustomProviderStore.didChangeNotification)) { _ in
+            customRefreshToken &+= 1
+            loadKey()
+        }
+        .sheet(item: $customEditorSeed) { seed in
+            CustomProviderEditor(seed: seed) { savedID in
+                // Switch to the newly-saved provider so the user can immediately
+                // enter the API key without an extra click in the picker.
+                if let savedID { providerID = savedID }
+                customEditorSeed = nil
+                loadKey()
             }
         }
+    }
+
+    /// Picker rows for stock presets, custom entries, and Kimi. Built as a
+    /// `@ViewBuilder` so the grouping `Section` labels render correctly
+    /// inside the Menu picker.
+    @ViewBuilder
+    private var providerPickerOptions: some View {
+        ForEach(OpenAIStockPresets.all) { preset in
+            Text(preset.displayName).tag(preset.id)
+        }
+        let custom = CustomProviderStore.all()
+        if !custom.isEmpty {
+            Divider()
+            ForEach(custom) { config in
+                Text(config.displayName).tag(config.providerID)
+            }
+        }
+        Divider()
+        Text("DeepSeek").tag("deepseek")
+        Text("Kimi For Coding").tag("kimi-coding")
+    }
+
+    /// Per-provider configuration fields, dispatched by `providerID`.
+    @ViewBuilder
+    private var providerFields: some View {
+        if let preset = OpenAIStockPresets.find(id: providerID) {
+            stockPresetFields(preset)
+        } else if let uuid = customProviderUUID(from: providerID),
+                  let config = CustomProviderStore.find(id: uuid) {
+            customProviderFields(config)
+        } else if providerID == "deepseek" {
+            deepseekFields
+        } else if providerID == "kimi-coding" {
+            kimiFields
+        } else {
+            // Selected id doesn't match any known provider — likely a custom
+            // entry was deleted while selected. Surface a hint and let the
+            // picker re-select.
+            Text("Provider not found. Pick another from the menu above.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Stock preset fields
+
+    @ViewBuilder
+    private func stockPresetFields(_ preset: OpenAIStockPresets.Preset) -> some View {
+        apiKeyRow(promptText: "Paste your \(preset.displayName) API key")
 
         TextField("Endpoint",
-                  text: $zaiEndpoint,
-                  prompt: Text(ZAIProvider.defaultEndpoint))
+                  text: endpointBinding(for: preset),
+                  prompt: Text(preset.defaultEndpoint))
             .textContentType(.URL)
 
-        Picker("Model", selection: zaiModelBinding) {
-            ForEach(ZAIProvider.supportedModels) { option in
+        Picker("Model", selection: modelBinding(for: preset)) {
+            ForEach(preset.models) { option in
                 Text(option.displayName).tag(option.id)
             }
         }
         .pickerStyle(.menu)
 
-        if let summary = ZAIProvider.model(for: zaiModelBinding.wrappedValue)?.summary {
+        if let summary = preset.model(forID: modelBinding(for: preset).wrappedValue)?.summary {
             Text(summary)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
 
+        if let signup = preset.signupURL {
+            Link("Get an API key →", destination: signup)
+                .font(.caption)
+        }
+
         testRow
     }
 
-    /// Picker binding that treats empty AppStorage as "use the default model".
-    /// When the user picks one, we always write the concrete id (no empty state).
-    private var zaiModelBinding: Binding<String> {
+    /// Endpoint TextField binding — falls back to the preset default for
+    /// display but persists user edits to the preset's UserDefaults key.
+    private func endpointBinding(for preset: OpenAIStockPresets.Preset) -> Binding<String> {
         Binding(
-            get: { zaiModel.isEmpty ? ZAIProvider.defaultModel : zaiModel },
-            set: { zaiModel = $0 }
+            get: { UserDefaults.standard.string(forKey: preset.endpointUserDefaultsKey) ?? "" },
+            set: { UserDefaults.standard.set($0, forKey: preset.endpointUserDefaultsKey) }
         )
     }
+
+    /// Model picker binding — collapses empty AppStorage to the preset default
+    /// so the picker always has a valid selection.
+    private func modelBinding(for preset: OpenAIStockPresets.Preset) -> Binding<String> {
+        Binding(
+            get: {
+                let raw = UserDefaults.standard.string(forKey: preset.modelUserDefaultsKey) ?? ""
+                return raw.isEmpty ? preset.defaultModel : raw
+            },
+            set: { UserDefaults.standard.set($0, forKey: preset.modelUserDefaultsKey) }
+        )
+    }
+
+    // MARK: - Custom provider fields
+
+    @ViewBuilder
+    private func customProviderFields(_ config: CustomProviderConfig) -> some View {
+        apiKeyRow(promptText: "Paste API key for \(config.displayName)")
+
+        HStack {
+            Image(systemName: "network")
+                .foregroundStyle(.secondary)
+            Text(config.endpoint)
+                .font(.caption.monospaced())
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer()
+        }
+
+        HStack {
+            Image(systemName: "cpu")
+                .foregroundStyle(.secondary)
+            Text(config.model)
+                .font(.caption.monospaced())
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+
+        HStack {
+            Button("Edit") {
+                customEditorSeed = .edit(config)
+            }
+            .controlSize(.small)
+            Button("Delete", role: .destructive) {
+                CustomProviderStore.delete(id: config.id)
+                // Switch back to the default provider if we just deleted the
+                // active one. Otherwise the body would render the "not found"
+                // hint until the user picks something.
+                if providerID == config.providerID {
+                    providerID = OpenAIStockPresets.all.first?.id ?? "zai"
+                }
+            }
+            .controlSize(.small)
+            Spacer()
+        }
+
+        testRow
+    }
+
+    /// Decode a `custom-<uuid>` provider id back into its UUID. Returns nil
+    /// for non-custom ids.
+    private func customProviderUUID(from id: String) -> UUID? {
+        guard id.hasPrefix("custom-") else { return nil }
+        return UUID(uuidString: String(id.dropFirst("custom-".count)))
+    }
+
+    // MARK: - DeepSeek fields (dedicated class — handles reasoner CoT)
+
+    private var deepseekModelBinding: Binding<String> {
+        Binding(
+            get: { deepseekModel.isEmpty ? DeepSeekProvider.defaultModel : deepseekModel },
+            set: { deepseekModel = $0 }
+        )
+    }
+
+    @ViewBuilder
+    private var deepseekFields: some View {
+        apiKeyRow(promptText: "Paste your DeepSeek API key")
+
+        TextField("Endpoint",
+                  text: $deepseekEndpoint,
+                  prompt: Text(DeepSeekProvider.defaultEndpoint))
+            .textContentType(.URL)
+
+        Picker("Model", selection: deepseekModelBinding) {
+            ForEach(DeepSeekProvider.supportedModels) { option in
+                Text(option.displayName).tag(option.id)
+            }
+        }
+        .pickerStyle(.menu)
+
+        if let summary = DeepSeekProvider.model(for: deepseekModelBinding.wrappedValue)?.summary {
+            Text(summary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+
+        Link("Get an API key →",
+             destination: URL(string: "https://platform.deepseek.com/api_keys")!)
+            .font(.caption)
+
+        testRow
+    }
+
+    // MARK: - Kimi fields (Anthropic-compatible — kept alongside plugin model)
 
     private var kimiModelBinding: Binding<String> {
         Binding(
@@ -251,14 +424,7 @@ private struct LanguageModelSettingsSection: View {
 
     @ViewBuilder
     private var kimiFields: some View {
-        HStack {
-            SecureField("API key", text: $apiKey, prompt: Text(apiKeyPlaceholder.isEmpty ? "Paste your Kimi API key" : apiKeyPlaceholder))
-            Button("Save") { saveKey() }
-                .disabled(apiKey.isEmpty)
-            if !apiKeyPlaceholder.isEmpty {
-                Button("Clear", role: .destructive) { clearKey() }
-            }
-        }
+        apiKeyRow(promptText: "Paste your Kimi API key")
 
         TextField("Endpoint",
                   text: $kimiEndpoint,
@@ -280,6 +446,21 @@ private struct LanguageModelSettingsSection: View {
         }
 
         testRow
+    }
+
+    // MARK: - Shared rows
+
+    @ViewBuilder
+    private func apiKeyRow(promptText: String) -> some View {
+        HStack {
+            SecureField("API key", text: $apiKey,
+                        prompt: Text(apiKeyPlaceholder.isEmpty ? promptText : apiKeyPlaceholder))
+            Button("Save") { saveKey() }
+                .disabled(apiKey.isEmpty)
+            if !apiKeyPlaceholder.isEmpty {
+                Button("Clear", role: .destructive) { clearKey() }
+            }
+        }
     }
 
     /// Test button + status — shared across providers; uses whichever is currently
@@ -307,14 +488,16 @@ private struct LanguageModelSettingsSection: View {
         }
     }
 
-    /// Which Keychain account holds the active provider's key. Returns nil for
-    /// providers that don't need a key (Apple Foundation, when we add it).
+    /// Which Keychain account holds the active provider's key. Now that every
+    /// provider stores keys in its own account, the mapping is just "providerID".
+    /// Custom entries derive their account from the UUID-suffixed id.
     private var currentKeychainAccount: String? {
-        switch providerID {
-        case "zai":         return ZAIProvider.keychainAccount
-        case "kimi-coding": return KimiCodingProvider.keychainAccount
-        default:            return nil
-        }
+        // Stock presets keep their existing accounts (id == account).
+        if OpenAIStockPresets.find(id: providerID) != nil { return providerID }
+        if customProviderUUID(from: providerID) != nil { return providerID }
+        if providerID == "deepseek" { return DeepSeekProvider.keychainAccount }
+        if providerID == "kimi-coding" { return KimiCodingProvider.keychainAccount }
+        return nil
     }
 
     private func loadKey() {
@@ -369,6 +552,104 @@ private struct LanguageModelSettingsSection: View {
         } catch {
             testStatus = .failed(error.localizedDescription)
         }
+    }
+}
+
+/// Drives the custom provider editor sheet. `.new` opens with blank fields and
+/// a fresh UUID on save; `.edit(config)` opens with the config pre-filled and
+/// upserts on save under the same UUID.
+enum CustomProviderEditorSeed: Identifiable {
+    case new
+    case edit(CustomProviderConfig)
+
+    var id: String {
+        switch self {
+        case .new: return "new"
+        case .edit(let c): return c.id.uuidString
+        }
+    }
+}
+
+/// Modal editor for a custom OpenAI-compatible provider. The user fills in
+/// the display name, endpoint URL, and model id; on Save the config is
+/// persisted via `CustomProviderStore` and the calling section is notified
+/// (so it can switch the active provider to the new entry).
+private struct CustomProviderEditor: View {
+    let seed: CustomProviderEditorSeed
+    /// Called on save/cancel. The String parameter is the providerID to switch
+    /// to (nil on cancel or when staying on the existing selection).
+    let onClose: (String?) -> Void
+
+    @State private var displayName: String = ""
+    @State private var endpoint: String = ""
+    @State private var model: String = ""
+
+    /// Existing UUID when editing, fresh one when creating. Frozen for the
+    /// life of the sheet so a quick double-tap doesn't create duplicates.
+    @State private var id: UUID = UUID()
+
+    var body: some View {
+        Form {
+            Section {
+                TextField("Name", text: $displayName,
+                          prompt: Text("e.g. Groq, Together, Local Ollama"))
+                TextField("Endpoint", text: $endpoint,
+                          prompt: Text("https://…/v1/chat/completions"))
+                    .textContentType(.URL)
+                TextField("Model", text: $model,
+                          prompt: Text("e.g. llama-3.1-70b-versatile"))
+            } header: {
+                Text("Provider")
+            } footer: {
+                Text("Any service that speaks the OpenAI chat completions wire format works. The API key goes in the main Language Model panel after you save.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .frame(minWidth: 460, minHeight: 320)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { onClose(nil) }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") { save() }
+                    .disabled(!canSave)
+            }
+        }
+        .onAppear(perform: hydrate)
+    }
+
+    private var canSave: Bool {
+        !displayName.trimmingCharacters(in: .whitespaces).isEmpty
+            && URL(string: endpoint.trimmingCharacters(in: .whitespaces)) != nil
+            && !model.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    private func hydrate() {
+        switch seed {
+        case .new:
+            id = UUID()
+            displayName = ""
+            endpoint = ""
+            model = ""
+        case .edit(let c):
+            id = c.id
+            displayName = c.displayName
+            endpoint = c.endpoint
+            model = c.model
+        }
+    }
+
+    private func save() {
+        let trimmed = CustomProviderConfig(
+            id: id,
+            displayName: displayName.trimmingCharacters(in: .whitespaces),
+            endpoint: endpoint.trimmingCharacters(in: .whitespaces),
+            model: model.trimmingCharacters(in: .whitespaces)
+        )
+        CustomProviderStore.upsert(trimmed)
+        onClose(trimmed.providerID)
     }
 }
 
@@ -2700,11 +2981,10 @@ private struct UsageSettingsSection: View {
         return f.string(from: NSNumber(value: n)) ?? "\(n)"
     }
 
+    /// Resolve a provider id to its human-readable display name. Asks the
+    /// registry so stock presets, custom entries, and Kimi are all covered
+    /// without per-provider branching here.
     private func providerLabel(_ id: String) -> String {
-        switch id {
-        case "zai":          return "Z.AI (GLM)"
-        case "kimi-coding":  return "Kimi For Coding"
-        default:             return id
-        }
+        LLMRegistry.displayName(for: id)
     }
 }

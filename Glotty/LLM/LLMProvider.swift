@@ -334,13 +334,61 @@ extension LLMProvider {
     }
 }
 
-/// Static registry of all known providers + the user's current selection.
-/// More providers (Apple Foundation, Claude, OpenAI) join this list later.
+/// Runtime registry of LLM providers. Resolves to:
+///   1. Every `OpenAIStockPresets` entry, materialised into an
+///      `OpenAICompatibleProvider` with the user's current endpoint/model
+///      overrides applied. (OpenAI, DeepSeek, OpenRouter, Z.AI today.)
+///   2. Every user-defined entry in `CustomProviderStore`, also materialised
+///      as an `OpenAICompatibleProvider`.
+///   3. The `KimiCodingProvider` — Anthropic-shaped, so it sits next to the
+///      plugin model rather than inside it.
+///
+/// `all` is computed each access so config changes (model picked, custom
+/// provider added) are visible immediately. The list is small enough that the
+/// extra UserDefaults reads per call don't matter.
 enum LLMRegistry {
-    static let all: [LLMProvider] = [
-        ZAIProvider(),
-        KimiCodingProvider(),
-    ]
+    static var all: [LLMProvider] {
+        var providers: [LLMProvider] = OpenAIStockPresets.all.map(makeProvider(for:))
+        providers.append(contentsOf: CustomProviderStore.all().map(makeProvider(for:)))
+        // DeepSeek and Kimi are dedicated classes — each handles a quirk the
+        // generic plugin shape can't express (DeepSeek's reasoning_content,
+        // Kimi's Anthropic-format API).
+        providers.append(DeepSeekProvider())
+        providers.append(KimiCodingProvider())
+        return providers
+    }
+
+    /// Build an `OpenAICompatibleProvider` from a stock preset, applying any
+    /// user overrides for endpoint and model from UserDefaults.
+    static func makeProvider(for preset: OpenAIStockPresets.Preset) -> OpenAICompatibleProvider {
+        let endpoint = URL(string: preset.currentEndpoint())
+            ?? URL(string: preset.defaultEndpoint)!
+        return OpenAICompatibleProvider(
+            id: preset.id,
+            displayName: preset.displayName,
+            endpointURL: endpoint,
+            model: preset.currentModel(),
+            keychainAccount: preset.id,
+            extraBodyJSON: preset.extraBodyJSON
+        )
+    }
+
+    /// Build an `OpenAICompatibleProvider` from a user-defined custom entry.
+    /// Falls back to a placeholder URL if the user typed something
+    /// unparseable — `isAvailable()` will return false on the next request
+    /// and the UI surfaces the config error.
+    static func makeProvider(for config: CustomProviderConfig) -> OpenAICompatibleProvider {
+        let endpoint = URL(string: config.endpoint)
+            ?? URL(string: "https://invalid.local/")!
+        return OpenAICompatibleProvider(
+            id: config.providerID,
+            displayName: config.displayName,
+            endpointURL: endpoint,
+            model: config.model,
+            keychainAccount: config.providerID,
+            extraBodyJSON: nil
+        )
+    }
 
     private static let selectionKey = "glotty.llmProvider"
     private static let defaultID = "zai"
@@ -355,6 +403,14 @@ enum LLMRegistry {
 
     static func current() -> LLMProvider? {
         let id = currentProviderID()
-        return all.first { $0.id == id } ?? all.first
+        let list = all
+        return list.first { $0.id == id } ?? list.first
+    }
+
+    /// Look up a provider's display name by id. Used by the usage tab so the
+    /// table renders human-readable rows regardless of where the provider came
+    /// from (stock / custom / Kimi).
+    static func displayName(for id: String) -> String {
+        all.first { $0.id == id }?.displayName ?? id
     }
 }
