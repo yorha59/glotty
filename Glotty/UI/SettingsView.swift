@@ -258,31 +258,21 @@ private struct LanguageModelSettingsSection: View {
         }
     }
 
-    /// Menu rows for stock presets, custom entries, the two dedicated
-    /// providers (DeepSeek, Kimi), and — crucially — the "Add custom
-    /// provider…" action at the bottom. Built for use inside a `Menu`
-    /// label so it can mix selection items and action items in one
-    /// dropdown (a `Picker` would only support tag-based selection).
+    /// Menu rows for every provider — stock OpenAI-compatible presets,
+    /// dedicated classes (DeepSeek, Kimi), and user-added custom entries —
+    /// in one flat list with no dividers. The user picks a provider; the
+    /// underlying wire format isn't their concern, so we don't surface it.
+    /// The "Add custom provider…" action moved out to the testRow next to
+    /// "Test connection", so it isn't tucked inside this dropdown.
     @ViewBuilder
     private var providerPickerMenu: some View {
         ForEach(OpenAIStockPresets.all) { preset in
             providerMenuButton(id: preset.id, label: preset.displayName)
         }
-        let custom = CustomProviderStore.all()
-        if !custom.isEmpty {
-            Divider()
-            ForEach(custom) { config in
-                providerMenuButton(id: config.providerID, label: config.displayName)
-            }
-        }
-        Divider()
         providerMenuButton(id: "deepseek", label: "DeepSeek")
         providerMenuButton(id: "kimi-coding", label: "Kimi For Coding")
-        Divider()
-        Button {
-            customEditorSeed = .new
-        } label: {
-            Label("Add custom provider…", systemImage: "plus")
+        ForEach(CustomProviderStore.all()) { config in
+            providerMenuButton(id: config.providerID, label: config.displayName)
         }
     }
 
@@ -541,13 +531,20 @@ private struct LanguageModelSettingsSection: View {
         }
     }
 
-    /// Test button + status — shared across providers; uses whichever is currently
-    /// selected via `LLMRegistry.current()`.
+    /// Test button + Add-custom button + status. Sharing one row keeps both
+    /// provider-level actions together at the bottom of the section, and
+    /// keeps the Add-custom affordance discoverable without burying it in
+    /// the picker dropdown.
     @ViewBuilder
     private var testRow: some View {
         HStack {
             Button("Test connection") { Task { await test() } }
                 .disabled(testStatus == .running)
+            Button {
+                customEditorSeed = .new
+            } label: {
+                Label("Add custom provider", systemImage: "plus")
+            }
             switch testStatus {
             case .idle:
                 EmptyView()
