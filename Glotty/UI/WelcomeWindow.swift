@@ -39,7 +39,11 @@ final class WelcomeWindowController {
             onOpenSettings: { SettingsWindowController.shared.show(selecting: .languageModel) }
         )
         let host = NSHostingController(rootView: view)
-        host.sizingOptions = [.preferredContentSize]
+        // Deliberately NOT using `sizingOptions = [.preferredContentSize]`:
+        // step changes alter the content height, and resizing the window
+        // mid-display-cycle reliably throws an NSGenericException from
+        // `_postWindowNeedsUpdateConstraints`. A fixed window size large
+        // enough to hold the tallest step keeps the layout pass clean.
 
         let w = NSWindow(contentViewController: host)
         w.title = "Welcome to Glotty"
@@ -48,6 +52,10 @@ final class WelcomeWindowController {
         w.isReleasedWhenClosed = false
         w.standardWindowButton(.miniaturizeButton)?.isHidden = true
         w.standardWindowButton(.zoomButton)?.isHidden = true
+        // Fixed size that comfortably contains every step including the
+        // hotkey grid + "Open Settings" button. Tuned by visual check;
+        // bump if a future step grows taller.
+        w.setContentSize(NSSize(width: 480, height: 480))
         w.center()
         w.collectionBehavior = [.moveToActiveSpace]
         window = w
@@ -109,8 +117,12 @@ private struct WelcomeView: View {
             footerBar
         }
         .padding(24)
-        .frame(width: Self.contentWidth)
-        .fixedSize(horizontal: false, vertical: true)
+        // Fill whatever size the window gave us — the controller has
+        // already chosen a fixed size that accommodates every step.
+        // Letting SwiftUI drive height via `.fixedSize` here caused
+        // a mid-display-cycle resize crash; see the controller's
+        // `host.sizingOptions` comment.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     // MARK: - Header
