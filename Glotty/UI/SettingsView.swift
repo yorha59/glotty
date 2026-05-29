@@ -220,25 +220,27 @@ private struct LanguageModelSettingsSection: View {
 
     var body: some View {
         Section {
-            Picker("Provider", selection: $providerID) {
-                providerPickerOptions
-            }
-            .pickerStyle(.menu)
-            .onChange(of: providerID) { _, _ in loadKey() }
-            .id(customRefreshToken)   // re-evaluate options when custom list changes
-
-            providerFields
-
+            // Picker + Add button on one row so the "add custom provider"
+            // affordance is always visible — burying it at the bottom of the
+            // section made it easy to miss.
             HStack {
-                Spacer()
+                Picker("Provider", selection: $providerID) {
+                    providerPickerOptions
+                }
+                .pickerStyle(.menu)
+                .onChange(of: providerID) { _, _ in loadKey() }
+                .id(customRefreshToken)   // re-evaluate options when custom list changes
                 Button {
                     customEditorSeed = .new
                 } label: {
-                    Label("Add custom provider", systemImage: "plus.circle")
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title3)
                 }
                 .buttonStyle(.borderless)
-                .controlSize(.small)
+                .help("Add a custom OpenAI-compatible provider")
             }
+
+            providerFields
         } header: {
             Text("Language Model")
         } footer: {
