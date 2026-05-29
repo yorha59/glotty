@@ -220,24 +220,18 @@ private struct LanguageModelSettingsSection: View {
 
     var body: some View {
         Section {
-            // Picker + Add button on one row so the "add custom provider"
-            // affordance is always visible — burying it at the bottom of the
-            // section made it easy to miss.
-            HStack {
-                Picker("Provider", selection: $providerID) {
-                    providerPickerOptions
-                }
-                .pickerStyle(.menu)
-                .onChange(of: providerID) { _, _ in loadKey() }
-                .id(customRefreshToken)   // re-evaluate options when custom list changes
-                Button {
-                    customEditorSeed = .new
+            // Use a Menu (not a Picker) so the "Add custom provider…" action
+            // can live as the bottom item inside the dropdown — same
+            // discoverability pattern as macOS's "Other Network…" /
+            // "Customize Toolbar…". A Picker would have consumed the full
+            // row width and clipped any sibling control.
+            LabeledContent("Provider") {
+                Menu {
+                    providerPickerMenu
                 } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title3)
+                    Text(currentProviderDisplayName)
                 }
-                .buttonStyle(.borderless)
-                .help("Add a custom OpenAI-compatible provider")
+                .id(customRefreshToken)
             }
 
             providerFields
@@ -264,24 +258,68 @@ private struct LanguageModelSettingsSection: View {
         }
     }
 
-    /// Picker rows for stock presets, custom entries, and Kimi. Built as a
-    /// `@ViewBuilder` so the grouping `Section` labels render correctly
-    /// inside the Menu picker.
+    /// Menu rows for stock presets, custom entries, the two dedicated
+    /// providers (DeepSeek, Kimi), and — crucially — the "Add custom
+    /// provider…" action at the bottom. Built for use inside a `Menu`
+    /// label so it can mix selection items and action items in one
+    /// dropdown (a `Picker` would only support tag-based selection).
     @ViewBuilder
-    private var providerPickerOptions: some View {
+    private var providerPickerMenu: some View {
         ForEach(OpenAIStockPresets.all) { preset in
-            Text(preset.displayName).tag(preset.id)
+            providerMenuButton(id: preset.id, label: preset.displayName)
         }
         let custom = CustomProviderStore.all()
         if !custom.isEmpty {
             Divider()
             ForEach(custom) { config in
-                Text(config.displayName).tag(config.providerID)
+                providerMenuButton(id: config.providerID, label: config.displayName)
             }
         }
         Divider()
-        Text("DeepSeek").tag("deepseek")
-        Text("Kimi For Coding").tag("kimi-coding")
+        providerMenuButton(id: "deepseek", label: "DeepSeek")
+        providerMenuButton(id: "kimi-coding", label: "Kimi For Coding")
+        Divider()
+        Button {
+            customEditorSeed = .new
+        } label: {
+            Label("Add custom provider…", systemImage: "plus")
+        }
+    }
+
+    /// One selectable provider row in the menu. Adds a checkmark
+    /// glyph to the currently-active provider so the user can see
+    /// what's selected without opening the menu twice.
+    @ViewBuilder
+    private func providerMenuButton(id: String, label: String) -> some View {
+        Button {
+            providerID = id
+            // Picker used `.onChange(of: providerID)` to re-load the
+            // saved API key for the newly-selected provider; with a
+            // Menu we drive it directly from the row action.
+            loadKey()
+        } label: {
+            if id == providerID {
+                Label(label, systemImage: "checkmark")
+            } else {
+                Text(label)
+            }
+        }
+    }
+
+    /// Human-readable name of the currently-selected provider, used as
+    /// the Menu's label. Falls back to the raw id for entries we can't
+    /// resolve (e.g. a custom entry that's been deleted).
+    private var currentProviderDisplayName: String {
+        if let preset = OpenAIStockPresets.find(id: providerID) {
+            return preset.displayName
+        }
+        if let uuid = customProviderUUID(from: providerID),
+           let config = CustomProviderStore.find(id: uuid) {
+            return config.displayName
+        }
+        if providerID == "deepseek" { return "DeepSeek" }
+        if providerID == "kimi-coding" { return "Kimi For Coding" }
+        return providerID
     }
 
     /// Per-provider configuration fields, dispatched by `providerID`.
