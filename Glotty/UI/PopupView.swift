@@ -276,6 +276,11 @@ struct PopupView: View {
     /// parsed variant cards once the stream finishes.
     @State private var polishRawText: String = ""
     @State private var copiedVariantIndex: Int? = nil
+    /// Goes true briefly when the user clicks the translate result to copy
+    /// it. Drives the green tint + checkmark confirmation in the same way
+    /// `copiedVariantIndex` does for polish variants. Auto-resets after
+    /// ~1.4s.
+    @State private var translationCopied: Bool = false
     /// Explain mode runs the LLM for a prose explanation in the user's native
     /// language. Text streams in chunk-by-chunk and we render it directly — no
     /// JSON shape, no variant cards.
@@ -849,11 +854,20 @@ struct PopupView: View {
         case .polish:              size = 26
         case .chat:                size = 24   // sourceBlock isn't rendered for chat, but the compiler needs exhaustiveness
         }
+        // Single-word selections (translate/explain) cap at 2 lines —
+        // a "word" that wraps more than that is almost certainly a
+        // mis-selection of trailing whitespace, and shrinking it to
+        // 2 keeps the popup compact. Everything else — sentences,
+        // paragraphs, polish drafts — has NO cap: the user's
+        // selection must be fully visible. Overflow scrolls via the
+        // outer ScrollView in `scrollableContent`.
+        let limit: Int? = ((mode == .translate || mode == .explain) && isSingleWord) ? 2 : nil
         return Text(sourceText)
             .font(.system(size: size, weight: .bold))
             .foregroundStyle(PopupTokens.primaryText)
             .textSelection(.enabled)
-            .lineLimit((mode == .translate || mode == .explain) && isSingleWord ? 2 : 4)
+            .lineLimit(limit)
+            .fixedSize(horizontal: false, vertical: true)
             .minimumScaleFactor(0.82)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -869,13 +883,7 @@ struct PopupView: View {
                         .foregroundStyle(PopupTokens.secondaryText)
                 }
             case .ready:
-                // Uniform body size for non-source-row content. Source row is the
-                // only "large" element on the page.
-                Text(translated)
-                    .font(.system(size: PopupTokens.bodySize, weight: .medium))
-                    .foregroundStyle(PopupTokens.primaryText)
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
+                translationCard
             case .failed(let message):
                 Text(message)
                     .font(.system(size: PopupTokens.bodySize))
@@ -883,6 +891,60 @@ struct PopupView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Click-to-copy card for the translate result. Mirrors `variantCard`
+    /// so the gesture and visual confirmation pattern match polish.
+    /// No `.textSelection(.enabled)` on the inner Text — text selection
+    /// captures clicks before they reach the card's `onTapGesture`,
+    /// breaking the copy behavior. The whole card is the copy target.
+    private var translationCard: some View {
+        let copied = translationCopied
+        let backgroundColor: Color = copied ? Color.green.opacity(0.12) : PopupTokens.variantSurface
+        return HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(translated)
+                .font(.system(size: PopupTokens.bodySize, weight: .medium))
+                .foregroundStyle(PopupTokens.primaryText)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if copied {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .font(.system(size: 12, weight: .semibold))
+            }
+        }
+        .padding(PopupTokens.variantCardPadding)
+        .background(
+            RoundedRectangle(cornerRadius: PopupTokens.variantCardRadius, style: .continuous)
+                .fill(backgroundColor)
+                .overlay(
+                    RoundedRectangle(cornerRadius: PopupTokens.variantCardRadius, style: .continuous)
+                        .strokeBorder(PopupTokens.border, lineWidth: 1)
+                )
+        )
+        .contentShape(Rectangle())
+        .onTapGesture { copyTranslation() }
+        .onHover { hovering in
+            if hovering { NSCursor.pointingHand.set() }
+            else { NSCursor.arrow.set() }
+        }
+        .help("Click to copy the translation")
+        .animation(.easeOut(duration: 0.15), value: copied)
+    }
+
+    /// Copy the translated text to the system pasteboard and flash a
+    /// green confirmation on the card for ~1.4s. Resets the indicator
+    /// only if no later copy has overwritten it, so back-to-back clicks
+    /// don't prematurely clear the most recent confirmation.
+    private func copyTranslation() {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(translated, forType: .string)
+        Self.dbg("copied translation (\(translated.count) chars)")
+        translationCopied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+            if translationCopied { translationCopied = false }
+        }
     }
 
     /// "Explanation in English · Anthropic Claude" — the section label shown
