@@ -111,14 +111,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         PermissionCheck.refreshNotificationsStatus()
 
         let missing = PermissionCheck.anyMissing()
-        dbg("anyMissing = \(missing)")
-        if missing {
-            // Open Settings → Permissions tab instead of the legacy standalone
-            // window. The permissions UI now lives there. Defer to next runloop
-            // tick — creating an NSHostingController inside
-            // applicationDidFinishLaunching deadlocks the SwiftUI App scene init.
+        let welcomeDone = UserDefaults.standard.bool(forKey: WelcomeWindowController.userDefaultsKey)
+        dbg("anyMissing = \(missing) welcomeDone = \(welcomeDone)")
+        if missing && welcomeDone {
+            // Only auto-open Settings → Permissions AFTER the user has
+            // finished the Welcome flow. While Welcome is showing for
+            // the first time, no other window should pop up and
+            // distract — the Welcome flow owns the screen. The user
+            // can revisit Permissions later via the menu bar or
+            // Settings → Permissions tab.
             DispatchQueue.main.async { [weak self] in
-                dbg("opening Settings → Permissions (first-launch missing perms)")
+                dbg("opening Settings → Permissions (post-welcome missing perms)")
                 self?.settingsWindow.show(selecting: .permissions)
             }
         }
@@ -352,6 +355,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleFire(mode: PopupMode) {
+        // Welcome flow takes precedence over real Fn-leader actions.
+        // During first-launch onboarding the user hasn't configured a
+        // provider / polish target / dictionary selection — running
+        // the real pipeline would either fail or behave incorrectly.
+        // Route to a tutorial popup with pre-calculated content so
+        // the user sees what each chord produces, without touching
+        // any of their (not-yet-existing) configuration.
+        if WelcomeWindowController.shared.isShowing {
+            Task { @MainActor in
+                WelcomeWindowController.shared.revealResult(for: mode)
+            }
+            return
+        }
         // Raycast-style auto-close: when the popup is about to overlay
         // another app's full-screen space, Settings/drill-in windows
         // need to come down first so the app drops back to .accessory
