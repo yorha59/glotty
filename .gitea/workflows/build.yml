@@ -33,7 +33,7 @@ jobs:
         run: bash scripts/make-dmg-nosign.sh
 
       - name: Upload DMG artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: Glotty-DMG
           path: dist/*.dmg
