@@ -172,16 +172,34 @@ final class PracticeScheduler: NSObject, ObservableObject {
         // none at notification time, so an empty string still pulls in
         // profile-style memories (always-on facts/preferences/projects).
         let userContext = LearnedMemoryStore.shared.contextBlock(for: "")
+        // Topics Glotty has already pitched in the last few days. The
+        // notification hook needs this filter too — without it the
+        // hook gravitates to whatever's most prominent in memory and
+        // pitches the same project every day. Same `recentTopics`
+        // source the chat-thread prompt uses.
+        let recentTopics = ChatStore.shared.recentTopics()
+        let recentTopicsBlock: String
+        if recentTopics.isEmpty {
+            recentTopicsBlock = ""
+        } else {
+            let bullets = recentTopics.map { "  - \($0)" }.joined(separator: "\n")
+            recentTopicsBlock = """
+
+            RECENT TOPICS — these came up in the last week's chats. DO NOT tie the hook to any of them; the user will find it repetitive ("how's that project going?" twice in a row reads as a CRM ping, not a friend). Pick a fresh angle.
+            \(bullets)
+            """
+        }
         let prompt = """
         You are \(persona.name), a \(persona.manner.promptHint) chat partner. Write ONE friendly, casual sentence in \(targetName) inviting the user to open a chat with you — like a text from a friend who wants to catch up.
 
         Guidelines:
         - One sentence. No greeting like "Hi!" — go straight to the hook.
-        - If the context below mentions something the user has been working on or talking about, tie the invitation to that ("How's [project] going? Got a sec to vent?"). Otherwise just be warmly curious about their day.
+        - Default to a generic warm opener (weather, time of day, random thought, simple curiosity about their day). Only tie to a known topic if it is NEW (not in the recent-topics list below) AND you have something concrete and fresh to ask — never a generic "how's [project] going" check-in on something you already pitched recently.
         - Do NOT mention that you've been "tracking", "noticing", or "saved notes". Speak like a friend who remembers from a previous conversation.
         - Output ONLY the sentence — no quotes, no preamble, no extra text.
 
         \(userContext.isEmpty ? "(No prior notes about the user yet.)" : userContext)
+        \(recentTopicsBlock)
         """
 
         var raw = ""
