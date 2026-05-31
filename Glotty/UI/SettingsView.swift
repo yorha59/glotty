@@ -196,7 +196,17 @@ struct SettingsView: View {
     }
 }
 
-private struct LanguageModelSettingsSection: View {
+/// Internal (was private) so the Welcome window can embed this
+/// inline on step 4 — keeps first-provider setup inside onboarding
+/// instead of bouncing the user to a separate Settings panel.
+struct LanguageModelSettingsSection: View {
+    /// When false, the section header ("Language Model") and the
+    /// long footer paragraph are suppressed. The Welcome window
+    /// passes `false` because the step's title already says "Set
+    /// up your AI provider" — repeating the header makes the rows
+    /// look pushed down and out of alignment.
+    var showChrome: Bool = true
+
     @AppStorage("glotty.llmProvider") private var providerID: String = "zai"
     @AppStorage("glotty.kimi.endpoint") private var kimiEndpoint: String = ""
     @AppStorage("glotty.kimi.model") private var kimiModel: String = ""
@@ -218,29 +228,40 @@ private struct LanguageModelSettingsSection: View {
         case failed(String)
     }
 
-    var body: some View {
-        Section {
-            // Use a Menu (not a Picker) so the "Add custom provider…" action
-            // can live as the bottom item inside the dropdown — same
-            // discoverability pattern as macOS's "Other Network…" /
-            // "Customize Toolbar…". A Picker would have consumed the full
-            // row width and clipped any sibling control.
-            LabeledContent("Provider") {
-                Menu {
-                    providerPickerMenu
-                } label: {
-                    Text(currentProviderDisplayName)
-                }
-                .id(customRefreshToken)
+    @ViewBuilder
+    private var sectionContent: some View {
+        // Use a Menu (not a Picker) so the "Add custom provider…" action
+        // can live as the bottom item inside the dropdown — same
+        // discoverability pattern as macOS's "Other Network…" /
+        // "Customize Toolbar…". A Picker would have consumed the full
+        // row width and clipped any sibling control.
+        LabeledContent("Provider") {
+            Menu {
+                providerPickerMenu
+            } label: {
+                Text(currentProviderDisplayName)
             }
+            .id(customRefreshToken)
+        }
 
-            providerFields
-        } header: {
-            Text("Language Model")
-        } footer: {
-            Text("The engine that powers Fn → R polish. API keys are stored in macOS Keychain. OpenAI-compatible providers (OpenAI, DeepSeek, OpenRouter, Z.AI, plus any custom endpoint you add) share the same wire format. Polish output language and prompt templates live in the Polish tab.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        providerFields
+    }
+
+    var body: some View {
+        Group {
+            if showChrome {
+                Section {
+                    sectionContent
+                } header: {
+                    Text("Language Model")
+                } footer: {
+                    Text("The engine that powers Fn → R polish. API keys are stored in macOS Keychain. OpenAI-compatible providers (OpenAI, DeepSeek, OpenRouter, Z.AI, plus any custom endpoint you add) share the same wire format. Polish output language and prompt templates live in the Polish tab.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Section { sectionContent }
+            }
         }
         .onAppear { loadKey() }
         .onReceive(NotificationCenter.default.publisher(for: CustomProviderStore.didChangeNotification)) { _ in
@@ -822,7 +843,7 @@ private struct UserProfileSection: View {
             } header: {
                 Text("Your native language")
             } footer: {
-                Text("The language you speak natively. Drives auto-detected source / target choices and biases translation behavior toward what you're likely reading or writing. Separate from Glotty's UI language below.")
+                Text("The language you speak natively. Drives auto-detected source / target choices and biases translation behavior toward what you're likely reading or writing. Also the language Fn → E (Explain) renders its explanations in, and — unless you've explicitly picked one below — the language Glotty's UI uses on the next launch.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

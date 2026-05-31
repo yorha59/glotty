@@ -16,16 +16,30 @@ enum SystemLanguage: String, CaseIterable, Identifiable, Sendable {
     case system
     case en
     case zhHans = "zh-Hans"
+    case zhHant = "zh-Hant"
+    case ja
+    case ko
+    case es
+    case fr
+    case de
 
     var id: String { rawValue }
 
-    /// User-facing label for the picker. Shown in the user's
-    /// current UI language so the choice is immediately legible.
+    /// User-facing label for the picker. Shown in the language
+    /// itself (endonym), which is the convention for language
+    /// pickers and makes the option immediately legible to a
+    /// speaker of that language regardless of current UI locale.
     var displayName: String {
         switch self {
         case .system: return String(localized: "Use system default")
         case .en:     return "English"
         case .zhHans: return "中文（简体）"
+        case .zhHant: return "中文（繁體）"
+        case .ja:     return "日本語"
+        case .ko:     return "한국어"
+        case .es:     return "Español"
+        case .fr:     return "Français"
+        case .de:     return "Deutsch"
         }
     }
 
@@ -35,8 +49,7 @@ enum SystemLanguage: String, CaseIterable, Identifiable, Sendable {
     var bundleLocaleID: String? {
         switch self {
         case .system: return nil
-        case .en:     return "en"
-        case .zhHans: return "zh-Hans"
+        default:      return rawValue
         }
     }
 }
@@ -56,11 +69,25 @@ enum SystemLanguageManager {
     static let appleLanguagesKey = "AppleLanguages"
 
     static var current: SystemLanguage {
-        guard let raw = UserDefaults.standard.string(forKey: defaultsKey),
-              let lang = SystemLanguage(rawValue: raw) else {
-            return .system
+        // 1. Explicit pick — Settings → Profile → System language.
+        if let raw = UserDefaults.standard.string(forKey: defaultsKey),
+           let lang = SystemLanguage(rawValue: raw) {
+            return lang
         }
-        return lang
+        // 2. Implicit default — follow `native_language` (onboarding
+        //    Q3 / Profile → Native language). The two are conceptually
+        //    aligned: the language you speak natively is almost always
+        //    the language you want Glotty's UI in. Only kicks in when
+        //    the user hasn't touched the System language picker yet,
+        //    so an explicit pick is never overridden.
+        if let native = UserDefaults.standard.string(forKey: "glotty.user.nativeLanguage")?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !native.isEmpty,
+           let lang = SystemLanguage(rawValue: native) {
+            return lang
+        }
+        // 3. Fall through to the OS preference.
+        return .system
     }
 
     /// Persist the user's choice and rewrite `AppleLanguages` so

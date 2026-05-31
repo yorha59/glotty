@@ -11,7 +11,7 @@ options:
     macOS: "26.0"
   developmentLanguage: en
   createIntermediateGroups: true
-  knownRegions: [en, zh-Hans]
+  knownRegions: [en, zh-Hans, zh-Hant, ja, ko, es, fr, de]
 
 settings:
   base:

@@ -493,7 +493,16 @@ struct PopupView: View {
                 guard mode == .chat else { return }
                 if !didHydrateChatToday {
                     didHydrateChatToday = true
-                    hydrateTodayChat()
+                    // Onboarding chats are ephemeral: they ALWAYS start
+                    // from a fresh "Hello" and don't share the daily
+                    // thread with normal chats. Skipping hydrate keeps
+                    // `tutorThread` empty so `runTutorTurn` fires the
+                    // scripted opener; `persistTutorTurn` separately
+                    // refuses to write onboarding turns to ChatStore,
+                    // so today's real thread stays untouched.
+                    if !onboarding {
+                        hydrateTodayChat()
+                    }
                 }
                 // On the very first .task fire (counter == 0) we only
                 // produce an opening turn when there's no prior chat
@@ -2531,15 +2540,16 @@ struct PopupView: View {
             }
             target = initial
         case .explain:
-            // Explain output = the user's native language. That's the saved
-            // Translation "target" (where decode lands its results). Empty →
-            // fall back to the Profile native lang, then English.
-            let trimmedTarget = savedTarget?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            if !trimmedTarget.isEmpty {
-                target = trimmedTarget
-            } else {
-                target = userNativeLanguage()
-            }
+            // Explain output language is driven directly by the
+            // user's Native language (Profile → Native language /
+            // onboarding Q3). This is intentionally NOT the
+            // Translation default target — those are two different
+            // ideas: "what should Fn-T translate INTO" can legitimately
+            // differ from "what language do I want long-form
+            // explanations in" (the latter is almost always your
+            // most-comfortable reading language). `userNativeLanguage()`
+            // already handles its own fallback to the system locale.
+            target = userNativeLanguage()
         case .polish:
             // Polish output language: user pref → fallback to English (the most
             // common "I want this in idiomatic <X>" case for our audience).
@@ -2792,6 +2802,11 @@ struct PopupView: View {
     /// conversation. Also updates `tutorThreadID` because the first
     /// turn of the day is what creates the thread row in the store.
     private func persistTutorTurn(_ turn: TutorTurn) {
+        // Onboarding chats are ephemeral — they shouldn't end up in
+        // today's saved thread, otherwise the user's first real chat
+        // of the day would open with the setup Q&A still showing.
+        // Re-opening Welcome later also restarts onboarding fresh.
+        if onboarding { return }
         let snapRole: TutorTurnSnapshot.Role
         switch turn.role {
         case .user:   snapRole = .user

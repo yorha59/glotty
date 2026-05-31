@@ -41,8 +41,273 @@
     "1. In System Settings → Accessibility, click the (–) minus button to remove every Glotty entry, then relaunch Glotty and grant fresh.": {
       "localizations": {}
     },
+    "1.1 Translate (Fn → T)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.1 Translate (Fn → T)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.1 翻译 (Fn → T)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.1 翻譯 (Fn → T)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.1 翻訳 (Fn → T)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.1 번역 (Fn → T)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.1 Traducir (Fn → T)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.1 Traduire (Fn → T)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.1 Übersetzen (Fn → T)"
+          }
+        }
+      }
+    },
+    "1.2 Polish (Fn → P)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.2 Polish (Fn → P)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.2 润色 (Fn → P)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.2 潤色 (Fn → P)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.2 推敲 (Fn → P)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.2 다듬기 (Fn → P)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.2 Pulir (Fn → P)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.2 Polir (Fn → P)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.2 Polieren (Fn → P)"
+          }
+        }
+      }
+    },
+    "1.3 Explain (Fn → E)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.3 Explain (Fn → E)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.3 解释 (Fn → E)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.3 解釋 (Fn → E)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.3 解説 (Fn → E)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.3 풀이 (Fn → E)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.3 Explicar (Fn → E)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.3 Expliquer (Fn → E)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.3 Erklären (Fn → E)"
+          }
+        }
+      }
+    },
     "2. From Terminal:": {
       "localizations": {}
+    },
+    "2. Set up your AI provider": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. Set up your AI provider"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. 配置 AI 服务商"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. 設定 AI 服務商"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. AI プロバイダーを設定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. AI 공급자 설정"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. Configura tu proveedor de IA"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. Configurer votre fournisseur d'IA"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2. KI-Anbieter einrichten"
+          }
+        }
+      }
+    },
+    "3. Let's get to know each other": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. Let's get to know each other"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. 相互认识一下"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. 互相認識一下"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. 自己紹介しましょう"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. 서로 인사해요"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. Conozcámonos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. Faisons connaissance"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. Lass uns einander kennenlernen"
+          }
+        }
+      }
     },
     "A popup appears with the translation, no focus stolen.": {
       "localizations": {
@@ -290,6 +555,59 @@
         }
       },
       "extractionState": "manual"
+    },
+    "Back": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一步"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一步"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "戻る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이전"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atrás"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Précédent"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurück"
+          }
+        }
+      }
     },
     "Backend": {
       "localizations": {
@@ -670,6 +988,112 @@
         }
       }
     },
+    "Decode foreign text into a chosen language. Highlight any text, hold Fn, then within 600ms tap T. A popup shows the translation; press Esc to dismiss. Runs locally via Apple's translation — no LLM required.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decode foreign text into a chosen language. Highlight any text, hold Fn, then within 600ms tap T. A popup shows the translation; press Esc to dismiss. Runs locally via Apple's translation — no LLM required."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把外文翻译成你选定的语言。选中任意文本,按住 Fn,在 600 毫秒内按 T。弹窗会显示译文;按 Esc 关闭。基于 Apple 本地翻译框架,不需要 LLM。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將外文翻譯成你選定的語言。選取任意文字,按住 Fn,在 600 毫秒內按 T。彈出視窗會顯示譯文;按 Esc 關閉。透過 Apple 本機翻譯執行,無需 LLM。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外国語の文章を選んだ言語に翻訳します。テキストを選択し、Fn を押しながら 600 ミリ秒以内に T を押すと、ポップアップで翻訳が表示されます。Esc で閉じます。Apple のローカル翻訳で動作するため、LLM は不要です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "외국어 텍스트를 원하는 언어로 옮깁니다. 텍스트를 선택하고 Fn을 누른 채 600밀리초 이내에 T를 누르세요. 팝업으로 번역이 나타나며 Esc로 닫습니다. Apple 로컬 번역으로 동작하므로 LLM이 필요 없습니다."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decodifica texto en otro idioma. Selecciona el texto, mantén Fn y pulsa T en menos de 600 ms. Aparece una ventana con la traducción; pulsa Esc para cerrarla. Funciona localmente con la traducción de Apple, sin necesidad de un LLM."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduisez un texte étranger dans la langue choisie. Sélectionnez le texte, maintenez Fn et tapez T en moins de 600 ms. Une fenêtre affiche la traduction ; appuyez sur Esc pour la fermer. Fonctionne en local avec la traduction Apple, sans LLM."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übersetzt fremdsprachigen Text in eine gewählte Sprache. Text markieren, Fn halten und innerhalb von 600 ms T drücken. Ein Popup zeigt die Übersetzung; Esc zum Schließen. Läuft lokal über Apples Übersetzungs-Framework — kein LLM nötig."
+          }
+        }
+      }
+    },
+    "Deeper explanation in your native language — meaning, tone, usage, and how it shifts across contexts. Highlight a word, idiom, or sentence, hold Fn, tap E. Glotty streams a four-section explanation. Press Esc to dismiss.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deeper explanation in your native language — meaning, tone, usage, and how it shifts across contexts. Highlight a word, idiom, or sentence, hold Fn, tap E. Glotty streams a four-section explanation. Press Esc to dismiss."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用你的母语深入讲解 —— 含义、语气、用法以及在不同语境下的变化。选中单词、习语或句子,按住 Fn,按 E。Glotty 会分四部分流式输出讲解。按 Esc 关闭。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以你的母語深入解說 —— 含義、語氣、用法以及在不同語境下的變化。選取單字、慣用語或句子,按住 Fn,按 E。Glotty 會分四個段落串流回應。按 Esc 關閉。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたの母語でより深く解説します ―― 意味、語感、用法、文脈ごとのニュアンスの違いまで。単語・慣用句・文を選択し、Fn を押しながら E。Glotty が 4 つのセクションに分けてストリーミング解説します。Esc で閉じます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모국어로 더 깊이 풀어드립니다 — 뜻, 어감, 쓰임새, 문맥에 따른 변화까지. 단어, 관용구, 문장을 선택한 뒤 Fn을 누른 채 E를 누르세요. Glotty가 네 개 섹션으로 나누어 스트리밍 설명합니다. Esc로 닫습니다."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explicación más profunda en tu idioma — significado, tono, uso y cómo cambia según el contexto. Selecciona una palabra, modismo o frase, mantén Fn y pulsa E. Glotty transmite una explicación en cuatro secciones. Pulsa Esc para cerrar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explication approfondie dans votre langue — sens, ton, usage, et nuances selon le contexte. Sélectionnez un mot, une expression ou une phrase, maintenez Fn et tapez E. Glotty diffuse une explication en quatre sections. Esc pour fermer."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiefere Erklärung in deiner Muttersprache — Bedeutung, Ton, Verwendung und Verschiebungen im Kontext. Wort, Redewendung oder Satz markieren, Fn halten und E drücken. Glotty streamt eine Erklärung in vier Abschnitten. Esc zum Schließen."
+          }
+        }
+      }
+    },
     "Default source language": {
       "localizations": {
         "zh-Hans": {
@@ -906,6 +1330,59 @@
         }
       }
     },
+    "Explanation": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explanation"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "讲解"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解說"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解説"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "풀이"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explicación"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explication"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erklärung"
+          }
+        }
+      }
+    },
     "Export Glotty backup": {
       "localizations": {}
     },
@@ -1004,6 +1481,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "Glotty 设置"
+          }
+        }
+      }
+    },
+    "Glotty is a language tutor that lives in your menu bar. We'll quickly tour the three core actions, then have you set up an LLM, then chat briefly so I know how to address you.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty is a language tutor that lives in your menu bar. We'll quickly tour the three core actions, then have you set up an LLM, then chat briefly so I know how to address you."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 是常驻菜单栏的语言学习助手。我们先快速浏览三个核心功能,接着配置 LLM,最后简短聊一下,让我知道该怎么称呼你。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 是常駐選單列的語言學習助手。我們先快速看過三個核心功能,接著設定 LLM,最後簡短聊一下,讓我知道該怎麼稱呼你。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty はメニューバーに常駐する語学学習アシスタントです。まず 3 つの主要機能をざっと見て、LLM を設定し、最後にあなたの呼び方を教えてもらうために少しおしゃべりしましょう。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty는 메뉴 막대에 상주하는 언어 학습 도우미입니다. 먼저 세 가지 핵심 기능을 살펴보고, LLM을 설정한 다음, 어떻게 불러드리면 좋을지 짧게 대화해 보아요."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty es un tutor de idiomas que vive en tu barra de menús. Veremos rápido las tres acciones principales, luego configurarás un LLM y al final charlaremos un momento para saber cómo dirigirme a ti."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty est un tuteur linguistique installé dans votre barre de menus. Nous allons survoler les trois actions principales, puis configurer un LLM, et enfin discuter brièvement pour que je sache comment t'appeler."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty ist ein Sprach-Tutor in deiner Menüleiste. Wir gehen kurz die drei Hauptaktionen durch, richten dann ein LLM ein und plaudern zum Schluss kurz, damit ich weiß, wie ich dich ansprechen soll."
           }
         }
       }
@@ -1165,6 +1695,59 @@
         }
       }
     },
+    "Hi, I'm Glotty. Nice to meet you!": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hi, I'm Glotty. Nice to meet you!"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你好,我是 Glotty,很高兴认识你!"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你好,我是 Glotty,很高興認識你!"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "こんにちは、Glotty です。よろしくお願いします!"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "안녕하세요, Glotty입니다. 만나서 반가워요!"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¡Hola! Soy Glotty. ¡Encantado de conocerte!"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salut, je suis Glotty. Enchanté de te rencontrer !"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hi, ich bin Glotty. Schön, dich kennenzulernen!"
+          }
+        }
+      }
+    },
     "Highlight any text in another app (browser, PDF, Notes, etc.).": {
       "localizations": {
         "zh-Hans": {
@@ -1303,6 +1886,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "最近 7 天"
+          }
+        }
+      }
+    },
+    "Last step — Glotty will open a short chat to learn how you'd like to be addressed. Your answers automatically configure the relevant settings; you can change anything later from the menu bar.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last step — Glotty will open a short chat to learn how you'd like to be addressed. Your answers automatically configure the relevant settings; you can change anything later from the menu bar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最后一步 —— Glotty 会打开一个简短的对话,了解你希望被怎么称呼。你的回答会自动写入对应的设置;之后可以随时从菜单栏修改。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最後一步 —— Glotty 會開啟一個簡短的對話,了解你希望被怎麼稱呼。你的回答會自動寫入對應的設定;之後可以隨時從選單列修改。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最後のステップです —— Glotty が短いチャットを開いて、あなたの呼び方を教えてもらいます。あなたの回答は対応する設定に自動的に反映されます。後からメニューバーでいつでも変更できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마지막 단계예요 — Glotty가 짧은 대화를 열어 어떻게 불러드리면 좋을지 여쭤봅니다. 답변은 관련 설정에 자동으로 저장되며, 나중에 메뉴 막대에서 언제든지 바꿀 수 있어요."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Último paso — Glotty abrirá un chat corto para saber cómo prefieres que te llame. Tus respuestas configuran automáticamente los ajustes correspondientes; puedes cambiar cualquier cosa más tarde desde la barra de menús."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dernière étape — Glotty va ouvrir un court échange pour savoir comment t'appeler. Tes réponses configurent automatiquement les réglages correspondants ; tu pourras tout modifier plus tard depuis la barre de menus."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzter Schritt — Glotty öffnet ein kurzes Gespräch, um zu erfahren, wie du angesprochen werden möchtest. Deine Antworten konfigurieren die passenden Einstellungen automatisch; alles lässt sich später jederzeit aus der Menüleiste ändern."
           }
         }
       }
@@ -1489,6 +2125,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "新上下文名称"
+          }
+        }
+      }
+    },
+    "Next": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一步"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一步"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次へ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siguiente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suivant"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiter"
           }
         }
       }
@@ -1699,6 +2388,23 @@
     "Only dictionaries that are not installed for this language pair are shown.": {
       "localizations": {}
     },
+    "Open Language Model settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Language Model settings"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开「语言模型」设置"
+          }
+        }
+      }
+    },
     "Open Settings": {
       "localizations": {
         "zh-Hans": {
@@ -1821,15 +2527,111 @@
         }
       }
     },
+    "Polish, Explain, and Chat call out to an LLM, so Glotty needs at least one provider configured before they work. Pick a stock provider — OpenAI, Google Gemini, Z.AI, DeepSeek, Kimi — or paste any OpenAI-compatible endpoint and API key. Come back when you're done.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polish, Explain, and Chat call out to an LLM, so Glotty needs at least one provider configured before they work. Pick a stock provider — OpenAI, Google Gemini, Z.AI, DeepSeek, Kimi — or paste any OpenAI-compatible endpoint and API key. Come back when you're done."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "润色、解释、聊天都会调用 LLM,所以你需要先至少配置一个服务商。可以选内置的 —— OpenAI、Google Gemini、Z.AI、DeepSeek、Kimi —— 也可以粘贴任意兼容 OpenAI 的接口和 API 密钥。配置完再回到这里继续。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "潤色、解釋、聊天都會呼叫 LLM,所以你需要先至少設定一個服務商。可以選內建的 —— OpenAI、Google Gemini、Z.AI、DeepSeek、Kimi —— 或貼上任意相容 OpenAI 的端點與 API 金鑰。設定完再回到這裡繼續。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "推敲・解説・チャットはいずれも LLM を呼び出すため、少なくとも 1 つのプロバイダーの設定が必要です。標準のもの(OpenAI、Google Gemini、Z.AI、DeepSeek、Kimi)を選ぶか、OpenAI 互換のエンドポイントと API キーを貼り付けてください。設定が終わったらここに戻ってきてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다듬기, 풀이, 채팅은 모두 LLM을 호출하므로 적어도 하나의 공급자를 설정해야 합니다. 기본 공급자 — OpenAI, Google Gemini, Z.AI, DeepSeek, Kimi — 중에서 고르거나 OpenAI 호환 엔드포인트와 API 키를 붙여 넣으세요. 설정이 끝나면 다시 돌아와 주세요."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulir, Explicar y Chat usan un LLM, así que Glotty necesita al menos un proveedor configurado para funcionar. Elige uno predefinido — OpenAI, Google Gemini, Z.AI, DeepSeek, Kimi — o pega cualquier endpoint compatible con OpenAI y su clave API. Vuelve cuando hayas terminado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polir, Expliquer et Chat appellent un LLM ; Glotty a donc besoin d'au moins un fournisseur configuré. Choisissez-en un parmi OpenAI, Google Gemini, Z.AI, DeepSeek, Kimi — ou collez n'importe quel endpoint compatible OpenAI avec sa clé API. Revenez ici une fois prêt."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polieren, Erklären und Chat rufen alle ein LLM auf, daher braucht Glotty mindestens einen konfigurierten Anbieter. Wähle einen vordefinierten — OpenAI, Google Gemini, Z.AI, DeepSeek, Kimi — oder füge einen OpenAI-kompatiblen Endpunkt mit API-Schlüssel ein. Komm danach hierher zurück."
+          }
+        }
+      }
+    },
     "Polished": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "润色结果"
+            "value": "润色后"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polished"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "潤色後"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改善後"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다듬은 표현"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version polie"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Korrigiert"
           }
         }
-      }
+      },
+      "extractionState": "manual"
     },
     "Practice": {
       "localizations": {}
@@ -1880,6 +2682,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "偏好设置 + 记忆/上下文 + 聊天历史(推荐)"
+          }
+        }
+      }
+    },
+    "Press": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按下"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按下"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "押してください:"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "누르세요:"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulsa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appuyez sur"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drücke"
           }
         }
       }
@@ -2170,6 +3025,59 @@
         }
       }
     },
+    "Rewrite your own writing in idiomatic form. Highlight a draft, hold Fn, tap P. Glotty returns 1–3 polished rewrites plus a list of grammar / word-choice issues. Press Esc to dismiss.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rewrite your own writing in idiomatic form. Highlight a draft, hold Fn, tap P. Glotty returns 1–3 polished rewrites plus a list of grammar / word-choice issues. Press Esc to dismiss."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把你自己写的内容改写得更地道。选中草稿,按住 Fn,按 P。Glotty 会返回 1–3 个润色版本,并列出语法 / 用词问题。按 Esc 关闭。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把你自己寫的內容改寫得更道地。選取草稿,按住 Fn,按 P。Glotty 會回傳 1–3 個潤色版本,並列出文法 / 用詞問題。按 Esc 關閉。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなた自身の文章を自然な表現に書き換えます。下書きを選択し、Fn を押しながら P を押してください。Glotty が 1〜3 つの推敲案と、文法・語選びの指摘を返します。Esc で閉じます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "직접 쓴 글을 자연스러운 표현으로 고쳐 씁니다. 초안을 선택하고 Fn을 누른 채 P를 누르세요. Glotty가 1–3개의 다듬은 표현과 문법 / 어휘 지적을 반환합니다. Esc로 닫습니다."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reescribe tu propio texto en una forma más natural. Selecciona el borrador, mantén Fn y pulsa P. Glotty devuelve de 1 a 3 versiones pulidas y una lista de problemas de gramática o vocabulario. Pulsa Esc para cerrar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reformulez votre propre texte de manière plus idiomatique. Sélectionnez le brouillon, maintenez Fn et tapez P. Glotty propose 1 à 3 reformulations soignées et une liste de problèmes de grammaire ou de vocabulaire. Esc pour fermer."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schreibt deinen eigenen Text idiomatischer um. Entwurf markieren, Fn halten und P drücken. Glotty liefert 1–3 polierte Varianten plus eine Liste von Grammatik- / Wortwahl-Hinweisen. Esc zum Schließen."
+          }
+        }
+      }
+    },
     "Save": {
       "localizations": {
         "zh-Hans": {
@@ -2243,12 +3151,224 @@
         }
       }
     },
+    "Skip for now": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip for now"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂时跳过"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫時跳過"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今はスキップ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금은 건너뛰기"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omitir por ahora"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passer pour l'instant"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorerst überspringen"
+          }
+        }
+      }
+    },
     "Some permissions missing — Fn → T won't work yet.": {
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "缺少部分权限 —— Fn → T 暂时无法使用。"
+          }
+        }
+      }
+    },
+    "Source": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原文"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原文"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原文"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원문"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Origen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelle"
+          }
+        }
+      }
+    },
+    "Source (idiom)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source (idiom)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原文(习语)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原文(慣用語)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原文(慣用句)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원문(관용구)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Origen (modismo)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source (expression)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelle (Redewendung)"
+          }
+        }
+      }
+    },
+    "Source (rough draft)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source (rough draft)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原文(草稿)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原文(草稿)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原文(下書き)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원문(초안)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Origen (borrador)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source (brouillon)"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelle (Entwurf)"
           }
         }
       }
@@ -2282,6 +3402,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "说话风格"
+          }
+        }
+      }
+    },
+    "Start onboarding chat": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start onboarding chat"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始引导对话"
           }
         }
       }
@@ -2528,8 +3665,51 @@
             "state": "translated",
             "value": "翻译"
           }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translation"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻譯"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "訳"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "번역"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traducción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduction"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übersetzung"
+          }
         }
-      }
+      },
+      "extractionState": "manual"
     },
     "Translation engine": {
       "localizations": {
@@ -2627,6 +3807,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "每周"
+          }
+        }
+      }
+    },
+    "Welcome to Glotty": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welcome to Glotty"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "欢迎使用 Glotty"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歡迎使用 Glotty"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty へようこそ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty에 오신 것을 환영합니다"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Te damos la bienvenida a Glotty"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bienvenue dans Glotty"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Willkommen bei Glotty"
           }
         }
       }
@@ -2828,6 +4061,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "可取消"
+          }
+        }
+      }
+    },
+    "to see the result": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "to see the result"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看结果"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看結果"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "で結果を見る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결과 보기"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "para ver el resultado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pour voir le résultat"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "um das Ergebnis zu sehen"
           }
         }
       }

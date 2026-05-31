@@ -71,12 +71,51 @@ private enum OSLocalizer {
         osPreferredLanguage().split(separator: "-").prefix(2).joined(separator: "-")
     }
 
-    /// Look up `key` in the OS-preferred language. Falls back to
-    /// returning the key itself (which is the English source string
-    /// by convention) when no matching lproj is present.
+    /// Look up `key` in the OS-preferred language. Resolution order:
+    ///
+    /// 1. Record the key as encountered so Settings → System →
+    ///    Refresh translations covers Welcome strings alongside the
+    ///    rest of the UI.
+    /// 2. Return the source verbatim for English-OS users (no work).
+    /// 3. LLM cache hit (per-OS-language) — fast path for strings the
+    ///    user previously triggered a refresh on.
+    /// 4. Bundle lookup against the matching `.lproj`. If the build
+    ///    shipped a translation, use it.
+    /// 5. Otherwise queue the key for on-demand LLM fill (LocaleCache
+    ///    debounces a batch translation) and return the source — the
+    ///    Welcome view's `.localizationAware()` rebuilds when the
+    ///    fill notification fires.
     static func string(_ key: String) -> String {
+        let lang = osPreferredContentKey()
+
+        // Always record — `Refresh translations` reads the encountered
+        // set, so this is how Welcome strings get included in the
+        // user-triggered re-translation pass.
+        LocalizationCache.shared.recordEncountered(key)
+
+        // English source language doesn't need translation.
+        guard lang != "en", !lang.hasPrefix("en-") else {
+            return key
+        }
+
+        // 1. LLM cache.
+        if let cached = LocalizationCache.shared.translation(for: key, language: lang) {
+            return cached
+        }
+
+        // 2. Shipped lproj catalog.
         let target = bundle ?? Bundle.main
-        return target.glotty_localizedString(forKey: key, value: key, table: nil)
+        let resolved = target.glotty_localizedString(forKey: key, value: key, table: nil)
+        if resolved != key {
+            return resolved
+        }
+
+        // 3. Queue for on-demand LLM fill. Returning the source key
+        //    means the user sees English until the fill lands; the
+        //    `.localizationAware()` modifier on WelcomeView reruns
+        //    the body once the cache update notification fires.
+        LocalizationCache.shared.queueMissingForTranslation(key, language: lang)
+        return resolved
     }
 }
 
@@ -280,6 +319,14 @@ private struct WelcomeView: View {
         // a mid-display-cycle resize crash; see the controller's
         // `host.sizingOptions` comment.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // Re-render when `LocalizationCache` lands new translations.
+        // OSLocalizer queues missing OS-language translations into
+        // the LLM filler; once the filler returns and posts
+        // `didUpdateNotification`, this modifier flips an internal
+        // id and SwiftUI rebuilds the body. Strings that were
+        // showing the English source while the fill was in flight
+        // pick up the freshly-cached OS-language translation here.
+        .localizationAware()
     }
 
     // MARK: - Step-aware spacing
@@ -389,7 +436,7 @@ private struct WelcomeView: View {
             Button {
                 onStartOnboardingChat()
             } label: {
-                Label(OSLocalizer.string("Start onboarding chat"),
+                Label(OSLocalizer.string("Hi, I'm Glotty. Nice to meet you!"),
                       systemImage: "bubble.left.and.text.bubble.right")
             }
             .buttonStyle(.borderedProminent)

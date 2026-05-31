@@ -214,7 +214,7 @@ enum SettingsRegistry {
             id: "native_language",
             defaultsKey: "glotty.user.nativeLanguage",
             displayName: String(localized: "Native language"),
-            description: "The language the user speaks natively. Drives default translation direction and prompt phrasing."
+            description: "The language the user speaks natively. Drives default translation direction and prompt phrasing, is the language Fn → E (Explain) renders its explanations in, and — unless the user has explicitly picked one — also becomes Glotty's UI language on the next launch."
         ))
 
         // Translation defaults use the "+ sentinel" variant — empty

@@ -19,7 +19,12 @@ struct SystemLanguageSection: View {
     var body: some View {
         Section {
             Picker("System language", selection: Binding<SystemLanguage>(
-                get: { SystemLanguage(rawValue: rawLanguage) ?? .system },
+                // Reading via `.current` (not `rawLanguage` directly)
+                // surfaces the implicit native-language fallback in
+                // the picker UI — otherwise the user sees "Use system
+                // default" even when behavior actually follows their
+                // saved `native_language`. See SystemLanguageManager.
+                get: { SystemLanguageManager.current },
                 set: { newValue in
                     Task { await switchLanguage(to: newValue) }
                 }
