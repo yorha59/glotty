@@ -184,6 +184,12 @@ struct PopupView: View {
     /// true — pitches a specific topic instead of a neutral greeting,
     /// since the user didn't come in with a question of their own.
     let proactive: Bool
+    /// True when this chat session was launched from the Welcome
+    /// window's onboarding handoff step. The chat-mode runs a
+    /// scripted setup conversation (asks display name, pronouns,
+    /// native lang, polish target) and applies each answer via
+    /// `set_setting` tool calls — see `TutorPrompt.build`.
+    let onboarding: Bool
     /// Fired the first time the user expands the polish chat from the
     /// collapsed pill. Lets `PopupController` grow the panel vertically
     /// so the new chat region doesn't squeeze the polish content above.
@@ -202,6 +208,7 @@ struct PopupView: View {
          mode: PopupMode,
          replay: PopupReplayPayload? = nil,
          proactive: Bool = false,
+         onboarding: Bool = false,
          onClose: @escaping () -> Void,
          onChatExpand: (() -> Void)? = nil,
          registerExtractionTrigger: ((@escaping () -> Void) -> Void)? = nil) {
@@ -209,6 +216,7 @@ struct PopupView: View {
         self.mode = mode
         self.replay = replay
         self.proactive = proactive
+        self.onboarding = onboarding
         self.onClose = onClose
         self.onChatExpand = onChatExpand
         self.registerExtractionTrigger = registerExtractionTrigger
@@ -2908,6 +2916,17 @@ struct PopupView: View {
             message += " " + note
         }
         appendSystemTurn(message)
+        // In onboarding the user expects Glotty to keep driving the
+        // conversation — confirming a pronoun shouldn't leave them
+        // staring at a quiet thread waiting for someone to speak.
+        // Auto-fire the next LLM turn so it moves on to the next
+        // question (or the wrap-up turn after the last one). Brief
+        // delay so the user can read the system "Applied" line first.
+        if onboarding {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                tutorRunCounter &+= 1
+            }
+        }
     }
 
     private func applyOpenSettingsTab(call: inout PendingToolCall, at idx: Int) {
@@ -3006,6 +3025,12 @@ struct PopupView: View {
             // block the prompt build below.
             TopicExtractor.extractPendingInBackground()
         }
+        // Onboarding chat (launched from Welcome step 3) forces tool
+        // calls ON regardless of the user's toggle — the whole point
+        // of this chat is to collect setup answers and emit
+        // `set_setting` calls. The prompt also gets the onboarding
+        // flag so TutorPrompt can switch to its scripted setup
+        // script instead of free conversation.
         let prompt = TutorPrompt.build(
             history: history,
             targetLanguage: target,
@@ -3014,7 +3039,8 @@ struct PopupView: View {
             isFirstTurn: isFirstTurn,
             proactive: isFirstTurn && proactive,
             recentTopics: recentTopics,
-            allowToolCalls: chatAllowSettingsChanges
+            allowToolCalls: chatAllowSettingsChanges || onboarding,
+            onboarding: onboarding
         )
 
         var raw = ""

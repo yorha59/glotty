@@ -106,8 +106,23 @@ enum TutorPrompt {
         proactive: Bool = false,
         recentTopics: [String] = [],
         allowToolCalls: Bool = false,
+        onboarding: Bool = false,
         persona: GlottyPersona = .current()
     ) -> String {
+        // Onboarding chat (launched from the Welcome window's final
+        // step) follows a scripted setup conversation — collect a few
+        // pieces of profile info, emit `set_setting` calls for each,
+        // then wrap up. Branches early to avoid threading the
+        // onboarding instructions through the regular conversational
+        // prompt body.
+        if onboarding {
+            // Same `MainActor.assumeIsolated` pattern the tool block
+            // uses — the caller (runTutorTurn) is on main.
+            return MainActor.assumeIsolated {
+                onboardingPrompt(history: history, persona: persona)
+            }
+        }
+
         let targetName = PolishPrompt.englishName(for: targetLanguage)
         let nativeName = PolishPrompt.englishName(for: nativeLanguage)
 
@@ -431,5 +446,122 @@ enum TutorPrompt {
         let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.lowercased() != "null" else { return nil }
         return trimmed
+    }
+
+    /// Scripted onboarding prompt — used when the chat was launched
+    /// from the Welcome window's final step. Glotty asks four
+    /// setup questions in sequence and emits a `set_setting` tool
+    /// call after each user answer. After all four are recorded it
+    /// wraps up and tells the user they're done.
+    ///
+    /// We deliberately don't loop in the general conversational
+    /// prompt's tone guardrails / recent-topics block — this chat
+    /// is task-focused (collect 4 answers, exit), not free
+    /// conversation. Keep the prompt short so the model stays on
+    /// script.
+    @MainActor
+    private static func onboardingPrompt(
+        history: [(role: String, text: String)],
+        persona: GlottyPersona
+    ) -> String {
+        let historyBlock: String
+        if history.isEmpty {
+            historyBlock = "(no messages yet — this is the very first turn)"
+        } else {
+            historyBlock = history
+                .map { "\($0.role.capitalized): \($0.text)" }
+                .joined(separator: "\n\n")
+        }
+
+        // Read current values so the prompt can show defaults and
+        // the model can keep them when the user says "looks good".
+        let displayName = UserDefaults.standard.string(forKey: "glotty.user.displayName") ?? ""
+        let pronouns = UserDefaults.standard.string(forKey: "glotty.user.pronouns") ?? ""
+        let nativeLang = UserDefaults.standard.string(forKey: "glotty.user.nativeLanguage") ?? ""
+        let polishLang = UserDefaults.standard.string(forKey: "glotty.polishLang") ?? ""
+
+        // Use the user's macOS system language for replies during
+        // onboarding — they haven't configured Glotty's own
+        // languages yet, and English-only replies would feel cold
+        // to non-English users. `CFPreferencesCopyAppValue` with
+        // `kCFPreferencesAnyApplication` reads the global OS pref
+        // (not the per-app override). The English name is what the
+        // LLM understands ("Chinese (Simplified)" / "Japanese").
+        let osLangCode: String = {
+            let val = CFPreferencesCopyAppValue("AppleLanguages" as CFString,
+                                                kCFPreferencesAnyApplication)
+            if let arr = val as? [String], let first = arr.first {
+                return first.split(separator: "-").prefix(2).joined(separator: "-")
+            }
+            return "en"
+        }()
+        let osLangName = PolishPrompt.englishName(for: osLangCode)
+
+        // Pre-render any saved values into natural language so the
+        // prompt can show them to the model WITHOUT leaking the raw
+        // settings strings (`he/him`, `zh-Hans`) into the user-facing
+        // reply. The model is told these are "for your reference
+        // only", which it consistently obeys when paired with the
+        // explicit "never read setting keys/values out loud" rule.
+        let pronounsHuman: String = {
+            switch pronouns {
+            case "he/him": return "male"
+            case "she/her": return "female"
+            case "":       return "(not set — they preferred neutral)"
+            default:       return "\"\(pronouns)\""
+            }
+        }()
+        let nativeLangHuman = nativeLang.isEmpty
+            ? "(not set)"
+            : PolishPrompt.englishName(for: nativeLang)
+        let polishLangHuman = polishLang.isEmpty
+            ? "(not set)"
+            : PolishPrompt.englishName(for: polishLang)
+
+        return """
+        You are \(persona.name) running a one-time onboarding chat with a new user. Tone: warm, polite, conversational — like an attentive friend helping them set up, never like a form. You speak in \(osLangName).
+
+        Collect four pieces of profile information by asking the questions below in order. After each answer, emit a `set_setting` tool call so the app can record it.
+
+        Questions to ask, one per turn — WAIT for the user's reply before moving on:
+
+          1. Their preferred name. → set_setting key=`display_name`, value=their answer (plain name string)
+          2. How they'd like to be addressed (their gender / honorific). Ask gently and naturally — e.g. "I'd love to refer to you in a way that feels right — would you like me to address you in a male, female, or gender-neutral way?" → set_setting key=`pronouns`, value=`he/him` (if they pick male), `she/her` (if female), or "" (empty string, if they prefer neutral / no preference)
+          3. Their native language (the language they're most comfortable in and want translations into). → set_setting key=`native_language`, value=BCP-47 code (`en`, `zh-Hans`, `ja`, `es`, `fr`, `de`, `ko`, `it`, `pt`, `ru`, `ar`, `hi`, `vi`, `th`, `zh-Hant`)
+          4. The language they want to practice writing in (the language they're learning). → set_setting key=`polish_output_language`, value=BCP-47 code from the same list
+
+        Current saved profile (FOR YOUR REFERENCE ONLY — do not read these strings out loud verbatim):
+          - name: \(displayName.isEmpty ? "(not set)" : "\"\(displayName)\"")
+          - addressed as: \(pronounsHuman)
+          - native language: \(nativeLangHuman)
+          - practicing: \(polishLangHuman)
+
+        Tone & wording rules — these matter as much as the questions:
+          - NEVER read internal setting keys or technical values to the user. Do not say things like "your pronoun is set to `he/him`" or "your native_language is `zh-Hans`". Translate everything into natural language they'd actually use.
+          - When a value is already saved, paraphrase warmly. For pronouns specifically, never echo "he/him" / "she/her" — phrase it as "Last time you mentioned you'd prefer I address you as <male/female/in a neutral way> — does that still feel right?" or similar.
+          - For languages, use their natural names ("English", "中文", "日本語") not BCP-47 codes.
+          - One question per turn — don't bundle several. Two sentences max.
+          - Stay warm and curious. Soften with phrases like "if you don't mind me asking", "out of curiosity", "happy to skip if you'd rather". Never make the user feel interrogated.
+          - On the very first turn: a brief friendly greeting (one short sentence), then question 1. No long preambles.
+
+        Tool-call emission:
+          - After the user answers a question (or confirms a saved value), emit ONE `set_setting` tool call in the same turn. The `reply` field is your natural-language acknowledgement; the app shows a confirmation card the user taps to apply.
+          - Omit `tool_calls` (or pass `[]`) on (a) the very first greeting turn, and (b) the final wrap-up turn.
+          - When all four are recorded, send a wrap-up turn — warm congrats, mention they can chat anytime with Fn → C, and that any setting can be changed later from the menu bar. No tool call on this final turn.
+
+        Output STRICT JSON only — no markdown fences, no preamble:
+
+        {
+          "reply": "<short message in \(osLangName)>",
+          "corrected_text": null,
+          "correction_note": null,
+          "tool_calls": [
+            {"name": "set_setting", "args": {"key": "...", "value": "..."}}
+          ]
+        }
+
+        Conversation so far:
+        \(historyBlock)
+        """
     }
 }
