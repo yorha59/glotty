@@ -32,8 +32,41 @@ jobs:
       - name: Package DMG
         run: bash scripts/make-dmg-nosign.sh
 
-      - name: Upload DMG artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: Glotty-DMG
-          path: dist/*.dmg
+      - name: Copy artifact to persistent location
+        run: |
+          mkdir -p ~/ci-artifacts/glotty
+          cp dist/*.dmg ~/ci-artifacts/glotty/
+          echo "=== Artifacts ==="
+          ls -lh ~/ci-artifacts/glotty/
+
+      - name: Publish to Gitea Release
+        run: |
+          GITEA_TOKEN=$(cat ~/projects/miner/.git-token)
+          DMG_FILE=$(ls dist/*.dmg | head -1)
+          DMG_NAME=$(basename "$DMG_FILE")
+          RELEASE_TAG="latest-build"
+          API="http://truenas.local:30008/api/v1/repos/hemoon/glotty"
+
+          # Delete old release
+          curl -sf -X DELETE \
+            -H "Authorization: token $GITEA_TOKEN" \
+            "$API/releases/tags/$RELEASE_TAG" 2>/dev/null || true
+
+          # Create release
+          RELEASE_ID=$(curl -sf -X POST \
+            -H "Authorization: token $GITEA_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{\"tag_name\":\"$RELEASE_TAG\",\"name\":\"Latest Build\",\"body\":\"Auto-built DMG from main branch\",\"target_commitish\":\"main\"}" \
+            "$API/releases" | python3 -c "import json,sys; print(json.load(sys.stdin).get('id',''))")
+
+          echo "Release ID: $RELEASE_ID"
+
+          # Upload DMG
+          curl -sf -X POST \
+            -H "Authorization: token $GITEA_TOKEN" \
+            -F "attachment=@$DMG_FILE" \
+            "$API/releases/$RELEASE_ID/assets?name=$DMG_NAME" | python3 -c "
+          import json,sys
+          r=json.load(sys.stdin)
+          print('Uploaded:', r.get('name','?'), f\"({r.get('size','?')} bytes)\")
+          print('Download:', r.get('browser_download_url','?'))"
