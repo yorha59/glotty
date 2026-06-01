@@ -51,9 +51,24 @@ KEYCHAIN_PASS_FILE="${KEYCHAIN_PASS_FILE:-}"
 # stored on the runner (NOT in the repo, NOT in env vars passed to
 # the workflow). Same pattern as ~/projects/miner/.git-token: a
 # 600-mode file on the runner that the workflow points to.
+#
+# act_runner's job session also gives the security command a HOME
+# that doesn't match the runner user's actual home, so the
+# default-keychain lookup ("login.keychain") may resolve to a
+# different file than the one we set up. Targeting the keychain by
+# absolute path avoids that ambiguity.
 if [ -n "$KEYCHAIN_PASS_FILE" ] && [ -r "$KEYCHAIN_PASS_FILE" ]; then
     echo "==> Unlocking login keychain (CI mode)"
-    security unlock-keychain -p "$(cat "$KEYCHAIN_PASS_FILE")" login.keychain
+    REAL_HOME=$(dscl . -read "/Users/$(whoami)" NFSHomeDirectory 2>/dev/null | awk '{print $2}')
+    REAL_HOME="${REAL_HOME:-$HOME}"
+    KEYCHAIN_PATH="$REAL_HOME/Library/Keychains/login.keychain-db"
+    echo "    User: $(whoami)   HOME: $HOME   Resolved home: $REAL_HOME"
+    echo "    Keychain: $KEYCHAIN_PATH"
+    ls -la "$KEYCHAIN_PATH" 2>&1
+    security unlock-keychain -p "$(cat "$KEYCHAIN_PASS_FILE")" "$KEYCHAIN_PATH"
+    # Make sure subsequent codesign + notarytool calls also target
+    # this keychain, not a default elsewhere.
+    security list-keychains -d user -s "$KEYCHAIN_PATH"
 fi
 
 echo "==> Building $SCHEME ($CONFIG) unsigned"
