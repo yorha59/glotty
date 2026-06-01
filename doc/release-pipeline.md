@@ -100,23 +100,39 @@ xcrun notarytool history --keychain-profile glotty-notary | head
 
 ### Allowing the runner's codesign to use the cert non-interactively
 
-By default the keychain prompts for permission on first use of a
-private key. CI runs in a non-interactive shell — the prompt is
-fatal. Tell the keychain to skip the prompt for codesign:
+Two things have to be true at signing time on the runner:
+
+**1. Keychain is unlocked from the act_runner session.**
+
+`act_runner` spawns its own session per job; that session sees the
+login keychain as **locked** even after the user has unlocked it
+interactively or via `set-keychain-settings -l`. The reliable fix
+is to unlock at the start of each job, from inside the workflow.
+
+`scripts/make-dmg-signed.sh` looks for `KEYCHAIN_PASS_FILE` env
+var. If it's set and the file is readable, the script unlocks the
+login keychain at job start using the file contents as the
+password. The workflow points it at `~/projects/miner/.keychain-pass`
+on the runner (chmod 600, password in plaintext at rest — runner's
+filesystem encryption is the protection here).
+
+Create the password file on the runner once:
 
 ```bash
-# Unlock the login keychain at boot / before each run if the runner
-# autostarts. For act_runner, this can go in a launchd plist or in
-# the runner's startup script:
-security unlock-keychain -p "<runner-user-login-password>" login.keychain
+echo "<runner-user-login-password>" > ~/projects/miner/.keychain-pass
+chmod 600 ~/projects/miner/.keychain-pass
+```
 
-# Allow codesign to read the private key without prompting:
+**2. codesign is allowed to use the private key without prompting.**
+
+Grant the partition-list permission once:
+
+```bash
 security set-key-partition-list -S apple-tool:,apple: \
     -s -k "<runner-user-login-password>" login.keychain
 ```
 
-These two lines should run before any signing operation. The
-simplest place is the runner's startup script.
+This is persistent until the cert is reimported.
 
 ## Inputs the script honors
 

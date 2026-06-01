@@ -42,6 +42,19 @@ trap 'rm -rf "$BUILD_DIR"' EXIT
 SIGN_IDENTITY="${SIGN_IDENTITY:-Developer ID Application: Simon Zu (47D8DFFZQ4)}"
 TEAM_ID="${TEAM_ID:-47D8DFFZQ4}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-glotty-notary}"
+KEYCHAIN_PASS_FILE="${KEYCHAIN_PASS_FILE:-}"
+
+# CI runs under act_runner which spawns its own session; the user's
+# login keychain shows up as locked from inside that session even
+# though `set-keychain-settings -l` was set to no auto-lock. The
+# only reliable fix is to unlock at job start using a password
+# stored on the runner (NOT in the repo, NOT in env vars passed to
+# the workflow). Same pattern as ~/projects/miner/.git-token: a
+# 600-mode file on the runner that the workflow points to.
+if [ -n "$KEYCHAIN_PASS_FILE" ] && [ -r "$KEYCHAIN_PASS_FILE" ]; then
+    echo "==> Unlocking login keychain (CI mode)"
+    security unlock-keychain -p "$(cat "$KEYCHAIN_PASS_FILE")" login.keychain
+fi
 
 echo "==> Building $SCHEME ($CONFIG) unsigned"
 # Build without code signing first; we re-sign manually below with
