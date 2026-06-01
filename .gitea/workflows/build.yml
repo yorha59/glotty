@@ -18,19 +18,19 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Build Glotty
-        run: |
-          xcodebuild \
-            -scheme Glotty \
-            -configuration Release \
-            -destination "platform=macOS" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            ENABLE_HARDENED_RUNTIME=NO \
-            build
-
-      - name: Package DMG
-        run: bash scripts/make-dmg-nosign.sh
+      - name: Build, sign, notarize, staple DMG
+        # The signed script handles build + sign + DMG + notarize +
+        # staple end-to-end. Prerequisites the runner must have set
+        # up once before this works:
+        #   1. Developer ID Application certificate installed in the
+        #      runner's login keychain.
+        #   2. notarytool credentials stored under profile name
+        #      `glotty-notary`:
+        #         xcrun notarytool store-credentials "glotty-notary" \
+        #             --apple-id hemoon@outlook.com \
+        #             --team-id 47D8DFFZQ4
+        # See doc/release-pipeline.md for the full runner setup steps.
+        run: bash scripts/make-dmg-signed.sh
 
       - name: Copy artifact to persistent location
         run: |
