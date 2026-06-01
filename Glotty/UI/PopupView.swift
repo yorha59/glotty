@@ -622,14 +622,16 @@ struct PopupView: View {
             maxHeight: mode == .polish ? .infinity : nil,
             alignment: .topLeading
         )
-        // The cap MUST come after `.fixedSize` to actually clamp
-        // the SwiftUI ideal that AppKit reads via `preferredContentSize`.
-        // `.fixedSize` reports "I want to be content-sized" (e.g.
-        // 1500pt for long content). `.frame(maxHeight: cap)` then
-        // clamps that at the screen cap, and SwiftUI is forced to
-        // render in the smaller space — the inner ScrollView takes
-        // over for the overflow.
-        .fixedSize(horizontal: false, vertical: mode != .polish)
+        // Cap the outer height at the screen so the panel can't grow
+        // past it. We dropped `.fixedSize(vertical:)` from this layer:
+        // it was reporting the FULL intrinsic content height (e.g.
+        // 1500pt) as the panel's preferredContentSize, then telling
+        // SwiftUI to render at that size while the panel was clamped
+        // at maxPanelHeight — which left the ScrollView with content
+        // pinned to the bottom rather than scrollable from the top.
+        // Without `.fixedSize`, SwiftUI renders at the size AppKit
+        // actually gives it (maxPanelHeight), and the inner ScrollView
+        // naturally lets the user scroll the overflow.
         .frame(maxHeight: maxPanelHeight)
     }
 
@@ -648,9 +650,36 @@ struct PopupView: View {
         if mode == .chat {
             contentColumn
         } else {
-            ScrollView(.vertical, showsIndicators: true) {
-                contentColumn
-                    .fixedSize(horizontal: false, vertical: true)
+            // Force the scroll position to the source text on first
+            // paint. Without this, having a TextField anywhere in the
+            // content (the polish/explain Discuss chat input) causes
+            // macOS to auto-promote it to first responder when the
+            // panel becomes key, which auto-scrolls the ScrollView to
+            // bring the input into view — pushing the source text +
+            // section headers off the top of the panel.
+            //
+            // We do TWO things:
+            //   1. `defaultScrollAnchor(.top)` — SwiftUI 5+ initial
+            //      anchor hint.
+            //   2. ScrollViewReader + a small retry loop — macOS's
+            //      first-responder auto-scroll fires AFTER the first
+            //      layout pass, so a one-shot `scrollTo` in `.onAppear`
+            //      doesn't reliably win. Repeating a few times over
+            //      ~600ms guarantees the final position is the top.
+            ScrollViewReader { proxy in
+                ScrollView(.vertical, showsIndicators: true) {
+                    contentColumn
+                        .fixedSize(horizontal: false, vertical: true)
+                        .id("popup-top")
+                }
+                .defaultScrollAnchor(.top)
+                .onAppear {
+                    for tick in 0..<6 {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + Double(tick) * 0.1) {
+                            proxy.scrollTo("popup-top", anchor: .top)
+                        }
+                    }
+                }
             }
         }
     }
@@ -1803,20 +1832,18 @@ struct PopupView: View {
                             Spacer(minLength: 0)
                         }
                         .frame(maxWidth: .infinity)
-                    } else if polishChatThread.count > 3 {
-                        // ≤3 turns render inline (every message visible).
-                        // Past 3, the thread becomes a ScrollView so the
-                        // chat region doesn't grow without bound. Polish
-                        // panels are user-resizable, so the user can drag
-                        // taller to see more without scrolling.
-                        ScrollView {
-                            polishChatTurnsList
-                        }
                     } else {
+                        // Render every turn inline — no nested ScrollView.
+                        // The OUTER scroll in `scrollableContent` handles
+                        // overflow for the whole popup; a nested ScrollView
+                        // here was eating scroll gestures, locking the
+                        // outer scroll at whatever position SwiftUI started
+                        // at, and hiding the source text at the top + the
+                        // chat input at the bottom.
                         polishChatTurnsList
                     }
                 }
-                .frame(minHeight: 180, maxHeight: 360, alignment: .topLeading)
+                .frame(minHeight: 180, alignment: .topLeading)
 
                 suggestionCards
 

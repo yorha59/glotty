@@ -291,6 +291,17 @@ final class PopupController {
         }
 
         panel.orderFrontRegardless()
+        // Clear any auto-promoted first responder. macOS picks the
+        // first focusable text view in the SwiftUI hierarchy when an
+        // NSPanel becomes key — that's the polish/explain Discuss
+        // chat input, buried at the bottom of the popup. macOS then
+        // auto-scrolls the ScrollView to bring the focused field
+        // into view, pushing the source text + section labels off
+        // the top of the panel. Explicitly setting firstResponder
+        // to nil after the panel is on screen prevents this.
+        DispatchQueue.main.async {
+            panel.makeFirstResponder(nil)
+        }
     }
 
     func dismiss(_ panel: PopupPanel) {
