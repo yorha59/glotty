@@ -1851,12 +1851,31 @@ struct PopupView: View {
                                 polishChatInputFocused = true
                             }
                         }
-                        .onSubmit { submitPolishChat() }
+                        // Mirror the tutor (Fn → C) composer's Return
+                        // handling: plain Return submits, Shift+Return
+                        // inserts a newline. Direct binding append
+                        // because a SwiftUI vertical TextField won't
+                        // fall through to NSTextView's default newline
+                        // when this handler returns `.ignored`.
+                        .onKeyPress(keys: [.return]) { press in
+                            if press.modifiers.contains(.shift) {
+                                polishChatInput += "\n"
+                                return .handled
+                            }
+                            submitPolishChat()
+                            return .handled
+                        }
                     Button("Send") { submitPolishChat() }
                         .buttonStyle(.borderedProminent)
                         .disabled(polishChatInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                                   || polishChatStatus.isWorking)
-                        .keyboardShortcut(.return, modifiers: [])
+                }
+
+                HStack {
+                    Text("⏎ Send · ⇧⏎ New line")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                    Spacer()
                 }
 
                 manualExtractButton
