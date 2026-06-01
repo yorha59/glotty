@@ -105,7 +105,7 @@ struct KimiCodingProvider: LLMProvider {
         // SSE with `content_block_delta` events carrying the incremental text.
         let body: [String: Any] = [
             "model": model,
-            "max_tokens": 1024,
+            "max_tokens": 3000,
             "temperature": 0.3,
             "stream": true,
             "messages": [
@@ -195,7 +195,7 @@ struct KimiCodingProvider: LLMProvider {
 
         let body: [String: Any] = [
             "model": model,
-            "max_tokens": 1024,
+            "max_tokens": 3000,
             "temperature": 0.5,
             "stream": true,
             "messages": [

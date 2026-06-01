@@ -131,7 +131,11 @@ struct OpenAICompatibleProvider: LLMProvider {
         var body: [String: Any] = [
             "model": model,
             "messages": [["role": "user", "content": prompt]],
-            "max_tokens": 1024,
+            // 3000 covers Chinese explanations (~1.5 tokens/char so
+            // 1024 capped at ~600 chars and truncated mid-sentence)
+            // and polish JSON with 2-3 long variants + issues. Polish
+            // typically uses much less; the headroom is free.
+            "max_tokens": 3000,
             "temperature": temperature,
             "stream": true,
             "stream_options": OpenAIUsageStream.streamOptions,

@@ -215,7 +215,7 @@ struct DeepSeekProvider: LLMProvider {
         let body: [String: Any] = [
             "model": modelID,
             "messages": [["role": "user", "content": prompt]],
-            "max_tokens": 1024,
+            "max_tokens": 3000,
             "temperature": temperature,
             "stream": true,
             "stream_options": OpenAIUsageStream.streamOptions,
