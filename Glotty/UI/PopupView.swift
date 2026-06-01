@@ -77,6 +77,12 @@ enum PopupTokens {
     /// Polish needs a bit more width for the variant cards (full sentences).
     /// Same auto-fit-height behaviour as translate.
     static let polishContentWidth: CGFloat = 560
+    /// Chat reuses the wider polish width so the composer's control
+    /// row — Modify-settings toggle, Auto-approve toggle, language
+    /// picker — fits on one line without wrapping. At translate's
+    /// 460pt, all three plus a multi-character language label
+    /// pushed the picker onto a second line on first launch.
+    static let chatContentWidth: CGFloat = 560
     /// Uniform font size for every non-source-row element in the translate
     /// popup (section labels, dict names, POS labels, glosses, defs, examples,
     /// translation result). Source row stays at its dedicated large size; the
@@ -319,6 +325,14 @@ struct PopupView: View {
     /// Defaults to false: the agent flavor is opt-in.
     @AppStorage("glotty.chat.allowSettingsChanges")
     private var chatAllowSettingsChanges: Bool = false
+    /// When ON, pending tool calls auto-confirm the moment the LLM
+    /// emits them — the user doesn't have to tap the Confirm card.
+    /// Rejected tool calls (unknown setting, blocked key, invalid
+    /// value) still surface as red badges; only `.pending` outcomes
+    /// are auto-approved. Persists across sessions. Defaults to OFF
+    /// so the user opts into the looser confirmation flow.
+    @AppStorage("glotty.chat.autoApproveTools")
+    private var chatAutoApproveTools: Bool = false
     /// Per-user chat reply language. Empty string ⇒ fall back to the
     /// polish output language (preserves the original behavior for
     /// users who never touch this picker). Persists across sessions.
@@ -678,8 +692,9 @@ struct PopupView: View {
     /// translate, explain, and chat stay at the original 460pt.
     private var contentWidth: CGFloat {
         switch mode {
-        case .polish:                       return PopupTokens.polishContentWidth
-        case .translate, .explain, .chat:   return PopupTokens.translateContentWidth
+        case .polish:                return PopupTokens.polishContentWidth
+        case .chat:                  return PopupTokens.chatContentWidth
+        case .translate, .explain:   return PopupTokens.translateContentWidth
         }
     }
 
@@ -1144,8 +1159,16 @@ struct PopupView: View {
     /// Same shape as the polish-discussion reply picker so the
     /// chat header has a consistent affordance across modes.
     private var tutorLanguagePicker: some View {
-        Picker("Reply in", selection: $chatTutorLanguage) {
-            Text("Reply: polish target").tag("")
+        // The picker only shows real languages — no "follow native"
+        // sentinel. When the user hasn't explicitly picked one
+        // (`chatTutorLanguage` empty), the binding presents the user's
+        // native language as the highlighted option, so the picker
+        // always reflects the language Glotty will actually reply in.
+        // Picking writes the BCP-47 code directly.
+        Picker("Reply in", selection: Binding<String>(
+            get: { chatTutorLanguage.isEmpty ? userNativeLanguage() : chatTutorLanguage },
+            set: { chatTutorLanguage = $0 }
+        )) {
             ForEach(LanguageOptions.all) { option in
                 Text(LanguageOptions.localizedName(for: option.id)).tag(option.id)
             }
@@ -1154,43 +1177,52 @@ struct PopupView: View {
         .labelsHidden()
         .controlSize(.small)
         .fixedSize()
-        .help("Language Glotty replies in for this chat. \"Polish target\" follows your Polish output language setting.")
+        .help("Language Glotty replies in for this chat.")
     }
 
     private var tutorToolsToggle: some View {
+        // Inline switch + label, no chip background. The switch itself
+        // surfaces on/off state; the chip styling was visual noise
+        // that made the toggle taller than the adjacent language
+        // picker. `.controlSize(.small)` matches the picker height.
         Toggle(isOn: $chatAllowSettingsChanges) {
-            HStack(spacing: 4) {
+            HStack(spacing: 3) {
                 Image(systemName: "wand.and.stars")
+                    .imageScale(.small)
                 Text("Modify settings")
+                    .font(.caption)
             }
-            .font(.caption.weight(.medium))
             .foregroundStyle(chatAllowSettingsChanges
                              ? PopupTokens.accent
                              : .secondary)
         }
         .toggleStyle(.switch)
-        .controlSize(.mini)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(chatAllowSettingsChanges
-                      ? PopupTokens.accent.opacity(0.08)
-                      : Color.secondary.opacity(0.06))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .strokeBorder(
-                            chatAllowSettingsChanges
-                                ? PopupTokens.accent.opacity(0.35)
-                                : Color.secondary.opacity(0.25),
-                            lineWidth: 1
-                        )
-                )
-        )
-        .animation(.easeInOut(duration: 0.15), value: chatAllowSettingsChanges)
+        .controlSize(.small)
         .help(chatAllowSettingsChanges
               ? "Glotty can request setting changes (you still confirm each one)."
               : "Glotty stays purely conversational. Turn on to let it propose setting changes.")
+    }
+
+    /// Auto-approve toggle. Only meaningful when "Modify settings" is
+    /// on (otherwise no tool calls fire), so we hide it when the
+    /// parent toggle is off to keep the composer row uncluttered.
+    private var tutorAutoApproveToggle: some View {
+        Toggle(isOn: $chatAutoApproveTools) {
+            HStack(spacing: 3) {
+                Image(systemName: "checkmark.seal")
+                    .imageScale(.small)
+                Text("Auto-approve")
+                    .font(.caption)
+            }
+            .foregroundStyle(chatAutoApproveTools
+                             ? PopupTokens.accent
+                             : .secondary)
+        }
+        .toggleStyle(.switch)
+        .controlSize(.small)
+        .help(chatAutoApproveTools
+              ? "Tool calls auto-confirm without showing the Confirm card. Rejected calls still surface as red badges."
+              : "Pending tool calls wait for your tap on Confirm. Turn on to skip the confirmation step.")
     }
 
     @ViewBuilder
@@ -1329,7 +1361,78 @@ struct PopupView: View {
         }
     }
 
+    @ViewBuilder
     private func toolCallPendingCard(call: PendingToolCall, turnID: UUID) -> some View {
+        // `open_settings_tab` is an action ("take me there"), not a
+        // values-change with a current → new comparison. Render it as
+        // a single tappable card-button so the whole surface invites
+        // a click — the standard Confirm / Cancel button row is the
+        // wrong vocabulary for "navigate to a page". The Skip link
+        // below provides a quiet opt-out without competing for
+        // attention with the primary action.
+        if call.name == "open_settings_tab" {
+            openSettingsPendingCard(call: call, turnID: turnID)
+        } else {
+            standardPendingCard(call: call, turnID: turnID)
+        }
+    }
+
+    /// Tap-to-open card for the `open_settings_tab` tool call. Used
+    /// during onboarding step 8 (dictionary activation) and any other
+    /// place the LLM proposes navigating to a Settings tab.
+    private func openSettingsPendingCard(call: PendingToolCall, turnID: UUID) -> some View {
+        let header = pendingCardHeader(for: call)
+        return VStack(alignment: .leading, spacing: 6) {
+            Button {
+                confirmToolCall(on: turnID)
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: header.icon)
+                        .font(.body)
+                        .foregroundStyle(PopupTokens.accent)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(header.title)
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(PopupTokens.primaryText)
+                        Text("Tap to open")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(PopupTokens.accent.opacity(0.10))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .strokeBorder(PopupTokens.accent.opacity(0.40), lineWidth: 1)
+                        )
+                )
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            HStack {
+                Spacer()
+                Button("Skip") { declineToolCall(on: turnID) }
+                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// Standard Confirm / Cancel pending card. Used for every tool
+    /// call EXCEPT `open_settings_tab` — settings changes have a
+    /// current → new comparison the user should read before
+    /// confirming, so the explicit button row is the right
+    /// affordance there.
+    private func standardPendingCard(call: PendingToolCall, turnID: UUID) -> some View {
         let header: (icon: String, title: String) = pendingCardHeader(for: call)
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
@@ -1562,6 +1665,16 @@ struct PopupView: View {
             // tight 4pt spacing.
             HStack(spacing: 8) {
                 tutorToolsToggle
+                // Auto-approve is meaningful whenever tool calls can
+                // fire: either the user explicitly toggled "Modify
+                // settings" ON, or we're in onboarding (which forces
+                // tool calls ON regardless of the toggle — see
+                // `allowToolCalls: chatAllowSettingsChanges || onboarding`
+                // in runTutorTurn). Hiding it during onboarding made
+                // the user think the toggle was missing.
+                if chatAllowSettingsChanges || onboarding {
+                    tutorAutoApproveToggle
+                }
                 tutorLanguagePicker
                 Spacer()
             }
@@ -1577,13 +1690,41 @@ struct PopupView: View {
                         guard gained else { return }
                         NSApp.activate(ignoringOtherApps: true)
                     }
-                    .onSubmit { submitTutor() }
+                    // Explicit Return-key handling: plain Return
+                    // submits (chat convention); Shift+Return inserts
+                    // a newline so users can compose multi-line
+                    // messages. We insert the newline directly into
+                    // the binding instead of returning `.ignored` —
+                    // SwiftUI's vertical TextField doesn't fall
+                    // through to NSTextView's default newline
+                    // insertion when this handler returns `.ignored`,
+                    // so nothing happened. Appending `\n` is good
+                    // enough for chat composition where users are
+                    // typing forward; cursor-aware insert would
+                    // require NSTextView APIs not exposed by
+                    // SwiftUI's TextField.
+                    .onKeyPress(keys: [.return]) { press in
+                        if press.modifiers.contains(.shift) {
+                            tutorInput += "\n"
+                            return .handled
+                        }
+                        submitTutor()
+                        return .handled
+                    }
                 Button("Send") { submitTutor() }
                     .buttonStyle(.borderedProminent)
                     .disabled(tutorInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                               || tutorStatus.isWorking
                               || tutorThread.isEmpty)
-                    .keyboardShortcut(.return, modifiers: [])
+            }
+            // Key-shortcut hint. Uses the Return (⏎) and Shift (⇧)
+            // glyphs so it reads compactly without prose, and sits
+            // right under the input where users look while typing.
+            HStack {
+                Text("⏎ Send · ⇧⏎ New line")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                Spacer()
             }
         }
     }
@@ -2931,17 +3072,16 @@ struct PopupView: View {
             message += " " + note
         }
         appendSystemTurn(message)
-        // In onboarding the user expects Glotty to keep driving the
-        // conversation — confirming a pronoun shouldn't leave them
-        // staring at a quiet thread waiting for someone to speak.
-        // Auto-fire the next LLM turn so it moves on to the next
-        // question (or the wrap-up turn after the last one). Brief
-        // delay so the user can read the system "Applied" line first.
-        if onboarding {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                tutorRunCounter &+= 1
-            }
-        }
+        // No auto-fire here — the onboarding prompt instructs the
+        // model to bundle "acknowledgement + next question" into the
+        // same turn as the `set_setting` tool_call. So when the user
+        // confirms, the next question is already on screen waiting
+        // for their answer. Auto-firing here would produce a third
+        // turn that either re-asks the same question (the original
+        // duplicate-question bug) or sits silently. The exception is
+        // `open_settings_tab` (step 8) — that one DOES auto-fire,
+        // because the user goes to Settings and the wrap-up needs to
+        // appear without further user input.
     }
 
     private func applyOpenSettingsTab(call: inout PendingToolCall, at idx: Int) {
@@ -2958,6 +3098,16 @@ struct PopupView: View {
         tutorThread[idx].toolCall = call
         persistToolCallUpdate(at: idx)
         appendSystemTurn("Opened Settings → \(tab.label).")
+        // Same auto-continue rule as set_setting during onboarding —
+        // step 8 (dictionary setup via open_settings_tab) needs the
+        // chat to advance to the wrap-up turn after the user confirms
+        // the tab open. Without this the thread sits quiet after
+        // Settings appears.
+        if onboarding {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                tutorRunCounter &+= 1
+            }
+        }
     }
 
     /// User tapped Cancel. Marks the card declined and tells the LLM.
@@ -2980,7 +3130,31 @@ struct PopupView: View {
         default:
             summary = "the request"
         }
-        appendSystemTurn("User declined \(summary).")
+        // During onboarding the chat needs to keep driving the
+        // conversation after any decline — otherwise the thread sits
+        // quiet. The system-note phrasing varies by tool: set_setting
+        // declines should re-ask the same question (user disagreed
+        // with the proposed value), while open_settings_tab declines
+        // should simply advance to the next step (user skipped the
+        // guided action — no point retrying it).
+        if onboarding {
+            switch call.name {
+            case "set_setting":
+                let key = call.args["key"] ?? ""
+                let prettyKey = SettingsRegistry.find(id: key)?.displayName ?? key
+                appendSystemTurn("User declined the proposed value for \(prettyKey). Re-ask the SAME question (the one tied to `\(key)`) with a fresh, gentler phrasing and clarifying angle — do NOT advance to the next question.")
+            case "open_settings_tab":
+                let tab = call.args["tab"] ?? ""
+                appendSystemTurn("User skipped opening Settings → \(SettingsTab(rawValue: tab)?.label ?? tab). Advance to the next step — do NOT re-offer the same tab.")
+            default:
+                appendSystemTurn("User declined \(summary).")
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                tutorRunCounter &+= 1
+            }
+        } else {
+            appendSystemTurn("User declined \(summary).")
+        }
     }
 
     /// Round-trip the updated tool-call to ChatStore so the resolved
@@ -3100,6 +3274,27 @@ struct PopupView: View {
             appendSystemTurn("Tool call `\(call.name)` rejected: \(reason)")
         }
         tutorStatus = .ready
+        // Auto-approve: if the user has the toggle on and the call
+        // resolved as `.pending` (i.e. validator passed), confirm it
+        // automatically. Small delay so the card is visible briefly
+        // before flipping to the applied state — gives the user a
+        // visible record of what was confirmed on their behalf.
+        //
+        // EXCLUDES `open_settings_tab` — that tool's whole purpose is
+        // to invite a deliberate user tap (the big tap-to-open card
+        // used in onboarding step 8 and elsewhere). Auto-confirming
+        // would flash the card for 0.35s and then yank the user to
+        // Settings before they could read what's about to happen.
+        // The set_setting auto-approve covers the values-change
+        // friction, which is the actual ask behind the toggle.
+        if chatAutoApproveTools, let call = resolvedToolCall,
+           case .pending = call.outcome,
+           call.name != "open_settings_tab" {
+            let pendingTurnID = newTurn.id
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                confirmToolCall(on: pendingTurnID)
+            }
+        }
         // Same in-dialog extraction trigger used by polish/explain
         // chats. Respects the user's mode toggle + cooldown.
         triggerMemoryExtractionIfApplicable()
@@ -3289,10 +3484,14 @@ struct PopupView: View {
 
     /// Language the tutor chat replies in. Honors the per-user
     /// override (chat composer picker → `glotty.chat.tutorLanguage`);
-    /// empty / unset falls back to the polish output language so
-    /// existing users see no behavior change until they pick.
+    /// empty / unset falls back to the user's native language —
+    /// chat is conversational reading, so the user's most-comfortable
+    /// language is the right default. (Earlier this fell back to the
+    /// polish output language, but that's "what I'm practicing
+    /// writing in" — typically a language the user is still learning,
+    /// not the language they want chat replies in.)
     private func tutorReplyLanguage() -> String {
-        chatTutorLanguage.isEmpty ? polishTargetLanguage() : chatTutorLanguage
+        chatTutorLanguage.isEmpty ? userNativeLanguage() : chatTutorLanguage
     }
 
     /// Options shown in the polish-chat "Reply in" picker. Mirrors the

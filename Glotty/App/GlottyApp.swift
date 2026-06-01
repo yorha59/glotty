@@ -368,6 +368,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return
         }
+        // Dictionary setup gate for Translate. Many users don't know
+        // they have to enable dictionaries through macOS first — the
+        // Dictionary.app menu (Window → Open Dictionaries) or
+        // Glotty's Settings → Dictionaries pane. Without any
+        // activated dictionary, Translate still works (Apple
+        // Translation + LLM gloss), but the dictionary section the
+        // popup is designed around is empty and the user thinks the
+        // feature is broken. Show a two-stage guidance card: stage
+        // 1 explains and offers a button to Settings → Dictionaries;
+        // when the card detects dictionaries have been activated it
+        // morphs to stage 2 with a sample word the user can highlight
+        // and translate to verify the feature works end-to-end. The
+        // card's controller owns the "guidance shown" flag and only
+        // flips it on dismiss, so the gate fires at most once.
+        if mode == .translate,
+           !UserDefaults.standard.bool(forKey: TranslateGuideWindowController.userDefaultsKey),
+           DictionaryLookup.availableDictionaries().isEmpty {
+            TranslateGuideWindowController.shared.show()
+            return
+        }
         // Raycast-style auto-close: when the popup is about to overlay
         // another app's full-screen space, Settings/drill-in windows
         // need to come down first so the app drops back to .accessory
@@ -397,6 +417,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             popup.show(sourceText: text, mode: mode)
         }
     }
+
 }
 
 // MARK: - Status menu rebuild

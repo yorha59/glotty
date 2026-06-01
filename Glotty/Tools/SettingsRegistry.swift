@@ -236,13 +236,11 @@ enum SettingsRegistry {
             sentinelID: "auto",
             sentinelLabel: String(localized: "Auto detect")
         ))
-        entries.append(.languagePickerWithSentinel(
+        entries.append(.languagePicker(
             id: "chat_reply_language",
             defaultsKey: "glotty.chat.tutorLanguage",
             displayName: String(localized: "Chat reply language"),
-            description: "The language Glotty replies in during chat. `polish_target` follows the polish output language; any other value pins chat to that language regardless of polish target.",
-            sentinelID: "polish_target",
-            sentinelLabel: String(localized: "Same as polish output language")
+            description: "The language Glotty replies in during chat. Pin to a specific BCP-47 language code (`en`, `zh-Hans`, etc.). When unset (empty string on disk), chat reply falls back to the user's native language."
         ))
 
         // MARK: Profile

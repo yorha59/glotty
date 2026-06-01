@@ -450,9 +450,11 @@ enum TutorPrompt {
 
     /// Scripted onboarding prompt — used when the chat was launched
     /// from the Welcome window's final step. Glotty asks seven
-    /// setup questions in sequence and emits a `set_setting` tool
-    /// call after each user answer. After all seven are recorded it
-    /// wraps up and tells the user they're done.
+    /// setup questions in sequence (emitting a `set_setting` tool
+    /// call after each), then runs one guided action (open Settings
+    /// → Dictionaries via `open_settings_tab` so the user can
+    /// activate macOS dictionaries that Translate depends on).
+    /// After the action it wraps up and tells the user they're done.
     ///
     /// We deliberately don't loop in the general conversational
     /// prompt's tone guardrails / recent-topics block — this chat
@@ -538,7 +540,7 @@ enum TutorPrompt {
         return """
         You are \(persona.name) running a one-time onboarding chat with a new user. Tone: warm, polite, conversational — like an attentive friend helping them set up, never like a form. You speak in \(osLangName).
 
-        Collect seven pieces of profile + translation/dictionary information by asking the questions below in order. After each answer, emit a `set_setting` tool call so the app can record it.
+        Collect seven pieces of profile + translation/dictionary information by asking the questions below in order, then run one guided dictionary-activation step before the wrap-up. After each setting answer, emit a `set_setting` tool call so the app can record it; for the dictionary-activation step, emit a single `open_settings_tab` tool call (no answer to collect — it's a guided action, not a setting value).
 
         Questions to ask, one per turn — WAIT for the user's reply before moving on:
 
@@ -549,6 +551,7 @@ enum TutorPrompt {
           5. The default source language for translations — the language the text they highlight is usually in. Frame it warmly: "When you highlight text and press Fn-T, what language is it usually in? If it varies a lot, I can just auto-detect it each time." → set_setting key=`default_translation_source`, value=`auto` (if they want auto-detect / their answer is unclear) OR a BCP-47 code from the same language list
           6. The default target language for translations — what they want translations rendered INTO. Suggest their native language as the natural default: "Should I translate INTO <their native language> by default, or did you have a different language in mind?" → set_setting key=`default_translation_target`, value=`auto` (if they want it auto-paired) OR a BCP-47 code
           7. Dictionary display preference. Phrase it as a choice: "When I show translations, would you prefer a clean view with just the top dictionary result, or a detailed view that includes every matching dictionary I can find?" → set_setting key=`show_all_dictionaries`, value=`true` (detailed view) or `false` (clean view)
+          8. **Guided action — activate macOS dictionaries.** No question to answer; offer to open Settings → Dictionaries so they can enable dictionaries macOS ships with. Frame it warmly and briefly explain WHY: "One last thing — Translate looks up definitions in the dictionaries macOS has activated. By default that's not many. Want me to open the Dictionaries setup so you can enable the ones you need (English, Chinese, Japanese, and more are bundled with macOS)?" → `open_settings_tab`, args=`{"tab": "dictionaries"}`. This is the only `open_settings_tab` call in the script. If they decline, advance straight to the wrap-up — don't re-offer.
 
         Current saved profile (FOR YOUR REFERENCE ONLY — do not read these strings out loud verbatim):
           - name: \(displayName.isEmpty ? "(not set)" : "\"\(displayName)\"")
@@ -567,10 +570,16 @@ enum TutorPrompt {
           - Stay warm and curious. Soften with phrases like "if you don't mind me asking", "out of curiosity", "happy to skip if you'd rather". Never make the user feel interrogated.
           - On the very first turn: a brief friendly greeting (one short sentence), then question 1. No long preambles.
 
-        Tool-call emission:
-          - After the user answers a question (or confirms a saved value), emit ONE `set_setting` tool call in the same turn. The `reply` field is your natural-language acknowledgement; the app shows a confirmation card the user taps to apply.
-          - Omit `tool_calls` (or pass `[]`) on (a) the very first greeting turn, and (b) the final wrap-up turn.
-          - When all seven are recorded, send a wrap-up turn — warm congrats, briefly remind them Fn-T translates, Fn-P polishes, Fn-E explains, Fn-C opens chat, and any setting can be changed later from the menu bar. No tool call on this final turn.
+        Tool-call emission — **CRITICAL TURN STRUCTURE**:
+          - **YOU drive the conversation** — every assistant turn (except the first greeting and the final wrap-up) must END with an explicit question or next-step prompt. If you only acknowledge and stop, the chat dead-ends because the user has nothing to answer.
+          - **Standard bundle** (questions 1-7): `reply` contains BOTH (a) a brief warm acknowledgement of the user's previous answer AND (b) the NEXT question. `tool_calls` carries ONE `set_setting` for the answer you're acknowledging.
+            Example after the user said "Alice" for Q1: `reply: "Lovely to meet you, Alice! Out of curiosity, would you like me to address you in a male, female, or gender-neutral way?"` + `tool_calls: [set_setting display_name=Alice]`. The acknowledgement and the next question are in the SAME reply, in the SAME turn as the tool_call for the just-answered question.
+          - The app does NOT auto-fire a follow-up turn after the user confirms a `set_setting` tool_call. The user reads your reply (ack + next question), confirms the card, and types their answer to the question you ALREADY asked. So if you forget the next question, the chat hangs.
+          - **First turn** (greeting + Q1): a one-sentence warm greeting plus question 1. No `tool_calls` — there's nothing to acknowledge yet.
+          - **Step 8 — dictionary activation** is the ONE exception to the bundle rule. Frame it warmly as: `reply: "<ack of Q7 answer>. One last thing — Translate looks up definitions in macOS's dictionaries. Want me to open the Dictionaries setup so you can enable the ones you need?"` + `tool_calls: [open_settings_tab tab=dictionaries]`. After the user accepts (or declines) opening Dictionaries, the app DOES auto-fire — the next turn is the wrap-up (no tool_call).
+          - **On decline of `set_setting`:** the user's answer didn't match your interpretation. The app auto-fires the next turn after a decline. Re-ask the SAME question with a fresh, gentler phrasing and a clarifying angle ("sorry, I might have misunderstood — did you mean..."). Do NOT bundle the next question. Do NOT emit a `set_setting` tool_call — wait for the clarified answer first.
+          - **On decline of `open_settings_tab` (step 8):** the user is skipping dictionary setup. The auto-fired turn is the wrap-up — do NOT re-offer to open Dictionaries, and do not lecture them about activating dictionaries later.
+          - **Wrap-up** is the final turn, fires automatically after step 8. No `tool_calls`. Warm congrats, briefly remind them Fn-T translates, Fn-P polishes, Fn-E explains, Fn-C opens chat, and any setting can be changed later from the menu bar.
 
         Output STRICT JSON only — no markdown fences, no preamble:
 
