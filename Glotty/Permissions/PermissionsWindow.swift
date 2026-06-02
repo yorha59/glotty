@@ -146,6 +146,11 @@ struct PermissionsView: View {
                 ForEach(Permission.allCases) { permission in
                     PermissionRow(permission: permission, refreshToken: refreshToken)
                 }
+                // System dependency check — same shape as the
+                // permission rows. Mirrors the Welcome flow's
+                // permissions step so what the user saw during
+                // onboarding stays reachable here.
+                DictionaryAppRow(refreshToken: refreshToken)
             }
 
             DisclosureGroup(isExpanded: $showStaleHelp) {
@@ -254,6 +259,71 @@ private struct PermissionRow: View {
                     }
                     .controlSize(.small)
                     .help("Forces macOS to add Glotty to the toggle list. Use this if the row is missing in System Settings.")
+                }
+            }
+        }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
+    }
+}
+
+/// System-dependency row for Apple's built-in Dictionary.app. Same
+/// visual shape as `PermissionRow` so the Settings list reads
+/// uniformly. Re-evaluated whenever the parent bumps
+/// `refreshToken` (every second while the view is visible), so a
+/// freshly-restored Dictionary.app flips from "Missing" to
+/// "Installed" automatically.
+private struct DictionaryAppRow: View {
+    let refreshToken: Int
+
+    private var url: URL? {
+        _ = refreshToken
+        for path in ["/System/Applications/Dictionary.app",
+                     "/Applications/Dictionary.app"] {
+            if FileManager.default.fileExists(atPath: path) {
+                return URL(fileURLWithPath: path)
+            }
+        }
+        return nil
+    }
+
+    var body: some View {
+        let present = url != nil
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: present ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .foregroundStyle(present ? .green : .orange)
+                .imageScale(.large)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Dictionary.app").font(.headline)
+                Text(present
+                     ? "Apple's built-in Dictionary app — Glotty reads its catalog to power offline dictionary lookups during Translate."
+                     : "Required for offline dictionary lookups. Ships with macOS; can't be reinstalled from the App Store. Run Software Update or use Migration Assistant to restore it.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 4) {
+                if present {
+                    Button("Installed ✓") { }
+                        .disabled(true)
+                } else {
+                    Button("Software Update") {
+                        if let su = URL(string: "x-apple.systempreferences:com.apple.preferences.softwareupdate") {
+                            NSWorkspace.shared.open(su)
+                        }
+                    }
+                    Button("Apple Support") {
+                        if let url = URL(string: "https://support.apple.com/guide/dictionary/welcome/mac") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                    .controlSize(.small)
+                    .help("Apple's Dictionary user guide — covers reinstalling system apps.")
                 }
             }
         }
