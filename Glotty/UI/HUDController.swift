@@ -52,7 +52,13 @@ final class HUDController {
         p.level = .statusBar
         p.isOpaque = false
         p.backgroundColor = .clear
-        p.hasShadow = true
+        // AppKit's window-level shadow follows the panel's RECTANGULAR
+        // bounds, not the rounded SwiftUI content inside — that draws
+        // a visible square shadow halo poking out past the rounded
+        // corners (the "圆角不对" report). Disable it here and let
+        // SwiftUI's `.shadow()` on the glassmorphism RoundedRectangle
+        // produce a shadow that matches the rounded shape.
+        p.hasShadow = false
         p.hidesOnDeactivate = false
         p.ignoresMouseEvents = true
         p.collectionBehavior = [.moveToActiveSpace, .transient, .ignoresCycle]
