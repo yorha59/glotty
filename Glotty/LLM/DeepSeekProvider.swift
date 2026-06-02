@@ -35,24 +35,38 @@ struct DeepSeekProvider: LLMProvider {
     let displayName = "DeepSeek"
 
     static let keychainAccount = "deepseek"
-    static let defaultEndpoint = "https://api.deepseek.com/v1/chat/completions"
-    static let defaultModel = "deepseek-chat"
+    /// Canonical chat completions endpoint as of June 2026. DeepSeek's
+    /// docs migrated off the `/v1/` prefix; the old form still resolves
+    /// for now but the new one is what they document.
+    static let defaultEndpoint = "https://api.deepseek.com/chat/completions"
+    static let defaultModel = "deepseek-v4-flash"
 
-    /// Catalogue exposed in the model picker. Summaries reflect DeepSeek's
-    /// published guidance: deepseek-chat = V3 unified model (fast, cheap,
-    /// solid for polish); deepseek-reasoner = R1 with explicit CoT (slower
-    /// but stronger on hard rewrites).
+    /// Catalogue exposed in the model picker. V4 is the current line
+    /// (June 2026); the old V3 ids are kept for backward compatibility
+    /// until DeepSeek's stated retirement date (2026-07-24).
     static let supportedModels: [DeepSeekModelOption] = [
         DeepSeekModelOption(
+            id: "deepseek-v4-flash",
+            displayName: "DeepSeek V4 Flash",
+            summary: "Current default — replaces V3 (deepseek-chat/reasoner). $0.14/1M input · $0.28/1M output. Thinking mode is on by default, so chat/explain shows a brief \"thinking\" preamble. Polish disables thinking automatically to keep JSON output snappy.",
+            isReasoner: true
+        ),
+        DeepSeekModelOption(
+            id: "deepseek-v4-pro",
+            displayName: "DeepSeek V4 Pro",
+            summary: "New flagship — stronger reasoning, slower, ~3× the price of Flash ($0.435/1M input · $0.87/1M output). Worth it for hard rewrites where Flash falls short.",
+            isReasoner: true
+        ),
+        DeepSeekModelOption(
             id: "deepseek-chat",
-            displayName: "DeepSeek-Chat (V3)",
-            summary: "Unified V3 model — fast, very cheap (~$0.27/1M input), strong general performance. Recommended default for polish and explain.",
+            displayName: "DeepSeek Chat (V3, legacy)",
+            summary: "Legacy V3 non-thinking. Same behavior as v4-flash with thinking disabled. DeepSeek will retire this id on 2026-07-24 — pick v4-flash for new setups.",
             isReasoner: false
         ),
         DeepSeekModelOption(
             id: "deepseek-reasoner",
-            displayName: "DeepSeek-Reasoner (R1)",
-            summary: "R1 reasoning model with explicit chain-of-thought. Higher quality on complex rewrites; expect a 10-30s think pause before the answer streams.",
+            displayName: "DeepSeek Reasoner (R1, legacy)",
+            summary: "Legacy V3 thinking. Same behavior as v4-flash with thinking enabled. Retiring 2026-07-24 — pick v4-flash or v4-pro for new setups.",
             isReasoner: true
         ),
     ]
@@ -137,7 +151,9 @@ struct DeepSeekProvider: LLMProvider {
         // `MainActor.assumeIsolated`; this Task isn't main-actor-isolated,
         // so we hop explicitly before building the prompt.
         let prompt = await MainActor.run { PolishPrompt.build(text: text, mode: mode) }
-        let body = try makeBody(prompt: prompt, temperature: 0.3)
+        // Polish output is JSON — disable thinking so v4 models don't
+        // waste tokens on a chain-of-thought we'd discard anyway.
+        let body = try makeBody(prompt: prompt, temperature: 0.3, enableThinking: false)
         let bytes = try await openStream(apiKey: apiKey, body: body)
 
         var accumulated = ""
@@ -209,10 +225,12 @@ struct DeepSeekProvider: LLMProvider {
 
     // MARK: - HTTP / SSE helpers
 
-    private func makeBody(prompt: String, temperature: Double) throws -> Data {
+    private func makeBody(prompt: String,
+                          temperature: Double,
+                          enableThinking: Bool = true) throws -> Data {
         // Reasoner models ignore temperature server-side; passing it anyway
         // is harmless and keeps polish/chat consistent.
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": modelID,
             "messages": [["role": "user", "content": prompt]],
             "max_tokens": 3000,
@@ -220,6 +238,14 @@ struct DeepSeekProvider: LLMProvider {
             "stream": true,
             "stream_options": OpenAIUsageStream.streamOptions,
         ]
+        // V4 models default thinking ON. For polish we ask for it OFF so
+        // the model doesn't burn tokens on a chain-of-thought we'll just
+        // discard before parsing the JSON. Older v3 ids ignore this
+        // field (they're not the thinking-capable models), so it's safe
+        // to send unconditionally when the caller wants thinking off.
+        if !enableThinking {
+            body["thinking"] = ["type": "disabled"]
+        }
         return try JSONSerialization.data(withJSONObject: body)
     }
 
