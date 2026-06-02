@@ -708,7 +708,7 @@ struct PopupView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(PopupTokens.tertiaryText)
                 Spacer()
-                Text("\(elapsedMs)ms · Esc")
+                Text(String(format: String(localized: "%dms · Esc"), elapsedMs))
                     .font(.system(size: 11))
                     .foregroundStyle(PopupTokens.tertiaryText)
             }
@@ -1159,7 +1159,7 @@ struct PopupView: View {
             Image(systemName: "bubble.left.and.text.bubble.right")
                 .foregroundStyle(PopupTokens.accent)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Chat with \(personaName)")
+                Text(String(format: String(localized: "Chat with %@"), personaName))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(PopupTokens.primaryText)
                 if !tutorProviderName.isEmpty {
@@ -2414,7 +2414,8 @@ struct PopupView: View {
                 Circle()
                     .fill(Color.green)
                     .frame(width: 6, height: 6)
-                Text("Streaming from \(polishProviderName.isEmpty ? "LLM" : polishProviderName)…")
+                Text(String(format: String(localized: "Streaming from %@…"),
+                            polishProviderName.isEmpty ? "LLM" : polishProviderName))
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundStyle(Color.green.opacity(0.9))
                 Spacer()

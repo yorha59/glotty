@@ -45,7 +45,7 @@ struct LearnedMemorySettingsSection: View {
         return Section {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Global memory")
+                    Text(String(localized: "Global memory"))
                         .font(.callout.bold())
                     // Single format string instead of inline plural
                     // interpolation so each locale gets one catalog
@@ -64,9 +64,9 @@ struct LearnedMemorySettingsSection: View {
                 .disabled(count == 0)
             }
         } header: {
-            Text("Global memory")
+            Text(String(localized: "Global memory"))
         } footer: {
-            Text("Persistent facts about you, injected into every LLM prompt regardless of which context is active.")
+            Text(String(localized: "Persistent facts about you, injected into every LLM prompt regardless of which context is active."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -91,7 +91,7 @@ struct LearnedMemorySettingsSection: View {
         let activeID = readActiveContextID()
         return Section {
             HStack(spacing: 8) {
-                Text("Active context")
+                Text(String(localized: "Active context"))
                 Picker("Active", selection: Binding<UUID?>(
                     get: { activeID },
                     set: { newID in
@@ -99,7 +99,7 @@ struct LearnedMemorySettingsSection: View {
                         refreshToken &+= 1
                     }
                 )) {
-                    Text("None (global only)").tag(UUID?.none)
+                    Text(String(localized: "None (global only)")).tag(UUID?.none)
                     ForEach(contexts) { ctx in
                         Text(ctx.name).tag(UUID?.some(ctx.id))
                     }
@@ -123,9 +123,9 @@ struct LearnedMemorySettingsSection: View {
                     .disabled(newContextName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         } header: {
-            Text("Contexts")
+            Text(String(localized: "Contexts"))
         } footer: {
-            Text("Contexts let you keep parallel sets of memories. When a context is active, its memories inject alongside Global ones; memories scoped to other contexts stay dormant.")
+            Text(String(localized: "Contexts let you keep parallel sets of memories. When a context is active, its memories inject alongside Global ones; memories scoped to other contexts stay dormant."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -228,10 +228,10 @@ struct LearnedMemorySettingsSection: View {
                     Image(systemName: "tray")
                         .font(.title2)
                         .foregroundStyle(.tertiary)
-                    Text("No suggestions yet.")
+                    Text(String(localized: "No suggestions yet."))
                         .font(.callout)
                         .foregroundStyle(.secondary)
-                    Text("After you chat with Glotty under a polish or explain popup, new memories Glotty notices will land here for review.")
+                    Text(String(localized: "After you chat with Glotty under a polish or explain popup, new memories Glotty notices will land here for review."))
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .multilineTextAlignment(.center)
@@ -254,7 +254,7 @@ struct LearnedMemorySettingsSection: View {
             }
         } header: {
             HStack {
-                Text("Suggestions")
+                Text(String(localized: "Suggestions"))
                 if !pending.isEmpty {
                     Text("\(pending.count)")
                         .font(.caption.monospacedDigit())
@@ -266,7 +266,7 @@ struct LearnedMemorySettingsSection: View {
             }
         } footer: {
             if !pending.isEmpty {
-                Text("Click a suggestion to reopen the conversation that produced it — approve or reject it from there. Or use Dismiss all to clear the whole queue.")
+                Text(String(localized: "Click a suggestion to reopen the conversation that produced it — approve or reject it from there. Or use Dismiss all to clear the whole queue."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -303,14 +303,14 @@ struct LearnedMemorySettingsSection: View {
             }
             HStack(spacing: 6) {
                 if event == nil {
-                    Text("Source conversation no longer in History.")
+                    Text(String(localized: "Source conversation no longer in History."))
                         .font(.caption2)
                         .foregroundStyle(.orange)
                 } else {
                     Image(systemName: "arrow.up.right.square")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text("Open conversation to review")
+                    Text(String(localized: "Open conversation to review"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -377,9 +377,9 @@ struct LearnedMemorySettingsSection: View {
                 Spacer()
             }
         } header: {
-            Text("Settings")
+            Text(String(localized: "Settings"))
         } footer: {
-            Text("Every memory still requires your approval before it's injected into LLM prompts.")
+            Text(String(localized: "Every memory still requires your approval before it's injected into LLM prompts."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

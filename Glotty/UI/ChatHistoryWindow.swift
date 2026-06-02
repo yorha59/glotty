@@ -29,7 +29,12 @@ final class ChatHistoryWindowController {
         let host = NSHostingController(rootView: view)
         host.sizingOptions = [.preferredContentSize]
 
-        let title = "Chat \u{2014} \(ChatDay.displayLabel(for: thread.dayKey))"
+        // `Chat — Mon, Jun 2` etc. The format string is localized so
+        // CJK / RTL locales can re-arrange the parts. The date label
+        // itself is user content (output of `ChatDay.displayLabel`)
+        // and stays as-is.
+        let title = String(format: String(localized: "Chat — %@"),
+                           ChatDay.displayLabel(for: thread.dayKey))
 
         if let window {
             window.contentViewController = host
@@ -120,7 +125,11 @@ struct ChatHistoryView: View {
                 Text(ChatDay.displayLabel(for: thread.dayKey))
                     .font(.title3.bold())
                 let userTurns = thread.turns.filter { $0.role == .user }.count
-                Text("\(thread.turns.count) message\(thread.turns.count == 1 ? "" : "s") \u{2022} \(userTurns) from you")
+                // "12 messages · 5 from you" — single format, locales
+                // re-order. Singular/plural pluralization isn't a thing
+                // in the locales we ship, so we use one key for both.
+                Text(String(format: String(localized: "%d messages · %d from you"),
+                            thread.turns.count, userTurns))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -162,7 +171,7 @@ struct ChatHistoryView: View {
                         .font(.caption)
                         .foregroundStyle(.orange)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Better:")
+                        Text(String(localized: "Better:"))
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.orange)
                         Text(corrected)

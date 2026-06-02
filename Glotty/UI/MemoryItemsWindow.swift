@@ -70,12 +70,17 @@ final class MemoryItemsWindowController {
     }
 
     private static func titleFor(scope: MemoryScope) -> String {
+        // Format string lets locales reorder the "Memory — <scope>"
+        // pieces; the scope name (Global / context name) is user
+        // content and isn't itself localized.
+        let format = String(localized: "Memory — %@")
         switch scope {
         case .global:
-            return "Memory — Global"
+            return String(format: format, String(localized: "Global"))
         case .context(let id):
-            let name = MemoryContextStore.shared.context(id: id)?.name ?? "Context"
-            return "Memory — \(name)"
+            let name = MemoryContextStore.shared.context(id: id)?.name
+                ?? String(localized: "Context")
+            return String(format: format, name)
         }
     }
 
@@ -138,7 +143,10 @@ struct MemoryItemsView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(scopeTitle)
                     .font(.title3.bold())
-                Text("\(memories.count) memor\(memories.count == 1 ? "y" : "ies")")
+                // Plural-aware via a single format key — Chinese,
+                // Japanese, Korean don't decline so a single string
+                // avoids two near-identical catalog entries.
+                Text(String(format: String(localized: "%d memories"), memories.count))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -154,7 +162,7 @@ struct MemoryItemsView: View {
             Image(systemName: "tray")
                 .font(.title)
                 .foregroundStyle(.secondary)
-            Text("No memories in this scope.")
+            Text(String(localized: "No memories in this scope."))
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
@@ -184,9 +192,9 @@ struct MemoryItemsView: View {
                         refreshToken &+= 1
                     } label: {
                         if case .global = memory.effectiveScope {
-                            Label("Global", systemImage: "checkmark")
+                            Label(String(localized: "Global"), systemImage: "checkmark")
                         } else {
-                            Text("Global")
+                            Text(String(localized: "Global"))
                         }
                     }
                     ForEach(MemoryContextStore.shared.all()) { ctx in
@@ -275,9 +283,12 @@ struct MemoryItemsView: View {
     private var scopeTitle: String {
         switch scope {
         case .global:
-            return "Global memory"
+            return String(localized: "Global memory")
         case .context(let id):
-            return MemoryContextStore.shared.context(id: id)?.name ?? "Context memory"
+            // User-content name (no translation), with a localized
+            // fallback when the context has been deleted.
+            return MemoryContextStore.shared.context(id: id)?.name
+                ?? String(localized: "Context memory")
         }
     }
 

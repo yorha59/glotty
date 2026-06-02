@@ -171,7 +171,7 @@ private struct TranslateGuideView: View {
 
     private var stageNeedsSetup: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Glotty's Translate uses the dictionaries macOS has activated. You don't have any activated yet — open Settings → Dictionaries to enable the ones you need (English, Chinese, Japanese, and more are included with macOS).")
+            Text(String(localized: "Glotty's Translate uses the dictionaries macOS has activated. You don't have any activated yet — open Settings → Dictionaries to enable the ones you need (English, Chinese, Japanese, and more are included with macOS)."))
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -180,7 +180,7 @@ private struct TranslateGuideView: View {
 
     private var stageReady: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Highlight the word below in any app — your browser, a doc, Notes — then press Fn → T. Glotty's popup should appear with the definition and translation.")
+            Text(String(localized: "Highlight the word below in any app — your browser, a doc, Notes — then press Fn → T. Glotty's popup should appear with the definition and translation."))
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

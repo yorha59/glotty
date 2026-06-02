@@ -42,9 +42,9 @@ struct SystemDebugSection: View {
                     .foregroundStyle(.secondary)
             }
         } header: {
-            Text("Translations")
+            Text(String(localized: "Translations"))
         } footer: {
-            Text("Re-translates the UI in the current language via the LLM, applying any wording preferences from your accepted memories.")
+            Text(String(localized: "Re-translates the UI in the current language via the LLM, applying any wording preferences from your accepted memories."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -54,7 +54,7 @@ struct SystemDebugSection: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 ProgressView().controlSize(.small)
-                Text("Translating UI… \(p.done) / \(p.total)")
+                Text(String(format: String(localized: "Translating UI… %d / %d"), p.done, p.total))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

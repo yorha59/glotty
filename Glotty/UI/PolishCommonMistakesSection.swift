@@ -53,7 +53,7 @@ struct PolishCommonMistakesSection: View {
             }
 
             if trendCategories.isEmpty {
-                Text("No mistake patterns yet. Polish will tag your drafts with categories (verb tense, articles, word choice, …) once it has rewritten a few.")
+                Text(String(localized: "No mistake patterns yet. Polish will tag your drafts with categories (verb tense, articles, word choice, …) once it has rewritten a few."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
@@ -64,9 +64,9 @@ struct PolishCommonMistakesSection: View {
                 }
             }
         } header: {
-            Text("Common mistake types")
+            Text(String(localized: "Common mistake types"))
         } footer: {
-            Text("Lines show how often Polish flagged each top category over the selected range. Click a legend entry to reopen the most recent run that flagged it.")
+            Text(String(localized: "Lines show how often Polish flagged each top category over the selected range. Click a legend entry to reopen the most recent run that flagged it."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

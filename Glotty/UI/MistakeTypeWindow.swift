@@ -134,7 +134,8 @@ struct MistakeTypeView: View {
                     Text(category)
                         .font(.title3).bold()
                         .lineLimit(2)
-                    Text("\(events.count) polish run\(events.count == 1 ? "" : "s") flagged with this category")
+                    Text(String(format: String(localized: "%d polish runs flagged with this category"),
+                                events.count))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -151,7 +152,7 @@ struct MistakeTypeView: View {
                     Image(systemName: "tray")
                         .font(.title)
                         .foregroundStyle(.secondary)
-                    Text("No polish runs in this time range.")
+                    Text(String(localized: "No polish runs in this time range."))
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -193,7 +194,7 @@ struct MistakeTypeView: View {
     private func row(_ event: MemoryEvent) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Text("Polish")
+                Text(String(localized: "Polish"))
                     .font(.caption2.bold())
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
