@@ -129,11 +129,11 @@ struct PermissionsView: View {
                     .font(.system(size: 22))
                     .foregroundStyle(allGranted ? .green : .orange)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(allGranted ? "Permissions granted" : "Glotty needs these permissions")
+                    Text((allGranted ? "Permissions granted" : "Glotty needs these permissions").t)
                         .font(.title3).bold()
-                    Text(allGranted
+                    Text((allGranted
                          ? "Live status below. Revoke or re-grant any of them from the matching System Settings pane — the row updates automatically."
-                         : "Status updates live. Grant in System Settings — this window refreshes automatically.")
+                         : "Status updates live. Grant in System Settings — this window refreshes automatically.").t)
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -241,8 +241,8 @@ private struct PermissionRow: View {
                 .padding(.top, 2)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(permission.displayName).font(.headline)
-                Text(permission.purpose)
+                Text(permission.displayName.t).font(.headline)
+                Text(permission.purpose.t)
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -251,12 +251,12 @@ private struct PermissionRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 4) {
-                Button(granted ? "Granted ✓" : "Open Settings") {
+                Button((granted ? "Granted ✓" : "Open Settings").t) {
                     PermissionCheck.openSettings(for: permission)
                 }
                 .disabled(granted)
                 if !granted {
-                    Button("Re-register") {
+                    Button("Re-register".t) {
                         PermissionCheck.requestRegistration(for: permission)
                     }
                     .controlSize(.small)
@@ -299,9 +299,9 @@ private struct DictionaryAppRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Dictionary.app").font(.headline)
-                Text(present
+                Text((present
                      ? "Apple's built-in Dictionary app — Glotty reads its catalog to power offline dictionary lookups during Translate."
-                     : "Required for offline dictionary lookups. Ships with macOS; can't be reinstalled from the App Store. Run Software Update or use Migration Assistant to restore it.")
+                     : "Required for offline dictionary lookups. Ships with macOS; can't be reinstalled from the App Store. Run Software Update or use Migration Assistant to restore it.").t)
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -311,15 +311,15 @@ private struct DictionaryAppRow: View {
 
             VStack(alignment: .trailing, spacing: 4) {
                 if present {
-                    Button("Installed ✓") { }
+                    Button("Installed ✓".t) { }
                         .disabled(true)
                 } else {
-                    Button("Software Update") {
+                    Button("Software Update".t) {
                         if let su = URL(string: "x-apple.systempreferences:com.apple.preferences.softwareupdate") {
                             NSWorkspace.shared.open(su)
                         }
                     }
-                    Button("Apple Support") {
+                    Button("Apple Support".t) {
                         if let url = URL(string: "https://support.apple.com/guide/dictionary/welcome/mac") {
                             NSWorkspace.shared.open(url)
                         }
