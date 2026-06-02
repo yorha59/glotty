@@ -469,6 +469,11 @@ private struct WelcomeView: View {
             ForEach(Permission.allCases) { perm in
                 permissionRow(perm)
             }
+            // System dependency row — not a permission, but the same
+            // "is this prerequisite in place?" check. Translate's
+            // dictionary lookup needs Apple's Dictionary.app to
+            // populate the catalog Glotty reads from.
+            dictionaryAppRow
             if PermissionCheck.anyMissing() {
                 Text(OSLocalizer.string("You can grant the missing ones now or skip this step and come back from the menu bar → Settings → Permissions later. The Translate/Polish/Explain demos in the next steps won't work until Accessibility and Input Monitoring are on."))
                     .font(.caption)
@@ -487,6 +492,73 @@ private struct WelcomeView: View {
                 permissionsTick &+= 1
             }
         }
+    }
+
+    /// First existing Dictionary.app on disk, or nil. macOS ships it
+    /// at /System/Applications on modern releases; /Applications is
+    /// the fallback some restored systems use. The result is
+    /// re-evaluated each render (via the body's `id(permissionsTick)`)
+    /// so the row flips from missing→present the moment a system
+    /// update or Migration Assistant restores it.
+    private static func dictionaryAppURL() -> URL? {
+        for path in ["/System/Applications/Dictionary.app",
+                     "/Applications/Dictionary.app"] {
+            if FileManager.default.fileExists(atPath: path) {
+                return URL(fileURLWithPath: path)
+            }
+        }
+        return nil
+    }
+
+    /// Dictionary.app presence row — shown in the same list as the
+    /// system permissions because it's the same shape of question:
+    /// "is this prerequisite in place?" Three visual states:
+    ///   - present: green check + "Installed" badge
+    ///   - missing: orange triangle + "Software Update" link
+    /// We deliberately do NOT offer an "install" button — Dictionary.app
+    /// ships with macOS and can't be installed from the App Store.
+    private var dictionaryAppRow: some View {
+        let url = Self.dictionaryAppURL()
+        let present = url != nil
+        return HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: present
+                  ? "checkmark.circle.fill"
+                  : "exclamationmark.triangle.fill")
+                .foregroundStyle(present ? .green : .orange)
+                .font(.system(size: 16))
+                .frame(width: 18)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(OSLocalizer.string("Dictionary.app"))
+                    .font(.system(size: 13, weight: .semibold))
+                Text(OSLocalizer.string(present
+                     ? "Apple's built-in Dictionary app — Glotty reads its catalog to power offline dictionary lookups during Translate."
+                     : "Required for offline dictionary lookups. Ships with macOS; can't be reinstalled from the App Store. Run Software Update or use Migration Assistant to restore it."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            if present {
+                Text(OSLocalizer.string("Installed"))
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            } else {
+                Button {
+                    if let su = URL(string: "x-apple.systempreferences:com.apple.preferences.softwareupdate") {
+                        NSWorkspace.shared.open(su)
+                    }
+                } label: {
+                    Text(OSLocalizer.string("Software Update"))
+                        .font(.caption)
+                }
+                .controlSize(.small)
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.secondary.opacity(present ? 0.05 : 0.10))
+        )
     }
 
     private func permissionRow(_ perm: Permission) -> some View {
