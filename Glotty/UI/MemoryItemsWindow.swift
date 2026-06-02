@@ -177,6 +177,18 @@ struct MemoryItemsView: View {
         } else {
             HStack(alignment: .top, spacing: 8) {
                 kindBadge(memory.kind)
+                if let lang = memory.sourceLanguage {
+                    // Compact chip so the user can see "this memory
+                    // was about ENGLISH" / "about Chinese" at a glance.
+                    // Drives the strict language filter in
+                    // contextBlock(for:targetLanguage:).
+                    Text(LanguageOptions.localizedName(for: lang))
+                        .font(.caption2)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(Capsule().fill(Color.secondary.opacity(0.12)))
+                        .foregroundStyle(.secondary)
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     if let term = memory.term {
                         Text(term).font(.callout.bold())

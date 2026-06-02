@@ -177,16 +177,23 @@ enum LocalizationFiller {
             .map { idx, s in "\(idx). \(s.replacingOccurrences(of: "\n", with: "\\n"))" }
             .joined(separator: "\n")
 
-        // User-controlled steering. Accepted memories the user has
-        // approved — preferences, glossary, project context — feed
-        // into the translation prompt so wording aligns with what
-        // the user actually wants to see in the UI. E.g. a memory
-        // like "I prefer 「润色」 over 「打磨」 for Polish" would
-        // steer the LLM that direction. Source string "" because
-        // there's no source text for a translation request — we
-        // just want the always-on profile-style memories.
+        // User-controlled steering. We pull memories scoped to the
+        // *target* language — those are the ones expressing wording
+        // preferences a Chinese-speaking user has voiced about their
+        // Chinese UI (e.g. "I prefer 「润色」 over 「打磨」"). Memories
+        // scoped to the English source — typically glossary entries
+        // like "Polish means the feature, not the country" — are
+        // statements ABOUT English usage; injecting them here biased
+        // the LLM toward preserving the English term verbatim instead
+        // of translating it, which was the whole bug the user
+        // reported. Language-nil memories (cross-language defaults
+        // like "user prefers concise UI") still apply.
+        //
+        // Source text "" because translation requests don't have one;
+        // the glossary haystack scan is a no-op and only the
+        // always-on preference/fact/project lines feed through.
         let userSteering = MainActor.assumeIsolated {
-            LearnedMemoryStore.shared.contextBlock(for: "")
+            LearnedMemoryStore.shared.contextBlock(for: "", targetLanguage: targetLanguage)
         }
         let steeringBlock = userSteering.isEmpty
             ? ""

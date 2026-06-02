@@ -71,6 +71,18 @@ struct LearnedMemory: Codable, Identifiable, Sendable, Hashable {
     /// entries on disk without this field decode cleanly; read via
     /// `effectiveScope` so callers don't have to nil-check.
     var scope: MemoryScope?
+    /// BCP-47 language code this memory is *about* (e.g. "en", "zh-Hans").
+    /// Drives the language-aware filter in `contextBlock(for:targetLanguage:)`
+    /// so a glossary entry like "Polish means the feature, not the country"
+    /// — which is a statement about ENGLISH usage — doesn't leak into the
+    /// translation prompt that's producing Chinese / Japanese / etc. UI
+    /// strings.
+    ///
+    /// `nil` ⇒ "applies regardless of language" (legacy entries on disk
+    /// without this field decode this way, preserving today's behavior).
+    /// Set by `MemoryExtractor` from the chat's effective language when
+    /// a new memory is recorded.
+    var sourceLanguage: String?
 
     init(
         id: UUID = UUID(),
@@ -81,7 +93,8 @@ struct LearnedMemory: Codable, Identifiable, Sendable, Hashable {
         sourceEventID: UUID? = nil,
         proposedAt: Date = Date(),
         status: LearnedMemoryStatus = .pending,
-        scope: MemoryScope? = nil
+        scope: MemoryScope? = nil,
+        sourceLanguage: String? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -92,6 +105,7 @@ struct LearnedMemory: Codable, Identifiable, Sendable, Hashable {
         self.proposedAt = proposedAt
         self.status = status
         self.scope = scope
+        self.sourceLanguage = sourceLanguage
     }
 
     /// Resolved scope — pre-context legacy entries (no `scope` field
@@ -299,17 +313,32 @@ final class LearnedMemoryStore {
     ///     contexts are dormant.
     /// Returns an empty string when there's nothing to inject — the
     /// caller can prepend it unconditionally.
-    func contextBlock(for sourceText: String) -> String {
+    func contextBlock(for sourceText: String, targetLanguage: String? = nil) -> String {
         let haystack = sourceText.lowercased()
         let activeID = MemoryContextStore.shared.activeContextID
 
         let relevant = accepted().filter { memory in
+            // 1. Active-context scoping (unchanged).
             switch memory.effectiveScope {
             case .global:
-                return true
+                break
             case .context(let id):
-                return id == activeID
+                if id != activeID { return false }
             }
+            // 2. Strict language match. Per the user's directive:
+            //    "only inject memory when the memory language is the
+            //    same as target language." A memory about English
+            //    usage doesn't influence Chinese UI translation; a
+            //    Chinese-context preference doesn't influence a
+            //    Polish-on-English session.
+            //
+            //    When the caller doesn't pass a `targetLanguage`
+            //    (older code paths) we keep the legacy behavior of
+            //    including everything — so existing call sites that
+            //    haven't been updated yet keep working.
+            guard let target = targetLanguage else { return true }
+            guard let memLang = memory.sourceLanguage else { return false }
+            return Self.languagesMatch(memLang, target)
         }
 
         var lines: [String] = []
@@ -337,6 +366,21 @@ final class LearnedMemoryStore {
     }
 
     // MARK: - Internals
+
+    /// True when two BCP-47 codes refer to the same language family
+    /// (compares the primary subtag, so `zh-Hans` matches `zh-Hans-CN`
+    /// and the bare `zh`, while `en` won't match `zh`). Used by the
+    /// memory language filter to be lenient about region/script
+    /// suffixes the caller may pass.
+    private static func languagesMatch(_ a: String, _ b: String) -> Bool {
+        // Compare the first two subtags (`zh-Hans`, `en-US`) so that
+        // a script-bearing memory ("zh-Hans") matches a region-extended
+        // request ("zh-Hans-CN") but not a different script ("zh-Hant").
+        func key(_ s: String) -> String {
+            s.lowercased().split(separator: "-").prefix(2).joined(separator: "-")
+        }
+        return key(a) == key(b)
+    }
 
     /// Canonical key for dedup — same kind + same content (case- and
     /// whitespace-insensitive) collapses into one memory. We also
@@ -399,6 +443,28 @@ final class LearnedMemoryStore {
                 guard !line.isEmpty else { return nil }
                 return try? decoder.decode(LearnedMemory.self, from: Data(line))
             }
+        backfillSourceLanguageIfNeeded()
+    }
+
+    /// One-shot migration: every memory persisted before the
+    /// `sourceLanguage` field existed was extracted from an
+    /// English-language chat — Glotty's first UI language was
+    /// English-only. Tag them "en" so the new strict
+    /// language-equality filter in `contextBlock(for:targetLanguage:)`
+    /// doesn't leak English glossary into Chinese / Japanese / etc.
+    /// translation prompts. Idempotent: only runs while at least one
+    /// entry still has `sourceLanguage == nil`.
+    private func backfillSourceLanguageIfNeeded() {
+        guard cache.contains(where: { $0.sourceLanguage == nil }) else { return }
+        var changed = false
+        cache = cache.map { memory in
+            guard memory.sourceLanguage == nil else { return memory }
+            var copy = memory
+            copy.sourceLanguage = "en"
+            changed = true
+            return copy
+        }
+        if changed { rewriteAll() }
     }
 }
 

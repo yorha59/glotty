@@ -181,8 +181,23 @@ enum MemoryExtractor {
         }
 
         dbg("extract RESPONSE — \(raw.count) chars")
-        let proposals = parse(raw, sourceEventID: sourceEventID)
-        dbg("extract PARSED — \(proposals.count) proposals")
+        // Tag every new memory with the language the conversation was
+        // in. Drives the strict-equality language filter in
+        // `LearnedMemoryStore.contextBlock(for:targetLanguage:)`, so a
+        // memory extracted from an English chat doesn't leak into a
+        // later Chinese-target prompt and vice versa. Use the polish
+        // target language as the proxy — that's the language of the
+        // LLM's output across polish, explain, and tutor chats; the
+        // conversation predominantly happens in that language.
+        let extractionLang: String? = {
+            let raw = UserDefaults.standard.string(forKey: "glotty.polishLang")?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return (raw?.isEmpty == false) ? raw : "en"
+        }()
+        let proposals = parse(raw,
+                              sourceEventID: sourceEventID,
+                              sourceLanguage: extractionLang)
+        dbg("extract PARSED — \(proposals.count) proposals (lang=\(extractionLang ?? "nil"))")
         guard !proposals.isEmpty else { return }
         let toAdd = Array(proposals.prefix(maxProposals))
         LearnedMemoryStore.shared.add(toAdd)
@@ -316,7 +331,9 @@ enum MemoryExtractor {
     /// ignored the "no fences" instruction; tolerates missing
     /// fields by skipping the malformed entry rather than failing
     /// the whole batch. Returns an empty array on total failure.
-    static func parse(_ raw: String, sourceEventID: UUID?) -> [LearnedMemory] {
+    static func parse(_ raw: String,
+                      sourceEventID: UUID?,
+                      sourceLanguage: String? = nil) -> [LearnedMemory] {
         let cleaned = stripCodeFences(raw)
         guard let data = cleaned.data(using: .utf8) else { return [] }
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -346,7 +363,8 @@ enum MemoryExtractor {
                 term: term,
                 content: content,
                 sourceQuote: (quote?.isEmpty == false) ? quote : nil,
-                sourceEventID: sourceEventID
+                sourceEventID: sourceEventID,
+                sourceLanguage: sourceLanguage
             )
         }
     }
