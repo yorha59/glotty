@@ -205,13 +205,32 @@ final class MemoryStore {
         }
     }
 
-    /// Append one event. No-op when recording is disabled or sourceText is
-    /// empty. Disk write happens on the serial write queue; the in-memory
-    /// cache update is synchronous so the next aggregation reflects the new
-    /// event immediately.
+    /// Append one event. No-op when recording is disabled, sourceText is
+    /// empty, the event has no meaningful result yet (unfinished run), or
+    /// the immediately-preceding event is the same kind+sourceText (back-
+    /// to-back duplicate — replaces in place so we keep the freshest copy
+    /// without padding History with near-identical rows).
     func record(_ event: MemoryEvent) {
         guard isRecordingEnabled else { return }
         guard !event.sourceText.isEmpty else { return }
+        // Skip unfinished queries — empty/whitespace `result` means the
+        // popup was dismissed before the stream produced anything (or the
+        // provider errored mid-flight and we still hit this code path).
+        // Polish has its own structured fields (variants/snapshot); a
+        // polish run without variants is also unfinished.
+        guard Self.hasContent(event) else { return }
+        // Adjacent dedup. If the latest event already in the cache shares
+        // kind + sourceText with the incoming one, replace it instead of
+        // appending — keeps the chronological order intact while ensuring
+        // History only shows one row per "the user asked again about the
+        // same thing right after."
+        if let last = cache.last,
+           last.kind == event.kind,
+           last.sourceText == event.sourceText {
+            cache[cache.count - 1] = event
+            rewriteAll()
+            return
+        }
 
         cache.append(event)
 
@@ -231,6 +250,22 @@ final class MemoryStore {
             } else {
                 try? line.write(to: fileURL, options: .atomic)
             }
+        }
+    }
+
+    /// True when the event carries enough output to be worth surfacing in
+    /// History. Polish uses its structured `polishSnapshot.variants`;
+    /// translate/explain just need a non-empty `result` string.
+    private static func hasContent(_ event: MemoryEvent) -> Bool {
+        switch event.kind {
+        case .polish:
+            if let snap = event.polishSnapshot, !snap.variants.isEmpty { return true }
+            // Older entries without polishSnapshot fall back to `result`.
+            let trimmed = (event.result ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            return !trimmed.isEmpty
+        case .translate, .explain:
+            let trimmed = (event.result ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            return !trimmed.isEmpty
         }
     }
 

@@ -1904,8 +1904,6 @@ struct PopupView: View {
                         .foregroundStyle(.tertiary)
                     Spacer()
                 }
-
-                manualExtractButton
             } else {
                 Button {
                     polishChatExpanded = true
