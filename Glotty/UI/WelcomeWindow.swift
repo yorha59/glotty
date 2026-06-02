@@ -382,8 +382,16 @@ private struct WelcomeView: View {
         case 0: key = "Welcome to Glotty"
         case 1: key = "1. Grant permissions"
         case 2: key = "2.1 Translate (Fn → T)"
-        case 3: key = "2.2 Polish (Fn → P)"
-        case 4: key = "2.3 Explain (Fn → E)"
+        // Use "Refine" instead of "Polish" as the verb here. Earlier
+        // "Polish" was being preserved by the LLM as a proper-noun
+        // brand name (and could also read as "Polish, the language"),
+        // so even "Polish your draft" came back as "用 Polish 润色草稿"
+        // — Chinese with the English word awkwardly preserved.
+        // "Refine your draft" is unambiguously a verb-noun phrase and
+        // translates cleanly to "润色你的草稿". The user-facing action
+        // chord (Fn → P) still points at the same Polish feature.
+        case 3: key = "2.2 Refine your draft (Fn → P)"
+        case 4: key = "2.3 Explain a word or phrase (Fn → E)"
         case 5: key = "3. Set up your AI provider"
         default: key = "4. Let's get to know each other"
         }
