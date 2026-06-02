@@ -79,13 +79,15 @@ struct PermissionsView: View {
     }
 
     var body: some View {
-        Group {
-            if PermissionCheck.anyMissing() {
-                permissionsStage
-            } else {
-                readyStage
-            }
-        }
+        // One unified stage that always shows the permission detection
+        // rows + status badges. Previously the body switched between a
+        // "permissionsStage" (rows visible) and a "readyStage" (no
+        // rows, just a "you're ready" panel) — that hid the live
+        // status the moment everything went green and left users
+        // without a way to confirm what was detected. We now keep the
+        // rows up at all times so the detect/granted feedback the
+        // Welcome flow exposes is also reachable from Settings.
+        permissionsStage
         .padding(20)
         // Standalone window has a fixed size; the Settings embed lets the
         // tab pane decide. Apply the fixed frame only when there's an
@@ -114,80 +116,28 @@ struct PermissionsView: View {
         .localizationAware()
     }
 
-    private var readyStage: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 10) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 36))
-                    .foregroundStyle(.green)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Glotty is ready!").font(.title2).bold()
-                    Text("Both permissions granted. Try it out below.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 12) {
-                Text("How to translate")
-                    .font(.headline)
-
-                stepRow(number: "1", text: "Highlight any text in another app (browser, PDF, Notes, etc.).")
-                stepRow(number: "2", text: "Press the **Fn** key, then within 600ms press **T**.")
-                stepRow(number: "3", text: "A popup appears with the translation, no focus stolen.")
-            }
-
-            Spacer(minLength: 0)
-
-            HStack {
-                // Show the actual menu-bar mascot here instead of a globe
-                // glyph — the user should see exactly what to look for in
-                // the status bar. Falls back to a globe SF symbol when the
-                // asset is missing (dev / tests).
-                if let mascot = NSImage(named: "StatusItemIcon") {
-                    Image(nsImage: mascot)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 18, height: 18)
-                        .foregroundStyle(.secondary)
-                } else {
-                    Image(systemName: "globe")
-                        .foregroundStyle(.secondary)
-                }
-                Text("Glotty lives in your menu bar — click the mascot for options.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                if let onClose {
-                    Button("Done", action: onClose)
-                        .keyboardShortcut(.defaultAction)
-                }
-            }
-        }
-    }
-
-    private func stepRow(number: String, text: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Text(number)
-                .font(.system(.callout, design: .rounded).bold())
-                .foregroundStyle(.white)
-                .frame(width: 22, height: 22)
-                .background(Circle().fill(Color.accentColor))
-            Text(.init(text))
-                .font(.callout)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
+    // The previous "readyStage" / `stepRow` helpers (a separate UI
+    // shown when everything was granted, hiding the per-permission
+    // status rows) have been removed — `permissionsStage` now covers
+    // both states with the same live-status layout.
 
     private var permissionsStage: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Glotty needs these permissions").font(.title3).bold()
-                Text("Status updates live. Grant in System Settings — this window refreshes automatically.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+        let allGranted = !PermissionCheck.anyMissing()
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: allGranted ? "checkmark.seal.fill" : "lock.open")
+                    .font(.system(size: 22))
+                    .foregroundStyle(allGranted ? .green : .orange)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(allGranted ? "Permissions granted" : "Glotty needs these permissions")
+                        .font(.title3).bold()
+                    Text(allGranted
+                         ? "Live status below. Revoke or re-grant any of them from the matching System Settings pane — the row updates automatically."
+                         : "Status updates live. Grant in System Settings — this window refreshes automatically.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             Divider()
