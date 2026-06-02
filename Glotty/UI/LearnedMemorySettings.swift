@@ -45,14 +45,14 @@ struct LearnedMemorySettingsSection: View {
         return Section {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(String(localized: "Global memory"))
+                    Text("Global memory".t)
                         .font(.callout.bold())
                     // Single format string instead of inline plural
                     // interpolation so each locale gets one catalog
                     // entry. Chinese, Japanese, Korean etc. don't
                     // distinguish singular/plural — keeping it as one
                     // key avoids two near-identical catalog entries.
-                    Text(String(format: String(localized: "%d memories · always injected"), count))
+                    Text(String(format: "%d memories · always injected".t, count))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -64,9 +64,9 @@ struct LearnedMemorySettingsSection: View {
                 .disabled(count == 0)
             }
         } header: {
-            Text(String(localized: "Global memory"))
+            Text("Global memory".t)
         } footer: {
-            Text(String(localized: "Persistent facts about you, injected into every LLM prompt regardless of which context is active."))
+            Text("Persistent facts about you, injected into every LLM prompt regardless of which context is active.".t)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -91,7 +91,7 @@ struct LearnedMemorySettingsSection: View {
         let activeID = readActiveContextID()
         return Section {
             HStack(spacing: 8) {
-                Text(String(localized: "Active context"))
+                Text("Active context".t)
                 Picker("Active", selection: Binding<UUID?>(
                     get: { activeID },
                     set: { newID in
@@ -99,7 +99,7 @@ struct LearnedMemorySettingsSection: View {
                         refreshToken &+= 1
                     }
                 )) {
-                    Text(String(localized: "None (global only)")).tag(UUID?.none)
+                    Text("None (global only)".t).tag(UUID?.none)
                     ForEach(contexts) { ctx in
                         Text(ctx.name).tag(UUID?.some(ctx.id))
                     }
@@ -123,9 +123,9 @@ struct LearnedMemorySettingsSection: View {
                     .disabled(newContextName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         } header: {
-            Text(String(localized: "Contexts"))
+            Text("Contexts".t)
         } footer: {
-            Text(String(localized: "Contexts let you keep parallel sets of memories. When a context is active, its memories inject alongside Global ones; memories scoped to other contexts stay dormant."))
+            Text("Contexts let you keep parallel sets of memories. When a context is active, its memories inject alongside Global ones; memories scoped to other contexts stay dormant.".t)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -160,7 +160,7 @@ struct LearnedMemorySettingsSection: View {
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(ctx.name)
-                    Text(String(format: String(localized: "%d memories"), count))
+                    Text(String(format: "%d memories".t, count))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -228,10 +228,10 @@ struct LearnedMemorySettingsSection: View {
                     Image(systemName: "tray")
                         .font(.title2)
                         .foregroundStyle(.tertiary)
-                    Text(String(localized: "No suggestions yet."))
+                    Text("No suggestions yet.".t)
                         .font(.callout)
                         .foregroundStyle(.secondary)
-                    Text(String(localized: "After you chat with Glotty under a polish or explain popup, new memories Glotty notices will land here for review."))
+                    Text("After you chat with Glotty under a polish or explain popup, new memories Glotty notices will land here for review.".t)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .multilineTextAlignment(.center)
@@ -254,7 +254,7 @@ struct LearnedMemorySettingsSection: View {
             }
         } header: {
             HStack {
-                Text(String(localized: "Suggestions"))
+                Text("Suggestions".t)
                 if !pending.isEmpty {
                     Text("\(pending.count)")
                         .font(.caption.monospacedDigit())
@@ -266,7 +266,7 @@ struct LearnedMemorySettingsSection: View {
             }
         } footer: {
             if !pending.isEmpty {
-                Text(String(localized: "Click a suggestion to reopen the conversation that produced it — approve or reject it from there. Or use Dismiss all to clear the whole queue."))
+                Text("Click a suggestion to reopen the conversation that produced it — approve or reject it from there. Or use Dismiss all to clear the whole queue.".t)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -303,14 +303,14 @@ struct LearnedMemorySettingsSection: View {
             }
             HStack(spacing: 6) {
                 if event == nil {
-                    Text(String(localized: "Source conversation no longer in History."))
+                    Text("Source conversation no longer in History.".t)
                         .font(.caption2)
                         .foregroundStyle(.orange)
                 } else {
                     Image(systemName: "arrow.up.right.square")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(String(localized: "Open conversation to review"))
+                    Text("Open conversation to review".t)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -377,9 +377,9 @@ struct LearnedMemorySettingsSection: View {
                 Spacer()
             }
         } header: {
-            Text(String(localized: "Settings"))
+            Text("Settings".t)
         } footer: {
-            Text(String(localized: "Every memory still requires your approval before it's injected into LLM prompts."))
+            Text("Every memory still requires your approval before it's injected into LLM prompts.".t)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

@@ -62,7 +62,7 @@ final class TranslateGuideWindowController: ObservableObject {
         // Glotty yet — by the time the Translate gate fires, the
         // user has completed setup and expects strings in the
         // Glotty UI language they (implicitly or explicitly) chose.
-        w.title = String(localized: "Set up Translate")
+        w.title = "Set up Translate".t
         w.styleMask = [.titled, .closable, .fullSizeContentView]
         w.titlebarAppearsTransparent = true
         w.isReleasedWhenClosed = false
@@ -171,7 +171,7 @@ private struct TranslateGuideView: View {
 
     private var stageNeedsSetup: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(String(localized: "Glotty's Translate uses the dictionaries macOS has activated. You don't have any activated yet — open Settings → Dictionaries to enable the ones you need (English, Chinese, Japanese, and more are included with macOS)."))
+            Text("Glotty's Translate uses the dictionaries macOS has activated. You don't have any activated yet — open Settings → Dictionaries to enable the ones you need (English, Chinese, Japanese, and more are included with macOS).".t)
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -180,7 +180,7 @@ private struct TranslateGuideView: View {
 
     private var stageReady: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(String(localized: "Highlight the word below in any app — your browser, a doc, Notes — then press Fn → T. Glotty's popup should appear with the definition and translation."))
+            Text("Highlight the word below in any app — your browser, a doc, Notes — then press Fn → T. Glotty's popup should appear with the definition and translation.".t)
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

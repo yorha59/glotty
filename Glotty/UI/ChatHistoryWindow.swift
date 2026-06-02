@@ -33,7 +33,7 @@ final class ChatHistoryWindowController {
         // CJK / RTL locales can re-arrange the parts. The date label
         // itself is user content (output of `ChatDay.displayLabel`)
         // and stays as-is.
-        let title = String(format: String(localized: "Chat — %@"),
+        let title = String(format: "Chat — %@".t,
                            ChatDay.displayLabel(for: thread.dayKey))
 
         if let window {
@@ -128,7 +128,7 @@ struct ChatHistoryView: View {
                 // "12 messages · 5 from you" — single format, locales
                 // re-order. Singular/plural pluralization isn't a thing
                 // in the locales we ship, so we use one key for both.
-                Text(String(format: String(localized: "%d messages · %d from you"),
+                Text(String(format: "%d messages · %d from you".t,
                             thread.turns.count, userTurns))
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -171,7 +171,7 @@ struct ChatHistoryView: View {
                         .font(.caption)
                         .foregroundStyle(.orange)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(String(localized: "Better:"))
+                        Text("Better:".t)
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.orange)
                         Text(corrected)

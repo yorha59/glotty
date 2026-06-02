@@ -246,7 +246,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // a user explicitly called it out as noise: "设置的三个。。。
         // 也不需要".
 
-        let settings = NSMenuItem(title: String(localized: "Settings"),
+        let settings = NSMenuItem(title: "Settings".t,
                                   action: #selector(openSettings),
                                   keyEquivalent: ",")
         settings.target = self
@@ -263,18 +263,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // chat prompt uses for short-term scoping.
         let contexts = MemoryContextStore.shared.all()
         let activeID = MemoryContextStore.shared.activeContextID
-        let memoryLabel = String(localized: "Memory")
+        let memoryLabel = "Memory".t
         let activeContextName: String
         if let active = contexts.first(where: { $0.id == activeID }) {
             activeContextName = active.name
         } else {
-            activeContextName = String(localized: "Global only")
+            activeContextName = "Global only".t
         }
         let memoryTitle = "\(memoryLabel): \(activeContextName)"
         let memoryItem = NSMenuItem(title: memoryTitle, action: nil, keyEquivalent: "")
         memoryItem.image = NSImage(systemSymbolName: "brain", accessibilityDescription: nil)
         let memorySubmenu = NSMenu()
-        let noneItem = NSMenuItem(title: String(localized: "Global only (no context)"),
+        let noneItem = NSMenuItem(title: "Global only (no context)".t,
                                   action: #selector(setActiveContext(_:)),
                                   keyEquivalent: "")
         noneItem.target = self
@@ -293,7 +293,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         memorySubmenu.addItem(.separator())
-        let manage = NSMenuItem(title: String(localized: "Manage memory"),
+        let manage = NSMenuItem(title: "Manage memory".t,
                                 action: #selector(openMemorySettings),
                                 keyEquivalent: "")
         manage.target = self
@@ -303,14 +303,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
-        let welcome = NSMenuItem(title: String(localized: "Show welcome"),
+        let welcome = NSMenuItem(title: "Show welcome".t,
                                  action: #selector(showWelcome),
                                  keyEquivalent: "")
         welcome.target = self
         welcome.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
         menu.addItem(welcome)
 
-        let quit = NSMenuItem(title: String(localized: "Quit Glotty"),
+        let quit = NSMenuItem(title: "Quit Glotty".t,
                               action: #selector(NSApplication.terminate(_:)),
                               keyEquivalent: "q")
         quit.image = NSImage(systemSymbolName: "power", accessibilityDescription: nil)

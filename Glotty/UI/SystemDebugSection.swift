@@ -42,9 +42,9 @@ struct SystemDebugSection: View {
                     .foregroundStyle(.secondary)
             }
         } header: {
-            Text(String(localized: "Translations"))
+            Text("Translations".t)
         } footer: {
-            Text(String(localized: "Re-translates the UI in the current language via the LLM, applying any wording preferences from your accepted memories."))
+            Text("Re-translates the UI in the current language via the LLM, applying any wording preferences from your accepted memories.".t)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -54,7 +54,7 @@ struct SystemDebugSection: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 ProgressView().controlSize(.small)
-                Text(String(format: String(localized: "Translating UI… %d / %d"), p.done, p.total))
+                Text(String(format: "Translating UI… %d / %d".t, p.done, p.total))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -75,7 +75,7 @@ struct SystemDebugSection: View {
         var seen = Set<String>()
         let sources = (bundled + encountered).filter { seen.insert($0).inserted }
         guard !sources.isEmpty else {
-            refreshResult = String(localized: "Nothing to translate.")
+            refreshResult = "Nothing to translate.".t
             return
         }
         refreshProgress = (done: 0, total: sources.count)

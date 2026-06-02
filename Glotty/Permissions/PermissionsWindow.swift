@@ -30,7 +30,7 @@ final class PermissionsWindowController {
 
         let host = NSHostingController(rootView: view)
         let w = NSWindow(contentViewController: host)
-        w.title = "Glotty — \(String(localized: "Permissions"))"
+        w.title = "Glotty — \("Permissions".t)"
         w.styleMask = [.titled, .closable, .miniaturizable]
         w.isReleasedWhenClosed = false
         w.setContentSize(NSSize(width: 480, height: 460))
@@ -155,19 +155,19 @@ struct PermissionsView: View {
 
             DisclosureGroup(isExpanded: $showStaleHelp) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(String(localized: "Granted but Glotty still says ✗?"))
+                    Text("Granted but Glotty still says ✗?".t)
                         .font(.callout).bold()
-                    Text(String(localized: "Dev builds are ad-hoc signed, so each rebuild has a different code signature. macOS's TCC tracks per-signature — your previous grant may belong to an older build. Two things to try:"))
+                    Text("Dev builds are ad-hoc signed, so each rebuild has a different code signature. macOS's TCC tracks per-signature — your previous grant may belong to an older build. Two things to try:".t)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text(String(localized: "1. In System Settings → Accessibility, click the (–) minus button to remove every Glotty entry, then relaunch Glotty and grant fresh."))
+                    Text("1. In System Settings → Accessibility, click the (–) minus button to remove every Glotty entry, then relaunch Glotty and grant fresh.".t)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text(String(localized: "2. From Terminal:"))
+                    Text("2. From Terminal:".t)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     // tccResetCommand returns a shell command string —
@@ -178,13 +178,13 @@ struct PermissionsView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(RoundedRectangle(cornerRadius: 6).fill(Color(NSColor.textBackgroundColor)))
                         .textSelection(.enabled)
-                    Text(String(localized: "Then quit & relaunch Glotty."))
+                    Text("Then quit & relaunch Glotty.".t)
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
                     Divider().padding(.vertical, 4)
 
-                    Text(String(localized: "Diagnostic info"))
+                    Text("Diagnostic info".t)
                         .font(.callout).bold()
                     diagnosticText
                         .font(.system(.caption2, design: .monospaced))
@@ -193,7 +193,7 @@ struct PermissionsView: View {
                 }
                 .padding(.top, 6)
             } label: {
-                Text(String(localized: "Troubleshooting")).font(.callout)
+                Text("Troubleshooting".t).font(.callout)
             }
 
             Spacer(minLength: 0)

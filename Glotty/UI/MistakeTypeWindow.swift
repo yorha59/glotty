@@ -43,7 +43,7 @@ final class MistakeTypeWindowController {
         if let window {
             Self.diag("show REUSE existing window")
             window.contentViewController = host
-            window.title = "\(String(localized: "Mistake type")) — \(category)"
+            window.title = "\("Mistake type".t) — \(category)"
             // Already hold an activation slot — just nudge to the front.
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
@@ -52,7 +52,7 @@ final class MistakeTypeWindowController {
         }
 
         let w = NSWindow(contentViewController: host)
-        w.title = "\(String(localized: "Mistake type")) — \(category)"
+        w.title = "\("Mistake type".t) — \(category)"
         w.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         w.isReleasedWhenClosed = false
         host.view.layoutSubtreeIfNeeded()
@@ -134,7 +134,7 @@ struct MistakeTypeView: View {
                     Text(category)
                         .font(.title3).bold()
                         .lineLimit(2)
-                    Text(String(format: String(localized: "%d polish runs flagged with this category"),
+                    Text(String(format: "%d polish runs flagged with this category".t,
                                 events.count))
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -152,7 +152,7 @@ struct MistakeTypeView: View {
                     Image(systemName: "tray")
                         .font(.title)
                         .foregroundStyle(.secondary)
-                    Text(String(localized: "No polish runs in this time range."))
+                    Text("No polish runs in this time range.".t)
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -194,7 +194,7 @@ struct MistakeTypeView: View {
     private func row(_ event: MemoryEvent) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Text(String(localized: "Polish"))
+                Text("Polish".t)
                     .font(.caption2.bold())
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)

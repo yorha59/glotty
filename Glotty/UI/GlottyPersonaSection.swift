@@ -77,7 +77,7 @@ struct GlottyPersonaSection: View {
             }
             ZStack(alignment: .topLeading) {
                 if character.isEmpty {
-                    Text(String(localized: "e.g. \u{201C}Loves indie games and dry humor. Bilingual in French.\u{201D}"))
+                    Text("e.g. \u{201C}Loves indie games and dry humor. Bilingual in French.\u{201D}".t)
                         .font(.callout)
                         .foregroundStyle(.tertiary)
                         .padding(.horizontal, 11)
@@ -92,9 +92,9 @@ struct GlottyPersonaSection: View {
                     .background(RoundedRectangle(cornerRadius: 6).fill(Color(NSColor.textBackgroundColor)))
             }
         } header: {
-            Text(String(localized: "Glotty's persona"))
+            Text("Glotty's persona".t)
         } footer: {
-            Text(String(localized: "How Glotty acts in chat. Reset by clearing the fields. Affects the conversational chat (Fn → C) and proactive reminder notifications."))
+            Text("How Glotty acts in chat. Reset by clearing the fields. Affects the conversational chat (Fn → C) and proactive reminder notifications.".t)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

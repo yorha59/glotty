@@ -708,7 +708,7 @@ struct PopupView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(PopupTokens.tertiaryText)
                 Spacer()
-                Text(String(format: String(localized: "%dms · Esc"), elapsedMs))
+                Text(String(format: "%dms · Esc".t, elapsedMs))
                     .font(.system(size: 11))
                     .foregroundStyle(PopupTokens.tertiaryText)
             }
@@ -1159,7 +1159,7 @@ struct PopupView: View {
             Image(systemName: "bubble.left.and.text.bubble.right")
                 .foregroundStyle(PopupTokens.accent)
             VStack(alignment: .leading, spacing: 2) {
-                Text(String(format: String(localized: "Chat with %@"), personaName))
+                Text(String(format: "Chat with %@".t, personaName))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(PopupTokens.primaryText)
                 if !tutorProviderName.isEmpty {
@@ -1508,7 +1508,7 @@ struct PopupView: View {
         case "open_settings_tab":
             let tab = call.args["tab"] ?? ""
             let label = SettingsTab(rawValue: tab)?.label ?? tab
-            return ("slider.horizontal.3", String(format: String(localized: "Open Settings → %@"), label))
+            return ("slider.horizontal.3", String(format: "Open Settings → %@".t, label))
         default:
             return ("questionmark.circle", call.name)
         }
@@ -2414,7 +2414,7 @@ struct PopupView: View {
                 Circle()
                     .fill(Color.green)
                     .frame(width: 6, height: 6)
-                Text(String(format: String(localized: "Streaming from %@…"),
+                Text(String(format: "Streaming from %@…".t,
                             polishProviderName.isEmpty ? "LLM" : polishProviderName))
                     .font(.system(size: 10, weight: .medium, design: .monospaced))
                     .foregroundStyle(Color.green.opacity(0.9))

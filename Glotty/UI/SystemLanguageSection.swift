@@ -49,9 +49,9 @@ struct SystemLanguageSection: View {
                 }
             }
         } header: {
-            Text(String(localized: "Glotty's UI language"))
+            Text("Glotty's UI language".t)
         } footer: {
-            Text(String(localized: "Glotty's UI language. Switching translates any missing strings and relaunches the app."))
+            Text("Glotty's UI language. Switching translates any missing strings and relaunches the app.".t)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -61,7 +61,7 @@ struct SystemLanguageSection: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 ProgressView().controlSize(.small)
-                Text(String(format: String(localized: "Translating UI… %d / %d"), p.done, p.total))
+                Text(String(format: "Translating UI… %d / %d".t, p.done, p.total))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
