@@ -61,10 +61,28 @@ final class HUDController {
     }
 }
 
-/// Translucent dark HUD — uses `.ultraThinMaterial` so it adapts to the desktop
-/// behind it in both light and dark modes (matches the previous design after a
-/// brief Figma-styled detour).
+/// Translucent HUD that adapts to the system colorScheme. Previously
+/// hardcoded dark (with `.colorScheme(.dark)` + white text); a user on
+/// a light-mode Mac reported the panel still came up dark, which read
+/// as a bug. Now uses `@Environment(\.colorScheme)` plus semantic
+/// colors so light-mode users get a matching panel.
 private struct HUDView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var titleColor: Color { colorScheme == .dark ? .white : .black }
+    private var secondaryColor: Color {
+        colorScheme == .dark ? .white.opacity(0.55) : .black.opacity(0.55)
+    }
+    private var dividerColor: Color {
+        colorScheme == .dark ? .white.opacity(0.15) : .black.opacity(0.10)
+    }
+    private var hintColor: Color {
+        colorScheme == .dark ? .white.opacity(0.45) : .black.opacity(0.45)
+    }
+    private var mascotTint: Color {
+        colorScheme == .dark ? .white.opacity(0.85) : .black.opacity(0.85)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
@@ -77,20 +95,20 @@ private struct HUDView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: 18, height: 18)
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(mascotTint)
                 } else {
                     Image(systemName: "globe")
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(mascotTint)
                 }
                 Text("Glotty")
                     .font(.system(.headline, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(titleColor)
                 Spacer()
                 Text("\(Keycode.currentLeader().label) \(String(localized: "held"))")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.55))
+                    .foregroundStyle(secondaryColor)
             }
-            Divider().background(.white.opacity(0.15))
+            Divider().background(dividerColor)
             // Use full %@ format strings rather than concat-with-prefix:
             // Chinese (and other) word orders place the language name
             // BEFORE the verb (e.g. "用中文解释"), which a bare
@@ -112,41 +130,49 @@ private struct HUDView: View {
                                      HUDView.polishLangName))
             Text("\(String(localized: "Release")) \(Keycode.currentLeader().label) \(String(localized: "to cancel"))")
                 .font(.caption2)
-                .foregroundStyle(.white.opacity(0.45))
+                .foregroundStyle(hintColor)
         }
         .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(glassmorphism)
-        .colorScheme(.dark)
         .localizationAware()
     }
 
     /// Glassmorphism panel — frosted backdrop blur (NSVisualEffectView
-    /// via `.thickMaterial`) with a dark tint laid on top so white
-    /// text reads clearly against any desktop. A faint diagonal
-    /// highlight at the top gives the "glass" sheen; the hairline
-    /// white border defines the edges.
+    /// via `.thickMaterial`) with a tint matched to the active
+    /// colorScheme so the same panel works on both light and dark
+    /// desktops. The diagonal highlight + hairline border give the
+    /// "glass" sheen on both.
     private var glassmorphism: some View {
         let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        let washColor: Color = colorScheme == .dark
+            ? Color.black.opacity(0.55)
+            : Color.white.opacity(0.55)
+        let highlightTop: Color = colorScheme == .dark
+            ? Color.white.opacity(0.10)
+            : Color.white.opacity(0.55)
+        let borderColors: [Color] = colorScheme == .dark
+            ? [Color.white.opacity(0.28), Color.white.opacity(0.06)]
+            : [Color.black.opacity(0.18), Color.black.opacity(0.04)]
+        let shadowColor: Color = colorScheme == .dark
+            ? Color.black.opacity(0.35)
+            : Color.black.opacity(0.18)
         return shape
             .fill(.thickMaterial)
             .overlay(
-                // Dark wash for legibility — the material alone reads
-                // too bright in many desktops behind. ~55% black puts
-                // us back into a dark, readable panel without losing
-                // the backdrop blur.
-                shape.fill(Color.black.opacity(0.55))
+                // Tint wash for legibility. Dark wash on dark mode keeps
+                // the panel readable against bright desktops; light wash
+                // on light mode keeps it readable against dark wallpapers
+                // without dragging the text into low-contrast territory.
+                shape.fill(washColor)
             )
             .overlay(
                 // Soft diagonal highlight along the top edge — the
-                // subtle "wet glass" cue without lightening the
-                // overall panel.
+                // subtle "wet glass" cue, brighter in light mode to
+                // suggest a frosted-glass top.
                 shape.fill(
                     LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.10),
-                            Color.clear,
-                        ],
+                        colors: [highlightTop, Color.clear],
                         startPoint: .top,
                         endPoint: .center
                     )
@@ -155,17 +181,14 @@ private struct HUDView: View {
             .overlay(
                 shape.strokeBorder(
                     LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.28),
-                            Color.white.opacity(0.06),
-                        ],
+                        colors: borderColors,
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
                     lineWidth: 0.8
                 )
             )
-            .shadow(color: .black.opacity(0.35), radius: 22, y: 8)
+            .shadow(color: shadowColor, radius: 22, y: 8)
     }
 
     /// Localized name of the user's native language. Both Translate and
@@ -189,22 +212,27 @@ private struct HUDView: View {
     }
 
     private func commandRow(key: String, label: String) -> some View {
-        HStack(spacing: 10) {
+        let isDark = colorScheme == .dark
+        let keyTextColor: Color = isDark ? .white : .black
+        let keyFill: Color = isDark ? .white.opacity(0.12) : .black.opacity(0.08)
+        let keyStroke: Color = isDark ? .white.opacity(0.18) : .black.opacity(0.18)
+        let labelColor: Color = isDark ? .white.opacity(0.9) : .black.opacity(0.82)
+        return HStack(spacing: 10) {
             Text(key)
                 .font(.system(.callout, design: .monospaced).bold())
-                .foregroundStyle(.white)
+                .foregroundStyle(keyTextColor)
                 .frame(width: 28, height: 24)
                 .background(
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(.white.opacity(0.12))
+                        .fill(keyFill)
                         .overlay(
                             RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .strokeBorder(.white.opacity(0.18), lineWidth: 0.5)
+                                .strokeBorder(keyStroke, lineWidth: 0.5)
                         )
                 )
             Text(label)
                 .font(.callout)
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(labelColor)
             Spacer()
         }
     }

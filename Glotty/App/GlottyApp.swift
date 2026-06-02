@@ -236,35 +236,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func rebuildStatusMenu(_ menu: NSMenu) {
         menu.removeAllItems()
 
-        let settings = NSMenuItem(title: String(localized: "Settings…"),
+        // All items get a matching SF Symbol so the leading edge of
+        // every row sits at the same x. Without icons the rows were
+        // visually ragged — Settings had no icon, the submenu chevron
+        // shifted Context inward, and Quit's ⌘Q badge made it loom
+        // larger than the rest.
+        //
+        // Title strings drop the trailing "…" Apple convention since
+        // a user explicitly called it out as noise: "设置的三个。。。
+        // 也不需要".
+
+        let settings = NSMenuItem(title: String(localized: "Settings"),
                                   action: #selector(openSettings),
                                   keyEquivalent: ",")
         settings.target = self
+        settings.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
         menu.addItem(settings)
 
         menu.addItem(.separator())
 
-        // Context submenu — shows the active context inline and lets
-        // the user switch with one click. "None" maps to global-only.
+        // Memory submenu — shows the active memory context inline and
+        // lets the user switch with one click. Labelled "Memory" in
+        // the user-facing chrome (matches the rest of the app); the
+        // internal `MemoryContext` type and code paths keep their
+        // "context" naming because that's the technical concept the
+        // chat prompt uses for short-term scoping.
         let contexts = MemoryContextStore.shared.all()
         let activeID = MemoryContextStore.shared.activeContextID
-        let contextLabel = String(localized: "Context")
-        let contextTitle: String
+        let memoryLabel = String(localized: "Memory")
+        let activeContextName: String
         if let active = contexts.first(where: { $0.id == activeID }) {
-            contextTitle = "\(contextLabel): \(active.name)"
+            activeContextName = active.name
         } else {
-            contextTitle = "\(contextLabel): \(String(localized: "None"))"
+            activeContextName = String(localized: "Global only")
         }
-        let contextItem = NSMenuItem(title: contextTitle, action: nil, keyEquivalent: "")
-        let contextSubmenu = NSMenu()
-        let noneItem = NSMenuItem(title: String(localized: "None (global only)"),
+        let memoryTitle = "\(memoryLabel): \(activeContextName)"
+        let memoryItem = NSMenuItem(title: memoryTitle, action: nil, keyEquivalent: "")
+        memoryItem.image = NSImage(systemSymbolName: "brain", accessibilityDescription: nil)
+        let memorySubmenu = NSMenu()
+        let noneItem = NSMenuItem(title: String(localized: "Global only (no context)"),
                                   action: #selector(setActiveContext(_:)),
                                   keyEquivalent: "")
         noneItem.target = self
         noneItem.state = activeID == nil ? .on : .off
-        contextSubmenu.addItem(noneItem)
+        memorySubmenu.addItem(noneItem)
         if !contexts.isEmpty {
-            contextSubmenu.addItem(.separator())
+            memorySubmenu.addItem(.separator())
             for ctx in contexts {
                 let item = NSMenuItem(title: ctx.name,
                                       action: #selector(setActiveContext(_:)),
@@ -272,29 +289,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 item.target = self
                 item.representedObject = ctx.id
                 item.state = ctx.id == activeID ? .on : .off
-                contextSubmenu.addItem(item)
+                memorySubmenu.addItem(item)
             }
         }
-        contextSubmenu.addItem(.separator())
-        let manage = NSMenuItem(title: String(localized: "Manage contexts…"),
+        memorySubmenu.addItem(.separator())
+        let manage = NSMenuItem(title: String(localized: "Manage memory"),
                                 action: #selector(openMemorySettings),
                                 keyEquivalent: "")
         manage.target = self
-        contextSubmenu.addItem(manage)
-        contextItem.submenu = contextSubmenu
-        menu.addItem(contextItem)
+        memorySubmenu.addItem(manage)
+        memoryItem.submenu = memorySubmenu
+        menu.addItem(memoryItem)
 
         menu.addItem(.separator())
 
-        let welcome = NSMenuItem(title: String(localized: "Show welcome…"),
+        let welcome = NSMenuItem(title: String(localized: "Show welcome"),
                                  action: #selector(showWelcome),
                                  keyEquivalent: "")
         welcome.target = self
+        welcome.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
         menu.addItem(welcome)
 
-        menu.addItem(NSMenuItem(title: String(localized: "Quit Glotty"),
-                                action: #selector(NSApplication.terminate(_:)),
-                                keyEquivalent: "q"))
+        let quit = NSMenuItem(title: String(localized: "Quit Glotty"),
+                              action: #selector(NSApplication.terminate(_:)),
+                              keyEquivalent: "q")
+        quit.image = NSImage(systemSymbolName: "power", accessibilityDescription: nil)
+        menu.addItem(quit)
     }
 
     /// Re-open the first-run walkthrough on demand. Useful for users
