@@ -560,5 +560,36 @@ final class MemoryStore {
                 guard !line.isEmpty else { return nil }
                 return try? decoder.decode(MemoryEvent.self, from: Data(line))
             }
+        // One-shot cleanup of stale rows on every launch — purges
+        // unfinished queries (empty `result`) and back-to-back
+        // duplicates that pre-date the matching guards in `record(_:)`.
+        // If anything gets dropped, the JSONL is rewritten so the file
+        // matches the cache on disk too.
+        purgeStaleEntries()
+    }
+
+    /// Drop empty/unfinished events and collapse adjacent
+    /// kind+sourceText duplicates (keeping the last of each run, which
+    /// is normally the most complete copy). Idempotent: a clean cache
+    /// passes through untouched. Rewrites the JSONL only when the cache
+    /// actually changed so the I/O is free on the common path.
+    private func purgeStaleEntries() {
+        let before = cache.count
+        var cleaned: [MemoryEvent] = []
+        cleaned.reserveCapacity(cache.count)
+        for event in cache {
+            guard Self.hasContent(event) else { continue }
+            if let last = cleaned.last,
+               last.kind == event.kind,
+               last.sourceText == event.sourceText {
+                // Adjacent dup — overwrite the earlier slot.
+                cleaned[cleaned.count - 1] = event
+            } else {
+                cleaned.append(event)
+            }
+        }
+        guard cleaned.count != before else { return }
+        cache = cleaned
+        rewriteAll()
     }
 }
