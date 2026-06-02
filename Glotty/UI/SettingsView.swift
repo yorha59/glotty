@@ -379,12 +379,12 @@ struct LanguageModelSettingsSection: View {
             .textContentType(.URL)
 
         HStack {
-            Picker("Model", selection: modelBinding(for: preset)) {
-                ForEach(preset.availableModels()) { option in
-                    Text(option.displayName.t).tag(option.id)
-                }
-            }
-            .pickerStyle(.menu)
+            modelIDInput(
+                label: "Model",
+                binding: rawModelBinding(for: preset),
+                placeholder: preset.defaultModel,
+                suggestions: preset.availableModels().map { ($0.id, $0.displayName.t) }
+            )
             .id(modelListRefreshToken)
             modelRefreshControl(providerID: preset.id) {
                 let endpoint = URL(string: preset.currentEndpoint())
@@ -550,12 +550,12 @@ struct LanguageModelSettingsSection: View {
             .textContentType(.URL)
 
         HStack {
-            Picker("Model", selection: deepseekModelBinding) {
-                ForEach(DeepSeekProvider.availableModels()) { option in
-                    Text(option.displayName).tag(option.id)
-                }
-            }
-            .pickerStyle(.menu)
+            modelIDInput(
+                label: "Model",
+                binding: $deepseekModel,
+                placeholder: DeepSeekProvider.defaultModel,
+                suggestions: DeepSeekProvider.availableModels().map { ($0.id, $0.displayName) }
+            )
             .id(modelListRefreshToken)
             modelRefreshControl(providerID: "deepseek") {
                 let raw = (deepseekEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -603,12 +603,12 @@ struct LanguageModelSettingsSection: View {
             .textContentType(.URL)
 
         HStack {
-            Picker("Model", selection: kimiModelBinding) {
-                ForEach(KimiCodingProvider.availableModels()) { option in
-                    Text(option.displayName.t).tag(option.id)
-                }
-            }
-            .pickerStyle(.menu)
+            modelIDInput(
+                label: "Model",
+                binding: $kimiModel,
+                placeholder: KimiCodingProvider.defaultModel,
+                suggestions: KimiCodingProvider.availableModels().map { ($0.id, $0.displayName.t) }
+            )
             .id(modelListRefreshToken)
             modelRefreshControl(providerID: "kimi-coding") {
                 let raw = (kimiEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -760,6 +760,55 @@ struct LanguageModelSettingsSection: View {
         } catch {
             modelFetchError[providerID] = error.localizedDescription
         }
+    }
+
+    /// Free-form model id input with a "Known models" menu next to it.
+    /// Lets users paste a brand-new model id from a provider release
+    /// note without waiting for our hardcoded catalog or `/models`
+    /// cache to catch up. The menu still surfaces the merged
+    /// hardcoded + fetched list as one-tap suggestions; selecting an
+    /// item writes it into the same binding the TextField writes to,
+    /// so the two stay in sync.
+    @ViewBuilder
+    private func modelIDInput(
+        label: LocalizedStringKey,
+        binding: Binding<String>,
+        placeholder: String,
+        suggestions: [(id: String, displayName: String)]
+    ) -> some View {
+        HStack(spacing: 4) {
+            TextField(label, text: binding, prompt: Text(placeholder))
+            if !suggestions.isEmpty {
+                Menu {
+                    ForEach(suggestions, id: \.id) { suggestion in
+                        Button {
+                            binding.wrappedValue = suggestion.id
+                        } label: {
+                            if suggestion.id == binding.wrappedValue {
+                                Label(suggestion.displayName, systemImage: "checkmark")
+                            } else {
+                                Text(suggestion.displayName)
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "list.bullet")
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .help("Pick from known models".t)
+            }
+        }
+    }
+
+    /// Raw binding for a stock preset's model id — empty string when
+    /// nothing's saved (TextField then shows the placeholder). The
+    /// fall-back-to-default logic lives in the consumer.
+    private func rawModelBinding(for preset: OpenAIStockPresets.Preset) -> Binding<String> {
+        Binding(
+            get: { UserDefaults.standard.string(forKey: preset.modelUserDefaultsKey) ?? "" },
+            set: { UserDefaults.standard.set($0, forKey: preset.modelUserDefaultsKey) }
+        )
     }
 
     /// Compact refresh button + per-provider status badge. Shown next
@@ -1006,9 +1055,9 @@ private struct UserProfileSection: View {
                 }
                 .pickerStyle(.menu)
             } header: {
-                Text("Your native language")
+                Text("Your native language".t)
             } footer: {
-                Text("The language you speak natively. Drives auto-detected source / target choices and biases translation behavior toward what you're likely reading or writing. Also the language Fn → E (Explain) renders its explanations in, and — unless you've explicitly picked one below — the language Glotty's UI uses on the next launch.")
+                Text("The language you speak natively. Drives auto-detected source / target choices and biases translation behavior toward what you're likely reading or writing. Also the language Fn → E (Explain) renders its explanations in, and — unless you've overridden it in the System tab — the language Glotty's UI uses on the next launch.".t)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

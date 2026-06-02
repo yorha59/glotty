@@ -284,6 +284,14 @@ struct LearnedMemorySettingsSection: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 kindBadge(memory.kind)
+                if let lang = memory.sourceLanguage {
+                    Text(LanguageOptions.localizedName(for: lang))
+                        .font(.caption2)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(Capsule().fill(Color.secondary.opacity(0.12)))
+                        .foregroundStyle(.secondary)
+                }
                 if let term = memory.term {
                     Text(term).font(.callout.bold())
                 }

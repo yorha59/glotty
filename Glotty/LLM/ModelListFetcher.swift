@@ -25,15 +25,18 @@ enum ModelListFetcher {
 
     /// GET `<base>/models` and return the list of ids, sorted. The
     /// `endpoint` argument is the chat-completions / messages URL the
-    /// caller already has; we strip the last path component and append
-    /// `models` to reach the listing.
+    /// caller already has; we derive the listing URL by chopping the
+    /// trailing chat path segment(s) and appending `models`. OpenAI-
+    /// style endpoints have two trailing segments (`/chat/completions`)
+    /// whose `/models` sibling lives one level up, while Anthropic-
+    /// style and other single-segment endpoints (`/messages`) sit at
+    /// the same level as `/models`.
     static func fetchModels(
         endpoint: URL,
         apiKey: String,
         auth: AuthStyle
     ) async throws -> [String] {
-        let modelsURL = endpoint.deletingLastPathComponent()
-            .appendingPathComponent("models")
+        let modelsURL = derivedModelsURL(from: endpoint)
         var req = URLRequest(url: modelsURL)
         req.httpMethod = "GET"
         req.timeoutInterval = 30
@@ -71,6 +74,28 @@ enum ModelListFetcher {
         // De-dupe and stable-sort so the picker order is predictable
         // across calls. Servers sometimes return duplicates.
         return Array(Set(ids)).sorted()
+    }
+
+    /// Derive the `/models` listing URL from a chat-style endpoint.
+    /// Two cases:
+    ///   - `<base>/chat/completions` (OpenAI, DeepSeek, OpenRouter,
+    ///      Z.AI, Gemini's OpenAI shim) → `<base>/models`. Z.AI
+    ///      lives at `.../v4/chat/completions`; the previous one-
+    ///      segment strip produced `.../v4/chat/models` and 404ed.
+    ///   - any other single-segment ending (`/messages` for Kimi's
+    ///      Anthropic-compatible endpoint) → strip one segment, append
+    ///      `models`.
+    static func derivedModelsURL(from endpoint: URL) -> URL {
+        let path = endpoint.path
+        if path.hasSuffix("/chat/completions") {
+            return endpoint
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appendingPathComponent("models")
+        }
+        return endpoint
+            .deletingLastPathComponent()
+            .appendingPathComponent("models")
     }
 }
 

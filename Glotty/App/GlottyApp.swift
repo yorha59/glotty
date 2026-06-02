@@ -24,9 +24,22 @@ struct GlottyApp: App {
     }
 
     var body: some Scene {
-        // No SwiftUI scene — we host Settings/Permissions/Popup as AppKit windows from
-        // the AppDelegate so they surface reliably from the status-bar menu.
+        // We host Settings/Permissions/Popup as AppKit windows from the AppDelegate
+        // so they surface reliably from the status-bar menu. SwiftUI requires at
+        // least one Scene, so we keep `Settings { EmptyView() }` as a placeholder
+        // — but the default `.appSettings` command also wires Cmd+, to OPEN that
+        // empty window. We replace it so Cmd+, drives our AppKit controller,
+        // otherwise pressing Cmd+, (or invoking Settings from elsewhere) produced
+        // two Settings windows side by side: the empty SwiftUI one and ours.
         Settings { EmptyView() }
+            .commands {
+                CommandGroup(replacing: .appSettings) {
+                    Button("Settings…") {
+                        SettingsWindowController.shared.show()
+                    }
+                    .keyboardShortcut(",", modifiers: .command)
+                }
+            }
     }
 }
 

@@ -22,16 +22,45 @@ struct SystemDebugSection: View {
     }
 
     private var translationsSection: some View {
-        Section {
-            Button {
-                Task { await refreshTranslations() }
-            } label: {
-                Label("Refresh translations", systemImage: "arrow.clockwise")
+        let canRefresh = refreshProgress == nil
+            && SystemLanguageManager.current.bundleLocaleID != nil
+            && SystemLanguageManager.current.bundleLocaleID != "en"
+        return Section {
+            HStack(spacing: 8) {
+                Button {
+                    Task { await refreshTranslations(memoryAffectedOnly: false) }
+                } label: {
+                    // Use the closure-based Label form with explicit
+                    // `.t` so the title goes through our swizzle on
+                    // macOS 26 — the convenience `Label("...", ...)`
+                    // initializer uses LocalizedStringResource and
+                    // bypasses Bundle.localizedString.
+                    Label {
+                        Text("Refresh all".t)
+                    } icon: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                }
+                .controlSize(.large)
+                .disabled(!canRefresh)
+
+                // Cheaper second pass: re-translate ONLY strings whose
+                // source mentions a term from accepted memory. Useful
+                // right after you accept or edit a glossary entry —
+                // you get the new wording everywhere it applies
+                // without paying for the whole catalog again.
+                Button {
+                    Task { await refreshTranslations(memoryAffectedOnly: true) }
+                } label: {
+                    Label {
+                        Text("Memory-affected only".t)
+                    } icon: {
+                        Image(systemName: "brain")
+                    }
+                }
+                .controlSize(.large)
+                .disabled(!canRefresh || memoryTerms().isEmpty)
             }
-            .controlSize(.large)
-            .disabled(refreshProgress != nil
-                      || SystemLanguageManager.current.bundleLocaleID == nil
-                      || SystemLanguageManager.current.bundleLocaleID == "en")
 
             if let p = refreshProgress {
                 progressRow(p)
@@ -42,9 +71,9 @@ struct SystemDebugSection: View {
                     .foregroundStyle(.secondary)
             }
         } header: {
-            Text("Translations".t)
+            Text("Localization".t)
         } footer: {
-            Text("Re-translates the UI in the current language via the LLM, applying any wording preferences from your accepted memories.".t)
+            Text("Re-translates the UI in the current language via the LLM, applying any wording preferences from your accepted memories. The partial refresh only touches strings that mention a term from your memories — cheaper after a single glossary change.".t)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -64,7 +93,7 @@ struct SystemDebugSection: View {
     }
 
     @MainActor
-    private func refreshTranslations() async {
+    private func refreshTranslations(memoryAffectedOnly: Bool) async {
         guard let lang = SystemLanguageManager.current.bundleLocaleID,
               lang != "en", !lang.hasPrefix("en-") else { return }
         refreshResult = nil
@@ -73,7 +102,30 @@ struct SystemDebugSection: View {
         let bundled = LocalizationCatalog.bundledSourceStrings()
         let encountered = Array(LocalizationCache.shared.encounteredSources)
         var seen = Set<String>()
-        let sources = (bundled + encountered).filter { seen.insert($0).inserted }
+        var sources = (bundled + encountered).filter { seen.insert($0).inserted }
+
+        if memoryAffectedOnly {
+            let terms = memoryTerms()
+            guard !terms.isEmpty else {
+                refreshResult = "No memory terms to filter by.".t
+                return
+            }
+            // Case-insensitive substring match. Source strings are
+            // English UI labels; glossary terms are typically short
+            // English nouns ("Polish", "Explain"). A simple
+            // contains-check is enough — the LLM filter the prompt
+            // already does the heavy lifting.
+            let lowered = terms.map { $0.lowercased() }
+            sources = sources.filter { source in
+                let s = source.lowercased()
+                return lowered.contains(where: { s.contains($0) })
+            }
+            guard !sources.isEmpty else {
+                refreshResult = "No UI strings mention your memory terms.".t
+                return
+            }
+        }
+
         guard !sources.isEmpty else {
             refreshResult = "Nothing to translate.".t
             return
@@ -91,5 +143,19 @@ struct SystemDebugSection: View {
         refreshResult = "Refreshed: \(result.translated) translated, \(result.failed) failed."
         // Notify all views so they re-render with the new cache.
         NotificationCenter.default.post(name: LocalizationCache.didUpdateNotification, object: nil)
+    }
+
+    /// Terms from accepted memories worth filtering UI sources by.
+    /// Right now: glossary `term` field only — those are the entries
+    /// that name a specific word the user has wording preferences
+    /// about. Preference/fact/project memories steer tone globally;
+    /// they don't map to a specific substring in the UI.
+    private func memoryTerms() -> [String] {
+        LearnedMemoryStore.shared.accepted().compactMap { memory in
+            guard memory.kind == .glossary,
+                  let term = memory.term?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !term.isEmpty else { return nil }
+            return term
+        }
     }
 }

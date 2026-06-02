@@ -61,7 +61,10 @@ final class SettingsWindowController {
         // scrolling lists). We pick a sensible initial content size instead and
         // keep the window resizable so the user can adjust.
         let w = NSWindow(contentViewController: host)
-        w.title = String(localized: "Glotty Settings")
+        // `.t` routes through Bundle.main.localizedString(forKey:value:table:)
+        // which our swizzle intercepts; `String(localized:)` uses the
+        // LocalizedStringResource path on macOS 26 and bypasses it.
+        w.title = "Glotty Settings".t
         w.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         w.isReleasedWhenClosed = false
         w.setContentSize(initialContentSize())
