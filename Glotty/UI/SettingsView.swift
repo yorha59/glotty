@@ -1962,6 +1962,25 @@ private struct DictionarySettingsSection: View {
         .frame(width: 560)
     }
 
+    /// Look for the system Dictionary app on disk. macOS ships it at
+    /// `/System/Applications/Dictionary.app` on modern releases; older
+    /// builds (or certain restored systems) keep a copy at
+    /// `/Applications/Dictionary.app`. Returns the first existing URL
+    /// or nil if neither is present — which is the "user truly
+    /// doesn't have Dictionary.app" case.
+    private static func dictionaryAppURL() -> URL? {
+        let candidates = [
+            "/System/Applications/Dictionary.app",
+            "/Applications/Dictionary.app",
+        ]
+        for path in candidates {
+            if FileManager.default.fileExists(atPath: path) {
+                return URL(fileURLWithPath: path)
+            }
+        }
+        return nil
+    }
+
     /// Empty-state body for the Install Dictionary sheet. We split this
     /// into three cases so the user always has *something* to do —
     /// previously the dialog showed a one-line "No available
@@ -1972,38 +1991,62 @@ private struct DictionarySettingsSection: View {
     private var installDialogEmptyState: some View {
         let catalogEmpty = availableLibraryDictionaries.isEmpty
         let installable = languageMatchedLibraryDictionaries.filter { !isInstalled($0) }
+        let dictAppURL = Self.dictionaryAppURL()
         VStack(spacing: 12) {
-            Image(systemName: catalogEmpty ? "books.vertical" : "magnifyingglass")
+            Image(systemName: catalogEmpty
+                  ? (dictAppURL == nil ? "exclamationmark.triangle" : "books.vertical")
+                  : "magnifyingglass")
                 .font(.system(size: 32))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(dictAppURL == nil && catalogEmpty ? .orange : .secondary)
 
             if catalogEmpty {
-                // No catalog entries at all — usually means Dictionary.app
-                // has never run on this machine (so it hasn't recorded
-                // "last available dictionaries"), AND
-                // /System/Library/AssetsV2 has no dictionary XMLs we can
-                // reach. Tell the user concretely how to populate it.
-                Text("No dictionaries are discoverable yet")
-                    .font(.headline)
-                Text("Glotty reads the dictionary catalog Apple's built-in **Dictionary** app populates. If you've never opened Dictionary on this Mac, open it once — it pulls the available list down — then come back here.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 24)
-                HStack(spacing: 8) {
-                    Button("Open Dictionary.app") {
-                        if let url = URL(string: "/System/Applications/Dictionary.app").flatMap({ url -> URL? in
-                            FileManager.default.fileExists(atPath: url.path) ? url : nil
-                        }) {
-                            NSWorkspace.shared.open(url)
-                        } else {
-                            NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications/Dictionary.app"))
+                // No catalog entries at all. Split on whether Apple's
+                // Dictionary.app is present, since the action the user
+                // can take differs sharply: opening the app vs.
+                // recovering a missing system app.
+                if let dictAppURL {
+                    Text("No dictionaries are discoverable yet")
+                        .font(.headline)
+                    Text("Glotty reads the dictionary catalog Apple's built-in **Dictionary** app populates. Open it once — it pulls the available list down — then come back here.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 24)
+                    HStack(spacing: 8) {
+                        Button("Open Dictionary.app") {
+                            NSWorkspace.shared.open(dictAppURL)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        Button("Retry") {
+                            loadLibraryDictionaries()
                         }
                     }
-                    .buttonStyle(.borderedProminent)
-                    Button("Retry") {
-                        loadLibraryDictionaries()
+                } else {
+                    // Dictionary.app genuinely isn't on disk. It ships
+                    // with macOS and can't be re-installed via the App
+                    // Store — the only real fixes are System Update or
+                    // an OS reinstall. Surface that honestly rather
+                    // than pretend a button can fix it.
+                    Text("Dictionary.app is missing on this Mac")
+                        .font(.headline)
+                    Text("Glotty relies on Apple's built-in **Dictionary** app, normally at /System/Applications/Dictionary.app. It's part of macOS — to restore it, run a System Update or use Migration Assistant. Glotty's other features (Translate, Polish, Explain, Chat) still work without it.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 24)
+                    HStack(spacing: 8) {
+                        Button("Open System Settings → Software Update") {
+                            if let url = URL(string: "x-apple.systempreferences:com.apple.preferences.softwareupdate") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }
+                        Button("Apple Support") {
+                            if let url = URL(string: "https://support.apple.com/guide/dictionary/welcome/mac") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }
                     }
                 }
             } else if languageMatchedLibraryDictionaries.isEmpty {
