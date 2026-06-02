@@ -210,8 +210,7 @@ enum LocalizationFiller {
 
         Translation rules:
         - Translate by intent and convention, not word-by-word. Use the natural \(langName) phrasing a native designer would write for the same kind of UI element.
-        - The word "Polish" in this app means the LLM rewriting feature (the verb / noun "polish"), NOT the country/language Poland. Translate accordingly.
-        - "Chat" means a friendly conversation with the in-app AI tutor.
+        - The action verbs "Polish", "Explain", "Chat", and "Translate" are Glotty's four core features. ALWAYS translate these to native \(langName) action words. NEVER preserve them in English in your output, even when they appear as labels, in lists alongside one another, or in section headers like "2.2 Polish". For Chinese specifically: Polish → 润色, Explain → 解释, Chat → 聊天, Translate → 翻译. ("Polish" is the verb meaning "to refine writing", NOT the country/language Poland.)
         - "Memory" / "Memories" mean facts the AI has saved about the user (preferences, projects, glossary).
         - "Context" / "Contexts" mean named memory scopes (a user's "Work" context vs. "Travel" context).
         - "Source" means the language the user is translating FROM.
