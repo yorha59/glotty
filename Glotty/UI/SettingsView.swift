@@ -217,6 +217,15 @@ struct LanguageModelSettingsSection: View {
     @State private var testStatus: TestStatus = .idle
     /// Bumped on CustomProviderStore changes so the picker re-reads the list.
     @State private var customRefreshToken: Int = 0
+    /// Bumped on ModelListCache changes so model pickers refresh after a
+    /// successful `/models` fetch.
+    @State private var modelListRefreshToken: Int = 0
+    /// Provider id whose model list is currently being fetched (drives
+    /// the per-row spinner). Nil when nothing's in-flight.
+    @State private var modelFetchingProviderID: String?
+    /// Most-recent model-fetch error, by provider id. Cleared on the
+    /// next successful fetch for the same provider.
+    @State private var modelFetchError: [String: String] = [:]
     /// Set to a non-nil config when the user taps "Add custom" or "Edit" on a
     /// custom entry — drives the sheet.
     @State private var customEditorSeed: CustomProviderEditorSeed?
@@ -267,6 +276,9 @@ struct LanguageModelSettingsSection: View {
         .onReceive(NotificationCenter.default.publisher(for: CustomProviderStore.didChangeNotification)) { _ in
             customRefreshToken &+= 1
             loadKey()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: ModelListCache.didChangeNotification)) { _ in
+            modelListRefreshToken &+= 1
         }
         .sheet(item: $customEditorSeed) { seed in
             CustomProviderEditor(seed: seed) { savedID in
@@ -366,12 +378,25 @@ struct LanguageModelSettingsSection: View {
                   prompt: Text(preset.defaultEndpoint))
             .textContentType(.URL)
 
-        Picker("Model", selection: modelBinding(for: preset)) {
-            ForEach(preset.models) { option in
-                Text(option.displayName.t).tag(option.id)
+        HStack {
+            Picker("Model", selection: modelBinding(for: preset)) {
+                ForEach(preset.availableModels()) { option in
+                    Text(option.displayName.t).tag(option.id)
+                }
+            }
+            .pickerStyle(.menu)
+            .id(modelListRefreshToken)
+            modelRefreshControl(providerID: preset.id) {
+                let endpoint = URL(string: preset.currentEndpoint())
+                    ?? URL(string: preset.defaultEndpoint)!
+                await refreshModels(
+                    providerID: preset.id,
+                    endpoint: endpoint,
+                    keychainAccount: preset.id,
+                    auth: .bearer
+                )
             }
         }
-        .pickerStyle(.menu)
 
         if let summary = preset.model(forID: modelBinding(for: preset).wrappedValue)?.summary {
             Text(summary)
@@ -429,10 +454,53 @@ struct LanguageModelSettingsSection: View {
         HStack {
             Image(systemName: "cpu")
                 .foregroundStyle(.secondary)
-            Text(config.model)
-                .font(.caption.monospaced())
-                .foregroundStyle(.secondary)
+            // If we've fetched the server's `/models` for this custom
+            // provider, present it as a dropdown so switching is one
+            // tap. Otherwise just show the current model id as text
+            // (the user typed it in the editor sheet).
+            if let cache = ModelListCache.cached(for: config.providerID),
+               !cache.modelIDs.isEmpty {
+                Menu {
+                    ForEach(cache.modelIDs, id: \.self) { mid in
+                        Button {
+                            var updated = config
+                            updated.model = mid
+                            CustomProviderStore.upsert(updated)
+                        } label: {
+                            if mid == config.model {
+                                Label(mid, systemImage: "checkmark")
+                            } else {
+                                Text(mid)
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(config.model)
+                            .font(.caption.monospaced())
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 9))
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                .menuStyle(.borderlessButton)
+                .id(modelListRefreshToken)
+            } else {
+                Text(config.model)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+            }
             Spacer()
+            modelRefreshControl(providerID: config.providerID) {
+                let endpoint = URL(string: config.endpoint)
+                    ?? URL(string: "https://invalid.local/")!
+                await refreshModels(
+                    providerID: config.providerID,
+                    endpoint: endpoint,
+                    keychainAccount: config.providerID,
+                    auth: .bearer
+                )
+            }
         }
 
         HStack {
@@ -481,12 +549,26 @@ struct LanguageModelSettingsSection: View {
                   prompt: Text(DeepSeekProvider.defaultEndpoint))
             .textContentType(.URL)
 
-        Picker("Model", selection: deepseekModelBinding) {
-            ForEach(DeepSeekProvider.supportedModels) { option in
-                Text(option.displayName).tag(option.id)
+        HStack {
+            Picker("Model", selection: deepseekModelBinding) {
+                ForEach(DeepSeekProvider.availableModels()) { option in
+                    Text(option.displayName).tag(option.id)
+                }
+            }
+            .pickerStyle(.menu)
+            .id(modelListRefreshToken)
+            modelRefreshControl(providerID: "deepseek") {
+                let raw = (deepseekEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                           ? DeepSeekProvider.defaultEndpoint : deepseekEndpoint)
+                let endpoint = URL(string: raw) ?? URL(string: DeepSeekProvider.defaultEndpoint)!
+                await refreshModels(
+                    providerID: "deepseek",
+                    endpoint: endpoint,
+                    keychainAccount: DeepSeekProvider.keychainAccount,
+                    auth: .bearer
+                )
             }
         }
-        .pickerStyle(.menu)
 
         if let summary = DeepSeekProvider.model(for: deepseekModelBinding.wrappedValue)?.summary {
             Text(summary)
@@ -520,12 +602,26 @@ struct LanguageModelSettingsSection: View {
                   prompt: Text(KimiCodingProvider.defaultEndpoint))
             .textContentType(.URL)
 
-        Picker("Model", selection: kimiModelBinding) {
-            ForEach(KimiCodingProvider.supportedModels) { option in
-                Text(option.displayName.t).tag(option.id)
+        HStack {
+            Picker("Model", selection: kimiModelBinding) {
+                ForEach(KimiCodingProvider.availableModels()) { option in
+                    Text(option.displayName.t).tag(option.id)
+                }
+            }
+            .pickerStyle(.menu)
+            .id(modelListRefreshToken)
+            modelRefreshControl(providerID: "kimi-coding") {
+                let raw = (kimiEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                           ? KimiCodingProvider.defaultEndpoint : kimiEndpoint)
+                let endpoint = URL(string: raw) ?? URL(string: KimiCodingProvider.defaultEndpoint)!
+                await refreshModels(
+                    providerID: "kimi-coding",
+                    endpoint: endpoint,
+                    keychainAccount: KimiCodingProvider.keychainAccount,
+                    auth: .anthropic(version: "2023-06-01", userAgent: "KimiCLI/1.5")
+                )
             }
         }
-        .pickerStyle(.menu)
 
         if let summary = KimiCodingProvider.model(for: kimiModelBinding.wrappedValue)?.summary {
             Text(summary)
@@ -630,6 +726,75 @@ struct LanguageModelSettingsSection: View {
         apiKey = ""
         apiKeyPlaceholder = ""
         testStatus = .idle
+    }
+
+    /// Fetch the latest model list from the given provider's `/models`
+    /// endpoint and save it to `ModelListCache`. The picker re-reads
+    /// via `modelListRefreshToken` once the notification fires. No-op
+    /// if the keychain doesn't yet hold an API key for this provider
+    /// (the server will reject the request).
+    private func refreshModels(
+        providerID: String,
+        endpoint: URL,
+        keychainAccount: String,
+        auth: ModelListFetcher.AuthStyle
+    ) async {
+        guard let key = Keychain.read(account: keychainAccount), !key.isEmpty else {
+            modelFetchError[providerID] = "Save your API key first."
+            return
+        }
+        modelFetchingProviderID = providerID
+        defer { modelFetchingProviderID = nil }
+        do {
+            let ids = try await ModelListFetcher.fetchModels(
+                endpoint: endpoint,
+                apiKey: key,
+                auth: auth
+            )
+            ModelListCache.save(CachedModelList(
+                providerID: providerID,
+                modelIDs: ids,
+                fetchedAt: Date()
+            ))
+            modelFetchError.removeValue(forKey: providerID)
+        } catch {
+            modelFetchError[providerID] = error.localizedDescription
+        }
+    }
+
+    /// Compact refresh button + per-provider status badge. Shown next
+    /// to each provider's Model picker. Spinner while in flight,
+    /// error in red if the last fetch failed, "✓ <n>" success badge
+    /// when the cache has been populated.
+    @ViewBuilder
+    private func modelRefreshControl(providerID: String, action: @escaping () async -> Void) -> some View {
+        HStack(spacing: 6) {
+            Button {
+                Task { await action() }
+            } label: {
+                Label("Refresh", systemImage: "arrow.clockwise")
+                    .labelStyle(.iconOnly)
+            }
+            .buttonStyle(.borderless)
+            .controlSize(.small)
+            .disabled(modelFetchingProviderID == providerID)
+            .help("Fetch this provider's current model list from its /models endpoint")
+
+            if modelFetchingProviderID == providerID {
+                ProgressView().controlSize(.small)
+            } else if let msg = modelFetchError[providerID] {
+                Label(msg, systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .font(.caption)
+                    .help(msg)
+            } else if let cache = ModelListCache.cached(for: providerID) {
+                Text("\(cache.modelIDs.count) models · \(cache.fetchedAt.formatted(.relative(presentation: .named)))")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+        }
     }
 
     private func test() async {

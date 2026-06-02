@@ -29,7 +29,36 @@ struct KimiCodingProvider: LLMProvider {
     ]
 
     static func model(for id: String) -> KimiModelOption? {
-        supportedModels.first { $0.id == id }
+        availableModels().first { $0.id == id }
+    }
+
+    /// Picker models — union of fetched ids and the hardcoded list.
+    /// Falls back to the hardcoded list when no `/models` fetch has
+    /// been cached.
+    static func availableModels() -> [KimiModelOption] {
+        let providerID = "kimi-coding"
+        guard let cache = ModelListCache.cached(for: providerID),
+              !cache.modelIDs.isEmpty else {
+            return supportedModels
+        }
+        let hardcodedByID = Dictionary(
+            uniqueKeysWithValues: supportedModels.map { ($0.id, $0) }
+        )
+        var merged: [KimiModelOption] = []
+        var seen: Set<String> = []
+        for fetchedID in cache.modelIDs {
+            let option = hardcodedByID[fetchedID] ?? KimiModelOption(
+                id: fetchedID,
+                displayName: fetchedID,
+                summary: "Auto-fetched from Kimi. No bundled description."
+            )
+            merged.append(option)
+            seen.insert(fetchedID)
+        }
+        for hardcoded in supportedModels where !seen.contains(hardcoded.id) {
+            merged.append(hardcoded)
+        }
+        return merged
     }
 
     private var endpointURL: URL {

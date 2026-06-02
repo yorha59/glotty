@@ -56,7 +56,37 @@ enum OpenAIStockPresets {
         }
 
         func model(forID id: String) -> ModelOption? {
-            models.first { $0.id == id }
+            availableModels().first { $0.id == id }
+        }
+
+        /// Models visible in the picker — union of (a) ids fetched from
+        /// the server's `/models` endpoint and (b) our hardcoded
+        /// catalog. Hardcoded entries keep their summaries; fetched-
+        /// only ids show as the bare id with a placeholder summary.
+        /// Falls back to the hardcoded list when nothing's cached.
+        func availableModels() -> [ModelOption] {
+            guard let cache = ModelListCache.cached(for: id), !cache.modelIDs.isEmpty else {
+                return models
+            }
+            let hardcodedByID = Dictionary(uniqueKeysWithValues: models.map { ($0.id, $0) })
+            var merged: [ModelOption] = []
+            var seen: Set<String> = []
+            for fetchedID in cache.modelIDs {
+                let option = hardcodedByID[fetchedID] ?? ModelOption(
+                    id: fetchedID,
+                    displayName: fetchedID,
+                    summary: "Auto-fetched from \(displayName). No bundled description."
+                )
+                merged.append(option)
+                seen.insert(fetchedID)
+            }
+            // Append any hardcoded models the server didn't list — keeps
+            // the user from "losing" a model they're already selected on
+            // if the server's catalog ever drops it temporarily.
+            for hardcoded in models where !seen.contains(hardcoded.id) {
+                merged.append(hardcoded)
+            }
+            return merged
         }
     }
 
