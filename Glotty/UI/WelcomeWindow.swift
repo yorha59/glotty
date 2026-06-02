@@ -280,7 +280,14 @@ private struct WelcomeView: View {
 
     private static let contentWidth: CGFloat = 460
 
-    private var stepCount: Int { 6 }
+    private var stepCount: Int { 7 }
+
+    /// Ticks every second while the welcome window is up so the
+    /// permissions step re-renders as the user grants access in
+    /// System Settings. `isGranted()` is a cheap syscall for AX /
+    /// IOHID; refreshing notifications happens in the background
+    /// and lands in the cache that the readers see on next render.
+    @State private var permissionsTick: Int = 0
 
     /// User's UI-language locale identifier (e.g. "zh-Hans"). Used to
     /// pick the demo translation output in step 1.1 so the example
@@ -373,11 +380,12 @@ private struct WelcomeView: View {
         let key: String
         switch step {
         case 0: key = "Welcome to Glotty"
-        case 1: key = "1.1 Translate (Fn → T)"
-        case 2: key = "1.2 Polish (Fn → P)"
-        case 3: key = "1.3 Explain (Fn → E)"
-        case 4: key = "2. Set up your AI provider"
-        default: key = "3. Let's get to know each other"
+        case 1: key = "1. Grant permissions"
+        case 2: key = "2.1 Translate (Fn → T)"
+        case 3: key = "2.2 Polish (Fn → P)"
+        case 4: key = "2.3 Explain (Fn → E)"
+        case 5: key = "3. Set up your AI provider"
+        default: key = "4. Let's get to know each other"
         }
         return OSLocalizer.string(key)
     }
@@ -386,14 +394,16 @@ private struct WelcomeView: View {
         let key: String
         switch step {
         case 0:
-            key = "Glotty is a language tutor that lives in your menu bar. We'll quickly tour the three core actions, then have you set up an LLM, then chat briefly so I know how to address you."
+            key = "Glotty is a language tutor that lives in your menu bar. We'll start with the permissions Glotty needs, then tour the three core actions, set up an LLM, and chat briefly so I know how to address you."
         case 1:
-            key = "Decode foreign text into a chosen language. Highlight any text, hold Fn, then within 600ms tap T. A popup shows the translation; press Esc to dismiss. Runs locally via Apple's translation — no LLM required."
+            key = "Glotty reads the text you've selected, listens for the Fn-leader chord, and sends you the occasional practice reminder. The OS keeps these behind dedicated permission switches — grant each one in System Settings and the status here will update automatically."
         case 2:
-            key = "Rewrite your own writing in idiomatic form. Highlight a draft, hold Fn, tap P. Glotty returns 1–3 polished rewrites plus a list of grammar / word-choice issues. Press Esc to dismiss."
+            key = "Decode foreign text into a chosen language. Highlight any text, hold Fn, then within 600ms tap T. A popup shows the translation; press Esc to dismiss. Runs locally via Apple's translation — no LLM required."
         case 3:
-            key = "Deeper explanation in your native language — meaning, tone, usage, and how it shifts across contexts. Highlight a word, idiom, or sentence, hold Fn, tap E. Glotty streams a four-section explanation. Press Esc to dismiss."
+            key = "Rewrite your own writing in idiomatic form. Highlight a draft, hold Fn, tap P. Glotty returns 1–3 polished rewrites plus a list of grammar / word-choice issues. Press Esc to dismiss."
         case 4:
+            key = "Deeper explanation in your native language — meaning, tone, usage, and how it shifts across contexts. Highlight a word, idiom, or sentence, hold Fn, tap E. Glotty streams a four-section explanation. Press Esc to dismiss."
+        case 5:
             key = "Polish, Explain, and Chat call out to an LLM, so Glotty needs at least one provider configured before they work. Pick a stock provider — OpenAI, Google Gemini, Z.AI, DeepSeek, Kimi — or paste any OpenAI-compatible endpoint and API key. Come back when you're done."
         default:
             key = "Last step — Glotty will open a short chat to learn how you'd like to be addressed. Your answers automatically configure the relevant settings; you can change anything later from the menu bar."
@@ -401,22 +411,24 @@ private struct WelcomeView: View {
         return OSLocalizer.string(key)
     }
 
-    /// Step-specific embedded content. Steps 1–3 show pre-prepared
-    /// input → result demos so the user understands what each action
-    /// produces without having to actually invoke the chord (which
-    /// also wouldn't work yet since they haven't configured an LLM
-    /// for Polish / Explain). Step 4 has the LLM-setup button.
-    /// Step 5 has the chat-handoff button.
+    /// Step-specific embedded content. Step 1 shows the permissions
+    /// checklist; steps 2-4 show pre-prepared input → result demos so
+    /// the user understands what each action produces without having
+    /// to actually invoke the chord (which also wouldn't work yet
+    /// since they haven't configured an LLM for Polish / Explain).
+    /// Step 5 has the LLM-setup form. Step 6 has the chat-handoff.
     @ViewBuilder
     private var currentExtra: some View {
         switch step {
         case 1:
-            translateDemo
+            permissionsChecklist
         case 2:
-            polishDemo
+            translateDemo
         case 3:
-            explainDemo
+            polishDemo
         case 4:
+            explainDemo
+        case 5:
             // Embed the real Language Model section inline so the user
             // configures their provider inside onboarding — no detour
             // to a separate Settings window.
@@ -432,7 +444,7 @@ private struct WelcomeView: View {
             .formStyle(.columns)
             .scrollContentBackground(.hidden)
             .frame(maxHeight: 320)
-        case 5:
+        case 6:
             Button {
                 onStartOnboardingChat()
             } label: {
@@ -444,6 +456,74 @@ private struct WelcomeView: View {
         default:
             EmptyView()
         }
+    }
+
+    /// One row per system permission Glotty needs, with current
+    /// status + an "Open System Settings" deep link to the right
+    /// pane. The `id(permissionsTick)` modifier on the outer VStack
+    /// forces a re-read every second so the row flips from "needed"
+    /// to "granted" without the user having to navigate away and
+    /// back.
+    private var permissionsChecklist: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(Permission.allCases) { perm in
+                permissionRow(perm)
+            }
+            if PermissionCheck.anyMissing() {
+                Text(OSLocalizer.string("You can grant the missing ones now or skip this step and come back from the menu bar → Settings → Permissions later. The Translate/Polish/Explain demos in the next steps won't work until Accessibility and Input Monitoring are on."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 6)
+            }
+        }
+        .id(permissionsTick)
+        .task {
+            // Lightweight timer — refresh once a second while this step
+            // is on screen so granting in System Settings reflects back
+            // here in roughly real time.
+            while !Task.isCancelled {
+                PermissionCheck.refreshNotificationsStatus()
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                permissionsTick &+= 1
+            }
+        }
+    }
+
+    private func permissionRow(_ perm: Permission) -> some View {
+        let granted = perm.isGranted()
+        return HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.circle")
+                .foregroundStyle(granted ? .green : .orange)
+                .font(.system(size: 16))
+                .frame(width: 18)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(OSLocalizer.string(perm.displayName))
+                    .font(.system(size: 13, weight: .semibold))
+                Text(OSLocalizer.string(perm.purpose))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            if !granted, let url = perm.settingsURL {
+                Button {
+                    NSWorkspace.shared.open(url)
+                } label: {
+                    Text(OSLocalizer.string("Open Settings"))
+                        .font(.caption)
+                }
+                .controlSize(.small)
+            } else if granted {
+                Text(OSLocalizer.string("Granted"))
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.secondary.opacity(granted ? 0.05 : 0.10))
+        )
     }
 
     // MARK: - Pre-prepared demos
