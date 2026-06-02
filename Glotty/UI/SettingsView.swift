@@ -1926,8 +1926,7 @@ private struct DictionarySettingsSection: View {
                 .textFieldStyle(.roundedBorder)
 
             if displayedInstallDialogDictionaries.isEmpty {
-                Text(installDialogEmptyMessage)
-                    .foregroundStyle(.secondary)
+                installDialogEmptyState
                     .frame(maxWidth: .infinity, minHeight: 180, alignment: .center)
             } else {
                 ScrollView {
@@ -1961,6 +1960,81 @@ private struct DictionarySettingsSection: View {
         }
         .padding(18)
         .frame(width: 560)
+    }
+
+    /// Empty-state body for the Install Dictionary sheet. We split this
+    /// into three cases so the user always has *something* to do —
+    /// previously the dialog showed a one-line "No available
+    /// dictionaries…" message and looked broken to users who don't
+    /// have Dictionary.app or whose system catalog hasn't been
+    /// primed yet.
+    @ViewBuilder
+    private var installDialogEmptyState: some View {
+        let catalogEmpty = availableLibraryDictionaries.isEmpty
+        let installable = languageMatchedLibraryDictionaries.filter { !isInstalled($0) }
+        VStack(spacing: 12) {
+            Image(systemName: catalogEmpty ? "books.vertical" : "magnifyingglass")
+                .font(.system(size: 32))
+                .foregroundStyle(.secondary)
+
+            if catalogEmpty {
+                // No catalog entries at all — usually means Dictionary.app
+                // has never run on this machine (so it hasn't recorded
+                // "last available dictionaries"), AND
+                // /System/Library/AssetsV2 has no dictionary XMLs we can
+                // reach. Tell the user concretely how to populate it.
+                Text("No dictionaries are discoverable yet")
+                    .font(.headline)
+                Text("Glotty reads the dictionary catalog Apple's built-in **Dictionary** app populates. If you've never opened Dictionary on this Mac, open it once — it pulls the available list down — then come back here.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 24)
+                HStack(spacing: 8) {
+                    Button("Open Dictionary.app") {
+                        if let url = URL(string: "/System/Applications/Dictionary.app").flatMap({ url -> URL? in
+                            FileManager.default.fileExists(atPath: url.path) ? url : nil
+                        }) {
+                            NSWorkspace.shared.open(url)
+                        } else {
+                            NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications/Dictionary.app"))
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    Button("Retry") {
+                        loadLibraryDictionaries()
+                    }
+                }
+            } else if languageMatchedLibraryDictionaries.isEmpty {
+                Text("No dictionaries for this language pair")
+                    .font(.headline)
+                Text("Glotty's catalog has \(availableLibraryDictionaries.count) dictionaries total, but none match **\(LanguageOptions.localizedName(for: effectivePair.source)) → \(LanguageOptions.localizedName(for: effectivePair.target))**. Try a different language pair, or clear the search to widen the list.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 24)
+            } else if installable.isEmpty {
+                Text("Everything matching is already installed")
+                    .font(.headline)
+                Text("All dictionaries Glotty knows about for **\(LanguageOptions.localizedName(for: effectivePair.source)) → \(LanguageOptions.localizedName(for: effectivePair.target))** are already in your list — nothing new to add.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 24)
+            } else {
+                Text("No matches for the current search")
+                    .font(.headline)
+                Text("Clear the search field above to see all \(installable.count) installable dictionaries for this language pair.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 24)
+            }
+        }
     }
 
     private var installDialogEmptyMessage: String {
