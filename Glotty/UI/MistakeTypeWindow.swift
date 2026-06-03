@@ -64,7 +64,7 @@ final class MistakeTypeWindowController {
         )
         w.contentMinSize = NSSize(width: contentWidth, height: 180)
         w.center()
-        w.collectionBehavior = [.moveToActiveSpace]
+        // No `.moveToActiveSpace` — see SettingsWindow for the why.
         window = w
         // Become a regular app for the lifetime of this window so it gets
         // proper Dock/⌘-Tab presence. Released on willClose.

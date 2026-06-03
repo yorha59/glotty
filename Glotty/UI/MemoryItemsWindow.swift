@@ -50,7 +50,7 @@ final class MemoryItemsWindowController {
         )
         w.contentMinSize = NSSize(width: contentWidth, height: 240)
         w.center()
-        w.collectionBehavior = [.moveToActiveSpace]
+        // No `.moveToActiveSpace` — see SettingsWindow for the why.
         window = w
 
         // Same .regular activation slot pattern as Settings — see

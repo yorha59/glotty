@@ -58,7 +58,7 @@ final class ChatHistoryWindowController {
         )
         w.contentMinSize = NSSize(width: contentWidth, height: 280)
         w.center()
-        w.collectionBehavior = [.moveToActiveSpace]
+        // No `.moveToActiveSpace` — see SettingsWindow for the why.
         window = w
 
         activationToken = AppActivation.register { [weak w] in

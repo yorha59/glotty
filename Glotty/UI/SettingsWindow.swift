@@ -70,7 +70,18 @@ final class SettingsWindowController {
         w.setContentSize(initialContentSize())
         w.contentMinSize = minimumContentSize
         w.center()
-        w.collectionBehavior = [.moveToActiveSpace]
+        // Deliberately NO `.moveToActiveSpace`. Settings is a regular
+        // full-app window, not an overlay — when invoked from a
+        // full-screen source app's space, the right macOS behavior is
+        // to slide the user out of that space onto Settings's own
+        // space where it has exclusive focus and IME. Setting
+        // `.moveToActiveSpace` instead drags Settings into the
+        // foreign space and inherits its locked input context: the
+        // window appears, the cursor blinks, but key events go to the
+        // full-screen-owning app. `.moveToActiveSpace` is correct for
+        // popups (which DO need to overlay on the source space) and
+        // wrong here. Same reasoning applies to the other managed
+        // windows below.
 
         window = w
         // Register with AppActivation, passing a closer the hotkey
