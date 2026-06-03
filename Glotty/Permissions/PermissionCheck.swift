@@ -117,15 +117,8 @@ enum PermissionCheck {
         }
     }
 
-    private static func debugWrite(_ msg: String) {
-        let line = "[\(Date())] PermissionCheck: \(msg)\n"
-        guard let data = line.data(using: .utf8) else { return }
-        let url = URL(fileURLWithPath: "/tmp/glotty-debug.log")
-        if let h = try? FileHandle(forWritingTo: url) {
-            h.seekToEndOfFile(); h.write(data); try? h.close()
-        } else {
-            try? data.write(to: url)
-        }
+    private static func debugWrite(_ msg: String, file: String = #fileID, line: Int = #line) {
+        Log.debug(.permissions, msg, file: file, line: line)
     }
 
     /// Only auto-registers permissions that *don't* show an in-app system prompt.

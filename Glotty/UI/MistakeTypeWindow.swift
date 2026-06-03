@@ -95,17 +95,8 @@ final class MistakeTypeWindowController {
         }
     }
 
-    private static func diag(_ msg: String) {
-        let line = "[\(Date())] MistakeTypeWindow: \(msg)\n"
-        guard let data = line.data(using: .utf8) else { return }
-        let path = URL(fileURLWithPath: "/tmp/glotty-debug.log")
-        if let h = try? FileHandle(forWritingTo: path) {
-            h.seekToEndOfFile()
-            h.write(data)
-            try? h.close()
-        } else {
-            try? data.write(to: path)
-        }
+    private static func diag(_ msg: String, file: String = #fileID, line: Int = #line) {
+        Log.debug(.settings, msg, file: file, line: line)
     }
 }
 

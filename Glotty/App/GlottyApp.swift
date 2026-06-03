@@ -2,17 +2,12 @@ import SwiftUI
 import AppKit
 import UserNotifications
 
-private func dbg(_ msg: String) {
-    let line = "[\(Date())] \(msg)\n"
-    if let data = line.data(using: .utf8) {
-        if let h = try? FileHandle(forWritingTo: URL(fileURLWithPath: "/tmp/glotty-debug.log")) {
-            h.seekToEndOfFile()
-            h.write(data)
-            try? h.close()
-        } else {
-            try? data.write(to: URL(fileURLWithPath: "/tmp/glotty-debug.log"))
-        }
-    }
+/// Thin wrapper around `Log.debug(.app, ...)` so existing call
+/// sites in this file don't need to be touched to gain the
+/// unified format. `#fileID` / `#line` default-init at the
+/// caller, so file/line carry the call site, not this wrapper.
+private func dbg(_ msg: String, file: String = #fileID, line: Int = #line) {
+    Log.debug(.app, msg, file: file, line: line)
 }
 
 @main

@@ -8,16 +8,54 @@ import SwiftUI
 struct SystemDebugSection: View {
     @State private var refreshProgress: (done: Int, total: Int)?
     @State private var refreshResult: String?
+    @State private var exportResult: String?
 
     var body: some View {
         Group {
             translationsSection
+            diagnosticsSection
             // `debugSection` (the "Capture all settings tabs" button)
             // is intentionally not rendered. End users never need
             // it. The dev / agent still triggers captures via the
             // `SettingsSnapshotter` distributed notification — see
             // `SettingsSnapshotter.captureNotificationName` and the
             // observer installed in `AppDelegate`.
+        }
+    }
+
+    /// "Export logs" lives here so users can grab Glotty's debug
+    /// file when filing a report. Dumps /tmp/glotty-debug.log (plus
+    /// the rotated .1 segment, in chronological order) to the
+    /// Desktop and reveals the result in Finder.
+    private var diagnosticsSection: some View {
+        Section {
+            Button {
+                if let url = Log.exportToDesktop() {
+                    exportResult = String(format: "Exported to %@".t, url.path)
+                } else {
+                    exportResult = "Couldn't export logs (no log file yet, or Desktop unavailable).".t
+                }
+            } label: {
+                Label {
+                    Text("Export logs".t)
+                } icon: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+            }
+            .controlSize(.large)
+
+            if let msg = exportResult {
+                Text(msg)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+        } header: {
+            Text("Diagnostics".t)
+        } footer: {
+            Text("Saves Glotty's debug log to your Desktop and reveals it in Finder. Attach it when reporting an issue.".t)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 

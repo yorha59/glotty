@@ -68,15 +68,8 @@ final class FnLeaderHotkey {
         FnLeaderHotkey.debug("install() success — event tap active")
     }
 
-    private static func debug(_ msg: String) {
-        let line = "[\(Date())] FnLeaderHotkey: \(msg)\n"
-        guard let data = line.data(using: .utf8) else { return }
-        let url = URL(fileURLWithPath: "/tmp/glotty-debug.log")
-        if let h = try? FileHandle(forWritingTo: url) {
-            h.seekToEndOfFile(); h.write(data); try? h.close()
-        } else {
-            try? data.write(to: url)
-        }
+    private static func debug(_ msg: String, file: String = #fileID, line: Int = #line) {
+        Log.debug(.hotkey, msg, file: file, line: line)
     }
 
     private func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {

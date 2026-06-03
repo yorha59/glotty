@@ -86,15 +86,8 @@ enum SettingsSnapshotter {
         return (tabs, includeHUD)
     }
 
-    nonisolated private static func writeLog(_ message: String) {
-        let line = "[\(Date())] \(message)\n"
-        let url = URL(fileURLWithPath: "/tmp/glotty-debug.log")
-        guard let data = line.data(using: .utf8) else { return }
-        if let h = try? FileHandle(forWritingTo: url) {
-            h.seekToEndOfFile(); h.write(data); try? h.close()
-        } else {
-            try? data.write(to: url)
-        }
+    nonisolated private static func writeLog(_ message: String, file: String = #fileID, line: Int = #line) {
+        Log.debug(.settings, message, file: file, line: line)
     }
 
     /// Capture an arbitrary subset of Settings tabs (plus optionally

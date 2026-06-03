@@ -7,15 +7,7 @@ final class PermissionsWindowController {
     private var window: NSWindow?
 
     func show() {
-        let line = "[\(Date())] PermissionsWindowController.show() called\n"
-        if let data = line.data(using: .utf8) {
-            if let h = try? FileHandle(forWritingTo: URL(fileURLWithPath: "/tmp/glotty-debug.log")) {
-                h.seekToEndOfFile(); h.write(data); try? h.close()
-            } else {
-                try? data.write(to: URL(fileURLWithPath: "/tmp/glotty-debug.log"))
-            }
-        }
-        NSLog("[Glotty] PermissionsWindowController.show() called")
+        Log.debug(.permissions, "PermissionsWindowController.show() called")
 
         // Always rebuild from scratch — defends against any stale window state from a
         // previous close. Cheap enough for a spike, removes a whole class of bugs.
@@ -46,11 +38,7 @@ final class PermissionsWindowController {
         w.makeKeyAndOrderFront(nil)
         w.orderFrontRegardless()
 
-        let endLine = "[\(Date())] window shown — frame=\(w.frame) visible=\(w.isVisible) onScreen=\(w.screen?.localizedName ?? "nil")\n"
-        if let d = endLine.data(using: .utf8), let h = try? FileHandle(forWritingTo: URL(fileURLWithPath: "/tmp/glotty-debug.log")) {
-            h.seekToEndOfFile(); h.write(d); try? h.close()
-        }
-        NSLog("[Glotty] PermissionsWindowController shown — frame=\(w.frame), visible=\(w.isVisible)")
+        Log.debug(.permissions, "window shown — frame=\(w.frame) visible=\(w.isVisible) onScreen=\(w.screen?.localizedName ?? "nil")")
     }
 }
 
