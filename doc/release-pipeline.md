@@ -6,31 +6,154 @@ How a push to `main` becomes a signed + notarized DMG on the Gitea
 ```
 git push origin main
         │
-        ▼
-.gitea/workflows/build.yml fires on the macOS runner
+        ▼  (within 5 min)
+poll-build LaunchAgent on the macOS runner (alex-mini.local)
+checks `git ls-remote origin main` and sees a new SHA
         │
         ▼
-scripts/make-dmg-signed.sh
+scripts/runner-mac/glotty-poll-build.sh
         │
-        ├── xcodebuild -configuration Release (unsigned)
-        ├── codesign with Developer ID Application + Hardened
-        │   Runtime + Secure Timestamp + Glotty-Release.entitlements
-        ├── hdiutil create … dist/Glotty-<version>.dmg
-        ├── codesign the DMG
-        ├── xcrun notarytool submit … --wait
-        └── xcrun stapler staple … the DMG
+        ├── git fetch + reset --hard origin/main
+        ├── xcodegen generate
+        ├── scripts/make-dmg-signed.sh
+        │       ├── xcodebuild -configuration Release (unsigned)
+        │       ├── codesign with Developer ID Application +
+        │       │   Hardened Runtime + Secure Timestamp +
+        │       │   Glotty-Release.entitlements
+        │       ├── hdiutil create … dist/Glotty-<version>.dmg
+        │       ├── codesign the DMG
+        │       ├── xcrun notarytool submit … --wait
+        │       └── xcrun stapler staple … the DMG
+        └── curl → DELETE old `latest-build` release, POST new,
+            upload the DMG as the asset
         │
         ▼
-Workflow uploads to Gitea Release `latest-build`
+http://truenas.local:30008/hemoon/glotty/releases/tag/latest-build
 ```
 
 End result: a DMG that Gatekeeper trusts on any Mac. User
 double-clicks, drags to Applications, opens — no warnings.
 
+## Why poll-and-build, not Gitea Actions / act_runner
+
+The original setup was Gitea Actions with `act_runner` reading
+`.gitea/workflows/build.yml` and running it as steps. That config
+is still committed; it just isn't the active path.
+
+The active path is a launchd-managed shell script that polls
+every 5 minutes because `act_runner` v0.2.13's Go networking
+stack on this runner fails to dial Gitea even when `curl` to the
+same IP returns HTTP 200 in 9ms. Diagnosed at length and never
+root-caused — likely a Go resolver / happy-eyeballs bug on
+networks where mDNS returns an unreachable IPv6 link-local. The
+poll-and-build LaunchAgent uses plain `bash`, `git`, and `curl`,
+all of which work fine on this host.
+
+If you later upgrade `act_runner` (or replace it) and want to
+switch back to Gitea Actions: `launchctl unload` the poll-build
+agent, re-enable the runner's LaunchAgent / startup config, and
+the existing `build.yml` does the rest.
+
 ## Runner setup (one-time)
 
-The macOS runner needs two things in its keychain. Both are
-persistent; once installed they survive runs.
+The macOS runner needs the keychain set up (below) plus the
+poll-build LaunchAgent installed. Both are persistent; once
+installed they survive reboots.
+
+### Install the poll-build LaunchAgent
+
+The script and the plist live in this repo under
+`scripts/runner-mac/` so they're version-controlled. Install:
+
+```bash
+ssh <runner>
+mkdir -p ~/bin
+cp ~/projects/glotty/scripts/runner-mac/glotty-poll-build.sh ~/bin/
+chmod +x ~/bin/glotty-poll-build.sh
+cp ~/projects/glotty/scripts/runner-mac/com.glotty.poll-build.plist \
+    ~/Library/LaunchAgents/
+launchctl load -w ~/Library/LaunchAgents/com.glotty.poll-build.plist
+```
+
+Verify:
+
+```bash
+launchctl list | grep glotty
+# Expect: -  0  com.glotty.poll-build
+#         ^         ^-- last exit code (0 = healthy)
+#         not running between ticks is normal
+
+tail /tmp/glotty-poll-build.log
+# Expect periodic "heartbeat" lines and "==> Published release …"
+# entries when commits ship.
+```
+
+State files:
+
+| Path | What |
+|---|---|
+| `/tmp/glotty-poll-build.log` | Per-tick log (heartbeats + build/publish output). Auto-rotates at 512 KB. |
+| `~/.glotty-poll-build-state` | Last-built commit SHA. The poller skips re-builds while the remote SHA matches. |
+| `/tmp/glotty-poll-build.stdout` + `.stderr` | launchd-captured streams. Should be empty in steady state. |
+
+Force a build right now (bypass the timer):
+
+```bash
+~/bin/glotty-poll-build.sh
+```
+
+## What broke act_runner and how to maybe restore it
+
+The act_runner LaunchAgent and Gitea's `build.yml` workflow are
+still committed and would work if the runner can dial Gitea
+reliably. As of 2026-06-04 it can't, and the dive turned up two
+distinct problems:
+
+### Problem 1 (fixable, fixed): mDNS publishes a bad link-local IPv6
+
+Symptom: `act_runner` on alex-mini dials
+`fe80::2472:b1ff:fefc:afea%en1`, gets "no route to host" —
+even though `truenas.local` has a working IPv4 address.
+
+Cause: avahi-daemon on truenas was including its br0 link-local
+IPv6 in mDNS responses sent over IPv4 multicast, even though its
+config has `use-ipv6=no`. That setting only controls IPv6
+sockets, not which addresses get published. Alex-mini's mDNS
+cached both records; Go's `net.Dial` picks IPv6 first per RFC
+8305 happy-eyeballs; NDP for the link-local fails (likely a
+Docker bridge sysctl on truenas suppressing NDP); Go errors out
+before falling back to v4.
+
+Fix (already applied to truenas's `/etc/avahi/avahi-daemon.conf`):
+
+```ini
+[publish]
+publish-aaaa-on-ipv4=no
+```
+
+After `systemctl restart avahi-daemon`, alex-mini's mDNS
+returns only IPv4 for `truenas.local`. Verify with
+`dscacheutil -flushcache && dscacheutil -q host -a name
+truenas.local` — should show only `ip_address: 192.168.100.150`.
+
+### Problem 2 (not root-caused): act_runner-specific IPv4 dial failure
+
+Even with mDNS clean, `act_runner` on alex-mini still gets
+"no route to host" dialing `192.168.100.150:30008` directly,
+while `curl` and `ping` from the same shell on the same Mac
+reach the same IP in 2-10ms. Something specific to act_runner's
+Go networking stack (possibly the wrong egress interface
+selection in the presence of Tailscale's utun12) is failing.
+Not root-caused; not fixed.
+
+This is the immediate reason CI runs through poll-build instead
+of act_runner. If you upgrade act_runner to a newer release or
+find a fix, re-enabling Gitea Actions CI is mechanical: install
+the `com.glotty.actrunner` LaunchAgent (template was at
+`~/Library/LaunchAgents/`, removed in cleanup), unload
+`com.glotty.poll-build`, and the existing `build.yml` runs.
+
+### Keychain prerequisites
 
 ### 1. Developer ID Application certificate
 
