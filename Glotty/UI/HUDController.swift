@@ -14,23 +14,43 @@ final class HUDController {
     /// Exposed for the debug snapshotter so it can capture the
     /// HUD's content view via NSView bitmap. Read-only.
     var currentPanel: NSPanel? { panel }
-    /// Height tuned to fit four command rows (Translate, Explain,
-    /// Polish, Chat).
-    private static let size = NSSize(width: 320, height: 210)
+    /// Visible glass-card size (header + 4 command rows + footer).
+    private static let contentSize = NSSize(width: 320, height: 210)
+    /// Margin around the visible card inside the panel — gives
+    /// SwiftUI's `.shadow(radius: 22, y: 8)` room to spill past the
+    /// rounded rectangle. Without this the shadow clips at the
+    /// panel's rectangular bounds, producing visible square
+    /// "shadow corners" especially top-left where the shadow
+    /// travels furthest. The HUDView's body wraps its content in
+    /// `.padding(shadowMargin)` to keep the visible card at
+    /// `contentSize` while the panel itself is larger.
+    private static let shadowMargin: CGFloat = 32
+    /// Outer panel size — content + shadow margin on every side.
+    private static var panelSize: NSSize {
+        NSSize(
+            width: contentSize.width + shadowMargin * 2,
+            height: contentSize.height + shadowMargin * 2
+        )
+    }
 
     func show() {
         let panel = ensurePanel()
 
         let host = NSHostingView(rootView: HUDView())
-        host.frame = NSRect(origin: .zero, size: HUDController.size)
+        host.frame = NSRect(origin: .zero, size: HUDController.panelSize)
         panel.contentView = host
-        panel.setContentSize(HUDController.size)
+        panel.setContentSize(HUDController.panelSize)
 
-        // Center horizontally on the active screen, ~25% down from the top.
+        // Center the visible glass card horizontally on the active
+        // screen, ~25% down from the top. The panel is panelSize
+        // (content + shadowMargin*2), but the user perceives it as
+        // contentSize — subtract the margin from origin so the visible
+        // card lands where they expect, with the invisible shadow
+        // buffer extending outward into the surrounding desktop.
         let screenFrame = NSScreen.main?.visibleFrame
             ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        let originX = screenFrame.midX - HUDController.size.width / 2
-        let originY = screenFrame.maxY - HUDController.size.height - screenFrame.height * 0.25
+        let originX = screenFrame.midX - HUDController.contentSize.width / 2 - HUDController.shadowMargin
+        let originY = screenFrame.maxY - HUDController.contentSize.height - screenFrame.height * 0.25 - HUDController.shadowMargin
         panel.setFrameOrigin(NSPoint(x: originX, y: originY))
 
         panel.orderFrontRegardless()
@@ -43,7 +63,7 @@ final class HUDController {
     private func ensurePanel() -> NSPanel {
         if let panel { return panel }
         let p = NSPanel(
-            contentRect: NSRect(origin: .zero, size: HUDController.size),
+            contentRect: NSRect(origin: .zero, size: HUDController.panelSize),
             styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -133,7 +153,7 @@ private struct HUDView: View {
                                      HUDView.polishLangName))
             commandRow(key: Keycode.label(for: Keycode.currentChat()),
                        label: String(format: String(localized: "Chat with Glotty in %@"),
-                                     HUDView.polishLangName))
+                                     HUDView.nativeLangName))
             Text("\(String(localized: "Release")) \(Keycode.currentLeader().label) \(String(localized: "to cancel"))")
                 .font(.caption2)
                 .foregroundStyle(hintColor)
@@ -141,6 +161,10 @@ private struct HUDView: View {
         .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(glassmorphism)
+        // Padding around the visible glass card so the .shadow() on
+        // glassmorphism has room to draw without being clipped at the
+        // NSPanel's rectangular bounds. Matches `HUDController.shadowMargin`.
+        .padding(32)
         .localizationAware()
     }
 
