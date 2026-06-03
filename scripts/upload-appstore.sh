@@ -38,6 +38,9 @@ EXPORT_OPTIONS_PLIST="$REPO_ROOT/build/exportOptions.plist"
 SIGN_IDENTITY="${SIGN_IDENTITY:-Apple Distribution: Simon Zu (47D8DFFZQ4)}"
 TEAM_ID="${TEAM_ID:-47D8DFFZQ4}"
 BUNDLE_ID="${BUNDLE_ID:-com.ruojunye.glotty}"
+# Name of the provisioning profile created by appstore-bootstrap.py.
+# Must match the `PROFILE_NAME` constant in that script.
+PROVISIONING_PROFILE_SPECIFIER="${PROVISIONING_PROFILE_SPECIFIER:-Glotty Mac App Store}"
 APPSTORE_ENTITLEMENTS="$REPO_ROOT/Glotty/Glotty-AppStore.entitlements"
 
 # App Store Connect API key for upload. Set these via env or
@@ -86,7 +89,22 @@ cat > "$EXPORT_OPTIONS_PLIST" <<EOF
     <key>teamID</key>
     <string>$TEAM_ID</string>
     <key>signingStyle</key>
-    <string>automatic</string>
+    <string>manual</string>
+    <key>signingCertificate</key>
+    <string>Apple Distribution</string>
+    <!--
+        Mac App Store uploads need a separate cert to sign the .pkg
+        installer that Xcode wraps the .app in. The installer cert's
+        display name is "3rd Party Mac Developer Installer" (legacy
+        branding; Apple's API calls it "Mac Installer Distribution").
+    -->
+    <key>installerSigningCertificate</key>
+    <string>3rd Party Mac Developer Installer</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>$BUNDLE_ID</key>
+        <string>$PROVISIONING_PROFILE_SPECIFIER</string>
+    </dict>
     <key>uploadSymbols</key>
     <true/>
 </dict>
@@ -100,15 +118,20 @@ echo "    Sandbox:   enabled via Glotty-AppStore.entitlements"
 # Force the App Store entitlements file. The default for the project
 # is Glotty-Release.entitlements (used by Developer ID); this
 # overrides it for the archive build only.
+# Manual signing: project.yml has CODE_SIGN_STYLE=Automatic for local
+# dev, but for the App Store archive we override to Manual and point
+# at the specific Distribution identity + provisioning profile. Xcode
+# refuses to mix Automatic with an explicit CODE_SIGN_IDENTITY.
 xcodebuild archive \
     -scheme "$SCHEME" \
     -configuration "$CONFIG" \
     -destination "generic/platform=macOS" \
     -archivePath "$ARCHIVE_PATH" \
     PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
-    CODE_SIGN_STYLE=Automatic \
+    CODE_SIGN_STYLE=Manual \
     DEVELOPMENT_TEAM="$TEAM_ID" \
     CODE_SIGN_IDENTITY="$SIGN_IDENTITY" \
+    PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_SPECIFIER" \
     CODE_SIGN_ENTITLEMENTS="$APPSTORE_ENTITLEMENTS" \
     ENABLE_HARDENED_RUNTIME=YES \
     OTHER_CODE_SIGN_FLAGS="--timestamp" \

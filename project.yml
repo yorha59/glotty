@@ -41,6 +41,16 @@ targets:
         INFOPLIST_KEY_LSUIElement: YES
         INFOPLIST_KEY_NSAccessibilityUsageDescription: "Glotty reads selected text from the focused application so it can be translated."
         INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026"
+        # App Store category — determines which section Glotty
+        # appears in. Productivity fits a translation/writing tool;
+        # alternatives: Reference, Utilities, Education.
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
+        # User-facing version (e.g. "1.0") and build number (e.g. "1").
+        # App Store submissions require both. The Dev ID DMG pipeline
+        # also picks these up — make-dmg-signed.sh stamps the version
+        # into the output filename.
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
         ENABLE_HARDENED_RUNTIME: YES
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
