@@ -147,10 +147,4 @@ enum PermissionCheck {
         }
     }
 
-    /// Reset Glotty's TCC entries via the user-facing `tccutil` command. Useful when a
-    /// stale ad-hoc-signed identity poisons the cache and the granted toggle no longer
-    /// applies to the freshly-built binary.
-    static func tccResetCommand() -> String {
-        "tccutil reset Accessibility com.ruojunye.glotty && tccutil reset ListenEvent com.ruojunye.glotty"
-    }
 }

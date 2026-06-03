@@ -61,22 +61,6 @@ struct PermissionsView: View {
 
     @State private var refreshToken = 0
     @State private var timer: Timer?
-    @State private var showStaleHelp = false
-
-    private var diagnosticText: Text {
-        let bundleID = Bundle.main.bundleIdentifier ?? "—"
-        let bundlePath = Bundle.main.bundlePath
-        let pid = ProcessInfo.processInfo.processIdentifier
-        let ax = Permission.accessibility.isGranted() ? "true" : "false"
-        let im = Permission.inputMonitoring.isGranted() ? "true" : "false"
-        return Text("""
-        bundle: \(bundleID)
-        path:   \(bundlePath)
-        pid:    \(pid)
-        AXIsProcessTrustedWithOptions(nil) = \(ax)
-        IOHIDCheckAccess(ListenEvent) granted = \(im)
-        """)
-    }
 
     var body: some View {
         // One unified stage that always shows the permission detection
@@ -151,49 +135,6 @@ struct PermissionsView: View {
                 // permissions step so what the user saw during
                 // onboarding stays reachable here.
                 DictionaryAppRow(refreshToken: refreshToken)
-            }
-
-            DisclosureGroup(isExpanded: $showStaleHelp) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Granted but Glotty still says ✗?".t)
-                        .font(.callout).bold()
-                    Text("Dev builds are ad-hoc signed, so each rebuild has a different code signature. macOS's TCC tracks per-signature — your previous grant may belong to an older build. Two things to try:".t)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text("1. In System Settings → Accessibility, click the (–) minus button to remove every Glotty entry, then relaunch Glotty and grant fresh.".t)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text("2. From Terminal:".t)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    // tccResetCommand returns a shell command string —
-                    // user content (verbatim), not localized.
-                    Text(PermissionCheck.tccResetCommand())
-                        .font(.system(.caption, design: .monospaced))
-                        .padding(8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(Color(NSColor.textBackgroundColor)))
-                        .textSelection(.enabled)
-                    Text("Then quit & relaunch Glotty.".t)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Divider().padding(.vertical, 4)
-
-                    Text("Diagnostic info".t)
-                        .font(.callout).bold()
-                    diagnosticText
-                        .font(.system(.caption2, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                }
-                .padding(.top, 6)
-            } label: {
-                Text("Troubleshooting".t).font(.callout)
             }
 
             Spacer(minLength: 0)
