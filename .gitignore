@@ -23,3 +23,7 @@ session
 
 # Local DMG build output (scripts/make-dmg.sh)
 dist/
+
+# App Store Connect API credentials (Key ID + Issuer ID).
+# Never commit — see doc/app-store-submission.md.
+.env.appstore
