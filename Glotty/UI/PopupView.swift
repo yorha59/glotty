@@ -1719,27 +1719,31 @@ struct PopupView: View {
                         guard gained else { return }
                         NSApp.activate(ignoringOtherApps: true)
                     }
-                    // Explicit Return-key handling: plain Return
-                    // submits (chat convention); Shift+Return inserts
-                    // a newline so users can compose multi-line
-                    // messages. We insert the newline directly into
-                    // the binding instead of returning `.ignored` —
-                    // SwiftUI's vertical TextField doesn't fall
-                    // through to NSTextView's default newline
-                    // insertion when this handler returns `.ignored`,
-                    // so nothing happened. Appending `\n` is good
-                    // enough for chat composition where users are
-                    // typing forward; cursor-aware insert would
-                    // require NSTextView APIs not exposed by
-                    // SwiftUI's TextField.
+                    // Return-key handling has to coexist with IME
+                    // composition (Pinyin, Kana, etc.) where Return
+                    // is supposed to COMMIT the current candidate,
+                    // not submit the message. `.onKeyPress` fires
+                    // even during composition, but `.onSubmit` is
+                    // IME-aware: the system suppresses it while marked
+                    // text is being edited and only fires when there's
+                    // no active composition. So:
+                    //   - Plain Return → handled by `.onSubmit` only,
+                    //     returning `.ignored` from onKeyPress so the
+                    //     IME / system gets the keypress first. During
+                    //     pinyin composition, IME consumes the Return
+                    //     to commit; only after composition ends does
+                    //     `.onSubmit` actually fire.
+                    //   - Shift+Return → handled directly in
+                    //     onKeyPress (insert newline). Composition
+                    //     interaction is rare here and acceptable.
                     .onKeyPress(keys: [.return]) { press in
                         if press.modifiers.contains(.shift) {
                             tutorInput += "\n"
                             return .handled
                         }
-                        submitTutor()
-                        return .handled
+                        return .ignored
                     }
+                    .onSubmit { submitTutor() }
                 Button("Send") { submitTutor() }
                     .buttonStyle(.borderedProminent)
                     .disabled(tutorInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
