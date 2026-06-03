@@ -8,6 +8,15 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    # act_runner spawns each step's shell with a stripped PATH
+    # (login defaults from launchd, no .zshrc). Homebrew installs
+    # to /opt/homebrew on Apple Silicon and isn't on that PATH —
+    # so `brew install xcodegen` and any other Homebrew-installed
+    # tool (xcodegen, the Apple Silicon openssl, ...) silently
+    # "command not found" and the build proceeds with a stale
+    # xcodeproj. Set PATH at the job level so every step inherits it.
+    env:
+      PATH: /opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,6 +55,12 @@ jobs:
           ls -lh ~/ci-artifacts/glotty/
 
       - name: Publish to Gitea Release
+        # `--ipv4` forces curl to skip IPv6 resolution. On this
+        # network, truenas.local's mDNS reply includes a link-local
+        # IPv6 address that the runner can't actually route to —
+        # without --ipv4, curl picks the IPv6 first and fails with
+        # "no route to host". Same fix applied to act_runner's own
+        # config (.runner uses the IPv4 IP directly).
         run: |
           GITEA_TOKEN=$(cat ~/projects/miner/.git-token)
           DMG_FILE=$(ls dist/*.dmg | head -1)
@@ -54,12 +69,12 @@ jobs:
           API="http://truenas.local:30008/api/v1/repos/hemoon/glotty"
 
           # Delete old release
-          curl -sf -X DELETE \
+          curl -sf --ipv4 -X DELETE \
             -H "Authorization: token $GITEA_TOKEN" \
             "$API/releases/tags/$RELEASE_TAG" 2>/dev/null || true
 
           # Create release
-          RELEASE_ID=$(curl -sf -X POST \
+          RELEASE_ID=$(curl -sf --ipv4 -X POST \
             -H "Authorization: token $GITEA_TOKEN" \
             -H "Content-Type: application/json" \
             -d "{\"tag_name\":\"$RELEASE_TAG\",\"name\":\"Latest Build\",\"body\":\"Auto-built DMG from main branch\",\"target_commitish\":\"main\"}" \
@@ -68,7 +83,7 @@ jobs:
           echo "Release ID: $RELEASE_ID"
 
           # Upload DMG
-          curl -sf -X POST \
+          curl -sf --ipv4 -X POST \
             -H "Authorization: token $GITEA_TOKEN" \
             -F "attachment=@$DMG_FILE" \
             "$API/releases/$RELEASE_ID/assets?name=$DMG_NAME" | python3 -c "
