@@ -33,6 +33,30 @@ final class PopupPanel: NSPanel {
         onCancel?()
     }
 
+    /// Return-while-composing should commit the IME candidate, not
+    /// submit the chat message. SwiftUI's `.onSubmit` fires on Return
+    /// regardless of marked-text state — so we intercept the keyDown
+    /// here, route it only into the field editor's `interpretKeyEvents`
+    /// (where the IME consumes it for commit), and skip the rest of
+    /// the dispatch chain that would trigger `.onSubmit`.
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown,
+           (event.keyCode == 36 || event.keyCode == 76),  // Return / numpad Enter
+           !event.modifierFlags.contains(.shift) {
+            if let tv = firstResponder as? NSTextView, tv.hasMarkedText() {
+                tv.interpretKeyEvents([event])
+                return
+            }
+            if let tf = firstResponder as? NSTextField,
+               let editor = tf.currentEditor() as? NSTextView,
+               editor.hasMarkedText() {
+                editor.interpretKeyEvents([event])
+                return
+            }
+        }
+        super.sendEvent(event)
+    }
+
     /// Allow the user to drag the panel to any position, including ones
     /// where the title bar is off-screen. AppKit's default
     /// `constrainFrameRect` keeps the title bar visible — fine for

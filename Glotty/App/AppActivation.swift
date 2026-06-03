@@ -35,8 +35,22 @@ enum AppActivation {
         count += 1
         if count == 1 {
             NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
+            // Pump the main runloop so Input Method Kit can finish
+            // binding its mach port for the freshly-promoted .regular
+            // process. Without this, SwiftUI TextFields in the first
+            // managed window of the session silently drop keystrokes
+            // ("error messaging the mach port for
+            // IMKCFRunLoopWakeUpReliable"). The caller invokes
+            // makeKeyAndOrderFront right after we return, so IMK has
+            // to be ready by then.
+            let deadline = Date(timeIntervalSinceNow: 0.25)
+            while Date() < deadline {
+                RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
+            }
+        } else {
+            NSApp.activate(ignoringOtherApps: true)
         }
-        NSApp.activate(ignoringOtherApps: true)
         let token = UUID()
         closers[token] = closer
         return token
