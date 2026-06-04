@@ -214,7 +214,8 @@ final class PopupController {
         // Polish/chat only diverge from translate by being resizable; the
         // chat-field IME first-open binding is handled separately when the
         // user actually taps into the field, not at panel creation.
-        let panel = createPanel(resizable: mode == .polish || mode == .chat)
+        let panel = createPanel(resizable: mode == .polish || mode == .chat,
+                                minimizable: mode == .chat)
 
         // Per-panel dismiss closure — each PopupView's onClose targets its own
         // panel, not the controller's notion of "the current one". This is
@@ -466,11 +467,22 @@ final class PopupController {
     /// windows means there's no "current" panel to reuse anymore. Translate
     /// and explain auto-fit (non-resizable); polish includes `.resizable`
     /// so the user can drag the corners as the chat thread grows.
-    private func createPanel(resizable: Bool = false) -> PopupPanel {
+    private func createPanel(resizable: Bool = false,
+                             minimizable: Bool = false) -> PopupPanel {
         var mask: NSWindow.StyleMask = [
             .nonactivatingPanel, .titled, .closable, .fullSizeContentView,
         ]
         if resizable { mask.insert(.resizable) }
+        // `minimizable` (chat only) keeps every IME-critical trait
+        // intact — `.nonactivatingPanel` stays in the mask,
+        // `.fullScreenAuxiliary` stays in the collectionBehavior below,
+        // and the app stays an LSUIElement agent. We only ADD the
+        // miniaturize button and DROP `.transient` (transient panels
+        // refuse to minimize). So the CJK-over-full-screen input that
+        // we worked hard for can't regress; the only open question is
+        // whether macOS actually minimizes a non-activating floating
+        // panel — verified empirically, not from this code.
+        if minimizable { mask.insert(.miniaturizable) }
         let p = PopupPanel(
             contentRect: NSRect(origin: .zero, size: NSSize(width: 460, height: 520)),
             styleMask: mask,
@@ -478,7 +490,13 @@ final class PopupController {
             defer: false
         )
         p.isFloatingPanel = true
-        p.level = .floating
+        // A `.floating`-level window can refuse to animate into the
+        // Dock on minimize. Chat (minimizable) drops to `.normal` level
+        // so the OS treats it like an ordinary window for the
+        // miniaturize path; it keeps `.fullScreenAuxiliary` so it can
+        // still appear over a full-screen space, just not pinned above
+        // every other window. Other modes stay `.floating`.
+        p.level = minimizable ? .normal : .floating
         p.titlebarAppearsTransparent = true
         p.titleVisibility = .hidden
         p.isMovableByWindowBackground = true
@@ -487,9 +505,13 @@ final class PopupController {
         p.isReleasedWhenClosed = false
         // `.fullScreenAuxiliary` lets the popup overlay a full-screen
         // source app (Chrome, Safari, etc.) without forcing macOS to
-        // switch out of that app's space.
-        p.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary, .transient]
-        p.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        // switch out of that app's space. `.transient` is omitted for
+        // minimizable (chat) panels because transient windows won't
+        // miniaturize.
+        p.collectionBehavior = minimizable
+            ? [.moveToActiveSpace, .fullScreenAuxiliary]
+            : [.moveToActiveSpace, .fullScreenAuxiliary, .transient]
+        p.standardWindowButton(.miniaturizeButton)?.isHidden = !minimizable
         p.standardWindowButton(.zoomButton)?.isHidden = true
         return p
     }
