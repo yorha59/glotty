@@ -206,6 +206,14 @@ struct PopupView: View {
     /// `nil` skips the auto-grow (e.g. previews, replay paths where the
     /// chat is already expanded on first paint).
     let onChatExpand: (() -> Void)?
+    /// Privacy "hide": orders the popup out and leaves a small floating
+    /// bubble at the right screen edge; clicking the bubble brings the
+    /// popup back. Deliberately NOT native miniaturize — minimizing the
+    /// non-activating agent panel loses the IME candidate binding (see
+    /// `PopupController.createPanel`). Hide/restore is a plain
+    /// `orderOut`/`orderFront`, the same path the popup uses to first
+    /// appear, so the IME stays bound. `nil` hides the button (previews).
+    let onHide: (() -> Void)?
     /// Re-register hook for post-dismiss memory extraction. PopupView
     /// calls this on every relevant @State change with a freshly-bound
     /// snapshot-capturing closure; PopupController stores the latest
@@ -221,6 +229,7 @@ struct PopupView: View {
          onboarding: Bool = false,
          onClose: @escaping () -> Void,
          onChatExpand: (() -> Void)? = nil,
+         onHide: (() -> Void)? = nil,
          registerExtractionTrigger: ((@escaping () -> Void) -> Void)? = nil) {
         self.sourceText = sourceText
         self.mode = mode
@@ -229,6 +238,7 @@ struct PopupView: View {
         self.onboarding = onboarding
         self.onClose = onClose
         self.onChatExpand = onChatExpand
+        self.onHide = onHide
         self.registerExtractionTrigger = registerExtractionTrigger
 
         // Pre-load @State from the replay payload so the popup renders the
@@ -647,6 +657,33 @@ struct PopupView: View {
         // actually gives it (maxPanelHeight), and the inner ScrollView
         // naturally lets the user scroll the overflow.
         .frame(maxHeight: maxPanelHeight)
+        // Hide-to-bubble button at the top-right, mirroring the native
+        // close button at the top-left. Sits in the trafficLightInset
+        // strip so it doesn't overlap content.
+        .overlay(alignment: .topTrailing) { hideButton }
+    }
+
+    /// Privacy "hide" affordance. Tucks the popup away behind a small
+    /// bubble (`PopupController.hideToBubble`) so nobody glancing at the
+    /// screen sees the translation/chat; a click on the bubble restores
+    /// it. The eye-slash icon reads as "hide from view" rather than a
+    /// second close button.
+    @ViewBuilder
+    private var hideButton: some View {
+        if let onHide {
+            Button(action: onHide) {
+                Image(systemName: "eye.slash")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(PopupTokens.tertiaryText)
+                    .frame(width: 20, height: 20)
+                    .background(.thinMaterial, in: Circle())
+                    .overlay(Circle().strokeBorder(PopupTokens.border, lineWidth: 0.5))
+            }
+            .buttonStyle(.plain)
+            .help("Hide from view — click the bubble to bring it back")
+            .padding(.top, 5)
+            .padding(.trailing, 8)
+        }
     }
 
     /// Wrap the content column in a ScrollView for non-chat modes

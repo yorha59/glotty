@@ -137,6 +137,16 @@ final class PopupController {
     /// consistently when an NSPanel is dismissed via `orderOut`.
     private var extractionTriggers: [ObjectIdentifier: () -> Void] = [:]
 
+    /// Bubbles standing in for hidden popups. Keyed by the hidden
+    /// popup's ObjectIdentifier; the value is the small floating panel
+    /// that sits at the right screen edge while the popup is hidden.
+    /// Clicking it restores the popup. This is Glotty's "minimize" —
+    /// a privacy gesture (tuck the translation out of sight, bring it
+    /// back with one click) implemented as `orderOut`/`orderFront`
+    /// rather than native miniaturize, which would break the IME
+    /// candidate binding. See `hideToBubble`.
+    private var bubbleForPopup: [ObjectIdentifier: NSPanel] = [:]
+
     /// Initial size for any popup before SwiftUI reports its intrinsic height.
     /// The hosting controller's `preferredContentSize` takes over right after
     /// the first layout pass; this is just a placeholder so the panel doesn't
@@ -244,6 +254,10 @@ final class PopupController {
                 guard let panelRef, !didGrowForChat else { return }
                 didGrowForChat = true
                 Self.growPanelForChat(panelRef)
+            },
+            onHide: { [weak self, weak panelRef] in
+                guard let panelRef else { return }
+                self?.hideToBubble(panelRef)
             },
             registerExtractionTrigger: { [weak self, weak panelRef] hook in
                 guard let self, let panelRef else { return }
@@ -400,6 +414,8 @@ final class PopupController {
     /// "panic" affordance and during tests.
     func dismissAll() {
         for p in panels { p.orderOut(nil) }
+        for b in bubbleForPopup.values { b.orderOut(nil) }
+        bubbleForPopup.removeAll()
         panels.removeAll()
         hosts.removeAll()
     }
@@ -413,6 +429,108 @@ final class PopupController {
         extractionTriggers.removeValue(forKey: id)?()
         hosts.removeValue(forKey: id)
         panels.removeAll { $0 === panel }
+        // If this popup was hidden behind a bubble, tear the bubble
+        // down too so a closed-while-hidden popup doesn't leave an
+        // orphaned bubble pointing at a dead window.
+        if let bubble = bubbleForPopup.removeValue(forKey: id) {
+            bubble.orderOut(nil)
+            layoutBubbles()
+        }
+    }
+
+    // MARK: - Hide to bubble ("minimize")
+
+    /// Hide `popup` behind a small floating bubble at the right screen
+    /// edge. The window is only `orderOut`'d — NOT miniaturized — so its
+    /// IME binding survives and `restoreFromBubble` can bring it back
+    /// exactly as it was. This is the privacy gesture: tuck a translation
+    /// or chat out of sight, restore it with one click on the bubble.
+    func hideToBubble(_ popup: PopupPanel) {
+        let key = ObjectIdentifier(popup)
+        guard bubbleForPopup[key] == nil else { return }  // already hidden
+        // Capture the popup's screen BEFORE ordering it out — once a
+        // window is hidden `window.screen` goes nil and `NSScreen.main`
+        // can resolve to a different display, parking the bubble off on
+        // a secondary monitor. Pin the bubble column to the screen the
+        // popup was actually on.
+        bubbleScreenFrame = popup.screen?.visibleFrame
+            ?? NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) })?.visibleFrame
+            ?? NSScreen.main?.visibleFrame
+            ?? bubbleScreenFrame
+        Log.debug(.popup, "hideToBubble — hiding popup behind bubble", op: "hide")
+        popup.orderOut(nil)
+        let bubble = makeBubble(restore: { [weak self, weak popup] in
+            guard let self, let popup else { return }
+            self.restoreFromBubble(popup)
+        })
+        bubbleForPopup[key] = bubble
+        layoutBubbles()
+        bubble.orderFrontRegardless()
+    }
+
+    /// Bring a hidden popup back: drop its bubble and re-order the
+    /// window front. `orderFront` re-shows the same NSPanel (never
+    /// destroyed, never miniaturized), so the IME candidate window
+    /// rebinds the moment the user taps back into a text field —
+    /// the same first-open behavior, not the broken post-miniaturize
+    /// state.
+    func restoreFromBubble(_ popup: PopupPanel) {
+        let key = ObjectIdentifier(popup)
+        if let bubble = bubbleForPopup.removeValue(forKey: key) {
+            bubble.orderOut(nil)
+        }
+        Log.debug(.popup, "restoreFromBubble — re-showing popup", op: "hide")
+        popup.orderFrontRegardless()
+        layoutBubbles()
+    }
+
+    /// Build the little click-to-restore bubble. Borderless,
+    /// non-activating, floating — same agent traits as the popup so it
+    /// rides over full-screen apps too. Hosts `PopupBubbleView`.
+    private func makeBubble(restore: @escaping () -> Void) -> NSPanel {
+        let size = Self.bubbleSize
+        let p = NSPanel(
+            contentRect: NSRect(origin: .zero, size: size),
+            styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        p.isFloatingPanel = true
+        p.level = .floating
+        p.isOpaque = false
+        p.backgroundColor = .clear
+        p.hasShadow = false  // the SwiftUI bubble draws its own shadow
+        p.hidesOnDeactivate = false
+        p.isReleasedWhenClosed = false
+        p.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary, .transient]
+        let host = NSHostingView(rootView: PopupBubbleView(onRestore: restore))
+        host.frame = NSRect(origin: .zero, size: size)
+        p.contentView = host
+        return p
+    }
+
+    private static let bubbleSize = NSSize(width: 56, height: 56)
+
+    /// Visible frame of the screen the bubbles live on — the screen the
+    /// most-recently-hidden popup was on. Captured in `hideToBubble`
+    /// before the popup is ordered out (after which its screen is nil).
+    private var bubbleScreenFrame = NSRect(x: 0, y: 0, width: 1440, height: 900)
+
+    /// Stack all current bubbles down the right edge of the bubble
+    /// screen's visible frame. Re-run whenever a bubble is added or
+    /// removed so the column stays gap-free.
+    private func layoutBubbles() {
+        let screen = bubbleScreenFrame
+        let size = Self.bubbleSize
+        let margin: CGFloat = 14
+        let gap: CGFloat = 10
+        let x = screen.maxX - size.width - margin
+        var y = screen.maxY - size.height - 90
+        for bubble in bubbleForPopup.values {
+            bubble.setFrame(NSRect(x: x, y: max(y, screen.minY), width: size.width, height: size.height),
+                            display: true)
+            y -= (size.height + gap)
+        }
     }
 
     /// Nudge any panel that ended up entirely outside every screen
@@ -508,5 +626,42 @@ final class PopupController {
         p.standardWindowButton(.miniaturizeButton)?.isHidden = true
         p.standardWindowButton(.zoomButton)?.isHidden = true
         return p
+    }
+}
+
+/// The little floating mascot the user clicks to bring a hidden popup
+/// back. Lives at the right screen edge while its popup is hidden;
+/// clicking calls `onRestore`. Deliberately tiny and self-shadowing so
+/// it reads as an unobtrusive "peek" affordance rather than a window.
+private struct PopupBubbleView: View {
+    let onRestore: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: onRestore) {
+            ZStack {
+                Circle()
+                    .fill(.regularMaterial)
+                    .overlay(Circle().strokeBorder(.white.opacity(0.18), lineWidth: 0.5))
+                    .shadow(color: .black.opacity(0.25), radius: hovering ? 9 : 5, y: 2)
+                if let mascot = NSImage(named: "StatusItemIcon") {
+                    Image(nsImage: mascot)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 30, height: 30)
+                } else {
+                    Image(systemName: "text.bubble.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(3)
+            .frame(width: 56, height: 56)
+            .scaleEffect(hovering ? 1.07 : 1.0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: hovering)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(String(localized: "Show Glotty"))
     }
 }
