@@ -141,9 +141,43 @@ echo "==> Verifying Glotty.app signature"
 # common mistakes (unsealed contents, broken nested bundles).
 codesign --verify --deep --strict --verbose=2 "$APP_SRC"
 
+# notarytool keychain args — used for BOTH the app and the DMG
+# submissions below. In CI mode the credential profile lives in the
+# dedicated CI keychain; local runs leave it on the default search.
+NOTARYTOOL_KEYCHAIN_ARGS=()
+[ -n "$CODESIGN_KEYCHAIN" ] && NOTARYTOOL_KEYCHAIN_ARGS=(--keychain "$CODESIGN_KEYCHAIN")
+
+# ----------------------------------------------------------------------
+# Notarize + STAPLE THE APP ITSELF, before it goes in the DMG.
+#
+# Stapling the DMG alone is NOT enough: when the user mounts the DMG
+# and copies Glotty.app to /Applications, the extracted app carries no
+# stapled ticket, so Gatekeeper falls back to an ONLINE check with
+# Apple on first launch. That online check is slow or blocked on some
+# networks (notably mainland China), where it manifests as "Glotty is
+# damaged / can't be opened". Stapling the app embeds the ticket so
+# the launch verifies fully OFFLINE. (Diagnosed 2026-06-04: a user in
+# CN couldn't open the downloaded build; the SSH-copied build worked
+# only because scp strips the quarantine flag.)
+# ----------------------------------------------------------------------
+echo "==> Notarizing the app (zip → notary service)"
+echo "    This usually takes 1-3 minutes; can take 10+ on busy days."
+APP_ZIP="$BUILD_DIR/Glotty-app.zip"
+# `ditto -c -k --keepParent` makes the zip notarytool expects.
+ditto -c -k --keepParent "$APP_SRC" "$APP_ZIP"
+xcrun notarytool submit "$APP_ZIP" \
+    --keychain-profile "$NOTARY_PROFILE" \
+    ${NOTARYTOOL_KEYCHAIN_ARGS[@]+"${NOTARYTOOL_KEYCHAIN_ARGS[@]}"} \
+    --wait
+
+echo "==> Stapling ticket onto Glotty.app (offline-verifiable)"
+xcrun stapler staple "$APP_SRC"
+xcrun stapler validate "$APP_SRC"
+
 echo "==> Packaging Glotty $VERSION"
 STAGE_DIR="$BUILD_DIR/stage"
 mkdir -p "$STAGE_DIR"
+# Copy the now-STAPLED app into the DMG.
 cp -R "$APP_SRC" "$STAGE_DIR/"
 ln -s /Applications "$STAGE_DIR/Applications"
 
@@ -170,28 +204,27 @@ codesign --force --timestamp \
     ${KEYCHAIN_ARGS[@]+"${KEYCHAIN_ARGS[@]}"} \
     "$DMG_PATH"
 
-echo "==> Submitting to Apple notary service"
-echo "    This usually takes 1-3 minutes; can take 10+ on busy days."
-# In CI mode the notarytool credential profile lives in the CI
-# keychain, not the default login keychain. Local runs leave
-# CODESIGN_KEYCHAIN empty so notarytool uses default search.
-NOTARYTOOL_KEYCHAIN_ARGS=()
-[ -n "$CODESIGN_KEYCHAIN" ] && NOTARYTOOL_KEYCHAIN_ARGS=(--keychain "$CODESIGN_KEYCHAIN")
+echo "==> Notarizing the DMG"
 xcrun notarytool submit "$DMG_PATH" \
     --keychain-profile "$NOTARY_PROFILE" \
     ${NOTARYTOOL_KEYCHAIN_ARGS[@]+"${NOTARYTOOL_KEYCHAIN_ARGS[@]}"} \
     --wait
 
 echo "==> Stapling notarization ticket onto DMG"
-# Stapling embeds the Apple-issued ticket directly in the DMG so
-# Gatekeeper on a user's Mac can verify offline (without contacting
-# Apple servers) on first launch. Without stapling, Gatekeeper has
-# to call home, which fails on machines that are offline / behind
-# strict firewalls during the first launch.
+# Stapling embeds the Apple-issued ticket directly in the DMG so the
+# DOWNLOAD itself verifies offline. Combined with the stapled app
+# above, both the .dmg and the extracted .app are fully offline-clean.
 xcrun stapler staple "$DMG_PATH"
 
-echo "==> Verifying stapled DMG passes Gatekeeper"
+echo "==> Verifying staples + Gatekeeper"
+xcrun stapler validate "$DMG_PATH"
 spctl --assess --type install --verbose "$DMG_PATH"
+# Also assert the app inside is stapled (the thing that was missing).
+MNT_CHECK=$(hdiutil attach "$DMG_PATH" -nobrowse -noautoopen 2>/dev/null | grep -oE "/Volumes/.*" | head -1)
+if [ -n "$MNT_CHECK" ]; then
+    xcrun stapler validate "$MNT_CHECK/Glotty.app" || echo "WARN: app inside DMG not stapled"
+    hdiutil detach "$MNT_CHECK" -quiet 2>/dev/null || true
+fi
 
 echo
 echo "Done: $DMG_PATH"
