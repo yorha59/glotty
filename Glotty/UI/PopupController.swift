@@ -191,7 +191,7 @@ final class PopupController {
         // Polish/chat only diverge from translate by being resizable; the
         // chat-field IME first-open binding is handled separately when the
         // user actually taps into the field, not at panel creation.
-        let panel = createPanel(resizable: mode == .polish)
+        let panel = createPanel(resizable: mode == .polish || mode == .chat)
 
         // Per-panel dismiss closure — each PopupView's onClose targets its own
         // panel, not the controller's notion of "the current one". This is
@@ -248,13 +248,21 @@ final class PopupController {
         // styleMask, and the auto-sync just gives them a better
         // starting size.
         let host = NSHostingController(rootView: rootView)
-        host.sizingOptions = [.preferredContentSize]
+        // Auto-fit (preferredContentSize) for translate / explain /
+        // polish. Chat is EXCLUDED: it's user-resizable and its
+        // content grows as messages arrive, so auto-sync would fight
+        // the manual drag — snapping the window back to the content's
+        // ideal size on every new message. We still read
+        // `preferredContentSize` once below to pick chat's initial
+        // size; we just don't keep tracking it.
+        host.sizingOptions = mode == .chat ? [] : [.preferredContentSize]
         panel.contentViewController = host
         hosts[ObjectIdentifier(panel)] = host
         host.view.layoutSubtreeIfNeeded()
         let preferred = host.preferredContentSize
         let initialSize: NSSize
-        if mode == .polish {
+        switch mode {
+        case .polish:
             // Polish starts at a comfortable working size — wide enough for
             // variant cards, tall enough to show variants + issues without
             // requiring an immediate drag. Bigger than the SwiftUI ideal so
@@ -265,7 +273,18 @@ final class PopupController {
             initialSize = NSSize(width: max(base.width, 560),
                                  height: max(base.height, 480))
             panel.contentMinSize = NSSize(width: 380, height: 240)
-        } else {
+        case .chat:
+            // Chat is user-resizable so the thread area can be dragged
+            // bigger. Start at the auto-fit ideal (or a sensible
+            // fallback) and set a floor so it can't be dragged uselessly
+            // small.
+            let base = (preferred.width > 0 && preferred.height > 0)
+                ? preferred
+                : NSSize(width: 560, height: 560)
+            initialSize = NSSize(width: max(base.width, 460),
+                                 height: max(base.height, 400))
+            panel.contentMinSize = NSSize(width: 380, height: 300)
+        default:
             initialSize = (preferred.width > 0 && preferred.height > 0)
                 ? preferred
                 : Self.initialSize

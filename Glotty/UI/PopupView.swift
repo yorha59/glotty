@@ -618,8 +618,12 @@ struct PopupView: View {
         .frame(
             minWidth: contentWidth,
             idealWidth: contentWidth,
-            maxWidth: mode == .polish ? .infinity : contentWidth,
-            maxHeight: mode == .polish ? .infinity : nil,
+            // Polish and chat are user-resizable panels — let the
+            // content stretch to fill whatever size the user drags to.
+            // Translate / explain stay pinned to `contentWidth` and
+            // auto-fit their height.
+            maxWidth: (mode == .polish || mode == .chat) ? .infinity : contentWidth,
+            maxHeight: (mode == .polish || mode == .chat) ? .infinity : nil,
             alignment: .topLeading
         )
         // Cap the outer height at the screen so the panel can't grow
