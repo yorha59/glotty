@@ -1,0 +1,9 @@
+log:
+  level: info
+runner:
+  file: .runner
+  capacity: 1
+  timeout: 3h
+  fetch_interval: 2s
+host:
+  workdir_parent: ""

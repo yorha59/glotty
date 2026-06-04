@@ -47,10 +47,28 @@ jobs:
           KEYCHAIN_PASS_FILE: /Users/sichengzu/projects/miner/.keychain-pass
         run: bash scripts/make-dmg-signed.sh
 
+      - name: Create ZIP artifact
+        # ZIP distributes better than DMG via messaging apps (Feishu,
+        # WeChat, etc.): macOS quarantines DMG-mounted apps when the
+        # DMG was downloaded by a sandboxed app, blocking execution
+        # with "File created by an AppSandbox, exec/open not allowed".
+        # ZIP avoids this — the extracted app inherits the stapled
+        # ticket and verifies offline without the quarantine propagation
+        # issue.  ditto preserves code signatures and resource forks.
+        run: |
+          DMG_FILE=$(ls dist/*.dmg | head -1)
+          VERSION=$(echo "$DMG_FILE" | sed 's/.*Glotty-\(.*\)\.dmg/\1/')
+          MNT=$(hdiutil attach "$DMG_FILE" -nobrowse -noautoopen 2>/dev/null | grep -oE "/Volumes/.*" | head -1)
+          ditto -c -k --keepParent "$MNT/Glotty.app" "dist/Glotty-$VERSION.zip"
+          hdiutil detach "$MNT" -quiet 2>/dev/null || true
+          echo "=== ZIP ==="
+          ls -lh dist/Glotty-*.zip
+
       - name: Copy artifact to persistent location
         run: |
           mkdir -p ~/ci-artifacts/glotty
           cp dist/*.dmg ~/ci-artifacts/glotty/
+          cp dist/*.zip ~/ci-artifacts/glotty/
           echo "=== Artifacts ==="
           ls -lh ~/ci-artifacts/glotty/
 
@@ -64,7 +82,9 @@ jobs:
         run: |
           GITEA_TOKEN=$(cat ~/projects/miner/.git-token)
           DMG_FILE=$(ls dist/*.dmg | head -1)
+          ZIP_FILE=$(ls dist/*.zip | head -1)
           DMG_NAME=$(basename "$DMG_FILE")
+          ZIP_NAME=$(basename "$ZIP_FILE")
           RELEASE_TAG="latest-build"
           API="http://truenas.local:30008/api/v1/repos/hemoon/glotty"
 
@@ -77,7 +97,7 @@ jobs:
           RELEASE_ID=$(curl -sf --ipv4 -X POST \
             -H "Authorization: token $GITEA_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "{\"tag_name\":\"$RELEASE_TAG\",\"name\":\"Latest Build\",\"body\":\"Auto-built DMG from main branch\",\"target_commitish\":\"main\"}" \
+            -d "{\"tag_name\":\"$RELEASE_TAG\",\"name\":\"Latest Build\",\"body\":\"Auto-built from main branch (DMG + ZIP)\",\"target_commitish\":\"main\"}" \
             "$API/releases" | python3 -c "import json,sys; print(json.load(sys.stdin).get('id',''))")
 
           echo "Release ID: $RELEASE_ID"
@@ -87,6 +107,16 @@ jobs:
             -H "Authorization: token $GITEA_TOKEN" \
             -F "attachment=@$DMG_FILE" \
             "$API/releases/$RELEASE_ID/assets?name=$DMG_NAME" | python3 -c "
+          import json,sys
+          r=json.load(sys.stdin)
+          print('Uploaded:', r.get('name','?'), f\"({r.get('size','?')} bytes)\")
+          print('Download:', r.get('browser_download_url','?'))"
+
+          # Upload ZIP
+          curl -sf --ipv4 -X POST \
+            -H "Authorization: token $GITEA_TOKEN" \
+            -F "attachment=@$ZIP_FILE" \
+            "$API/releases/$RELEASE_ID/assets?name=$ZIP_NAME" | python3 -c "
           import json,sys
           r=json.load(sys.stdin)
           print('Uploaded:', r.get('name','?'), f\"({r.get('size','?')} bytes)\")
