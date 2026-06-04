@@ -219,16 +219,21 @@ enum BackupService {
         return alert.runModal() == .alertFirstButtonReturn
     }
 
-    private static func applyPreferences(_ prefs: [String: BackupPreferenceValue]) {
+    /// `defaults` is injectable purely for testing — production
+    /// callers use `.standard`. Lets the import round-trip be
+    /// verified against a throwaway suite without touching the real
+    /// app domain.
+    static func applyPreferences(_ prefs: [String: BackupPreferenceValue],
+                                 into defaults: UserDefaults = .standard) {
         // Clear all known keys first so the imported state is a
         // clean overlay — keys absent from the bundle revert to
         // their hard-coded defaults rather than carrying over from
         // the previous install.
         for key in BackupPreferences.knownKeys {
-            UserDefaults.standard.removeObject(forKey: key)
+            defaults.removeObject(forKey: key)
         }
         for (key, value) in prefs {
-            UserDefaults.standard.set(value.rawValue, forKey: key)
+            defaults.set(value.rawValue, forKey: key)
         }
     }
 
@@ -253,7 +258,7 @@ enum BackupService {
     /// backup keep whatever's already on this machine rather than
     /// being wiped, so importing a settings-only backup doesn't
     /// clobber keys the user already entered here.
-    private static func applyAPIKeys(_ keys: [String: String]) {
+    static func applyAPIKeys(_ keys: [String: String]) {
         for (account, secret) in keys where !secret.isEmpty {
             _ = Keychain.write(secret, account: account)
         }

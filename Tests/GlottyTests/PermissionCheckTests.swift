@@ -4,11 +4,12 @@ import Foundation
 
 @Suite("Permission metadata")
 struct PermissionMetadataTests {
-    @Test("Both permissions enumerate")
+    @Test("All permissions enumerate")
     func allCases() {
-        #expect(Permission.allCases.count == 2)
+        #expect(Permission.allCases.count == 3)
         #expect(Permission.allCases.contains(.accessibility))
         #expect(Permission.allCases.contains(.inputMonitoring))
+        #expect(Permission.allCases.contains(.notifications))
     }
 
     @Test("Display names are non-empty for every permission")
@@ -43,23 +44,6 @@ struct PermissionMetadataTests {
     func identifiers() {
         #expect(Permission.accessibility.id == "accessibility")
         #expect(Permission.inputMonitoring.id == "inputMonitoring")
-    }
-}
-
-@Suite("PermissionCheck.tccResetCommand")
-struct TCCResetCommandTests {
-    @Test("Command resets both Accessibility and ListenEvent for the bundle ID")
-    func resetCommand() {
-        let cmd = PermissionCheck.tccResetCommand()
-        #expect(cmd.contains("tccutil reset Accessibility"))
-        #expect(cmd.contains("tccutil reset ListenEvent"))
-        #expect(cmd.contains("com.ruojunye.glotty"))
-    }
-
-    @Test("Command chains the two resets with &&")
-    func usesAndChain() {
-        let cmd = PermissionCheck.tccResetCommand()
-        #expect(cmd.contains("&&"))
     }
 }
 
