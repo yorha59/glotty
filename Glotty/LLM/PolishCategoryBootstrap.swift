@@ -101,7 +101,7 @@ enum PolishCategoryBootstrap {
         let appSupport = FileManager.default.urls(
             for: .applicationSupportDirectory, in: .userDomainMask
         ).first ?? URL(fileURLWithPath: NSHomeDirectory())
-        let dir = appSupport.appendingPathComponent("Glotty", isDirectory: true)
+        let dir = appSupport.appendingPathComponent(AppIdentity.supportFolderName, isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("polish-categories.json")
     }()

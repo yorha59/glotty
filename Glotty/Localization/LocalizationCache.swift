@@ -33,7 +33,7 @@ final class LocalizationCache {
                 for: .applicationSupportDirectory,
                 in: .userDomainMask
             ).first ?? URL(fileURLWithPath: NSHomeDirectory())
-            let glottyDir = appSupport.appendingPathComponent("Glotty", isDirectory: true)
+            let glottyDir = appSupport.appendingPathComponent(AppIdentity.supportFolderName, isDirectory: true)
             try? FileManager.default.createDirectory(
                 at: glottyDir, withIntermediateDirectories: true
             )
