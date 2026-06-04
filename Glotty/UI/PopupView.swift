@@ -64,6 +64,10 @@ enum PopupTokens {
 
     // Sizing
     static let containerPadding: CGFloat = 14
+    /// Extra top padding so content clears the native macOS
+    /// traffic-light buttons (close/minimize) overlaid at the top-left
+    /// of the hidden-titlebar, full-size-content popup panel.
+    static let trafficLightInset: CGFloat = 22
     static let containerRadius: CGFloat = 16
     static let sectionGap: CGFloat = 10
     static let variantCardPadding: CGFloat = 10
@@ -184,9 +188,6 @@ struct PopupView: View {
     /// is pre-populated from this payload in `init`.
     let replay: PopupReplayPayload?
     let onClose: () -> Void
-    /// Minimize the popup window (chat only). `nil` for modes that
-    /// aren't minimizable, which hides the minimize button.
-    let onMinimize: (() -> Void)?
     /// True when this popup was opened by a proactive trigger (chat
     /// reminder notification) rather than the user explicitly hitting
     /// Fn → C. The opening tutor turn leans in harder when this is
@@ -219,7 +220,6 @@ struct PopupView: View {
          proactive: Bool = false,
          onboarding: Bool = false,
          onClose: @escaping () -> Void,
-         onMinimize: (() -> Void)? = nil,
          onChatExpand: (() -> Void)? = nil,
          registerExtractionTrigger: ((@escaping () -> Void) -> Void)? = nil) {
         self.sourceText = sourceText
@@ -228,7 +228,6 @@ struct PopupView: View {
         self.proactive = proactive
         self.onboarding = onboarding
         self.onClose = onClose
-        self.onMinimize = onMinimize
         self.onChatExpand = onChatExpand
         self.registerExtractionTrigger = registerExtractionTrigger
 
@@ -490,14 +489,6 @@ struct PopupView: View {
     var body: some View {
         outerLayout
             .background(containerBackground)
-            // Always-visible close affordance. The popup is a
-            // borderless agent-app panel whose window red-button can be
-            // hard to see (hidden titlebar, full-size content view), and
-            // ESC alone isn't obvious — so every popup gets an explicit
-            // X in the top-trailing corner wired to the same dismiss
-            // path. (Reported: chat couldn't be closed by ESC or the
-            // red button.)
-            .overlay(alignment: .topTrailing) { windowControls }
             .localizationAware()
             .onAppear { setupConfiguration() }
             .task(id: mode == .polish ? "polish-\(sourceText)-\(polishRetryCounter)" : "") {
@@ -622,50 +613,18 @@ struct PopupView: View {
     /// styleMask and this view lets its frame stretch to the panel size
     /// (no `.fixedSize`, with `maxWidth` / `maxHeight` set to `.infinity`).
     /// The initial width is the same `contentWidth` either way.
-    /// Window controls in the top-trailing corner. The native macOS
-    /// traffic-light buttons are hidden (they'd sit on top of the
-    /// source text in our hidden-titlebar, full-size-content panel —
-    /// "a close button on the left of the selection"), so these are
-    /// the popup's only window chrome: minimize (chat only) + close.
-    /// Subtle so they don't compete with content; brighten on hover.
-    private var windowControls: some View {
-        HStack(spacing: 2) {
-            if let onMinimize {
-                Button(action: onMinimize) {
-                    Image(systemName: "minus.circle.fill")
-                        .font(.system(size: 15))
-                        .foregroundStyle(.secondary)
-                        .symbolRenderingMode(.hierarchical)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 4)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help("Minimize")
-            }
-            Button(action: {
-                Log.debug(.popup, "X close button tapped — mode=\(mode)", op: "close")
-                onClose()
-            }) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 15))
-                    .foregroundStyle(.secondary)
-                    .symbolRenderingMode(.hierarchical)
-                    .padding(8)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .help("Close")
-            .keyboardShortcut(.cancelAction)  // also fires on ⌘. / Esc
-        }
-    }
-
     private var outerLayout: some View {
         VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
             scrollableContent
             footerForMode
         }
         .padding(PopupTokens.containerPadding)
+        // Extra top inset so the first content row (the source text)
+        // clears the native macOS traffic-light buttons, which sit at
+        // the top-left over our hidden-titlebar, full-size-content
+        // panel. Without this the close/minimize buttons overlap the
+        // selection text. ~22pt is the traffic-light strip height.
+        .padding(.top, PopupTokens.trafficLightInset)
         .frame(
             minWidth: contentWidth,
             idealWidth: contentWidth,
