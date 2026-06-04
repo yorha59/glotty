@@ -98,46 +98,37 @@ final class LocalizationCache {
 
     // MARK: - On-demand translation
 
-    /// Source strings the swizzle has hit a cache miss on and
-    /// queued for LLM translation. Drained by `runPendingFillSoon`.
-    private var pendingForFill: Set<String> = []
-    private var pendingFillTask: Task<Void, Never>?
-
-    /// Queue a missing source string for on-demand LLM translation
-    /// in the given language. Debounced — multiple cache misses in
-    /// the same render pass (common when a new view appears) are
-    /// collected and sent in one LLM batch, then the cache update
-    /// notification fires and views re-render.
+    /// No-op by design. Glotty does NOT auto-translate the UI in the
+    /// background — that behavior caused two problems:
+    ///
+    ///   1. It fired LLM calls before the user had even finished LLM
+    ///      setup. With no provider configured the calls just failed,
+    ///      over and over.
+    ///   2. Worse, each (failed) attempt posted `didUpdateNotification`,
+    ///      which rebuilds every `.localizationAware()` view — and a
+    ///      SwiftUI rebuild destroys + recreates the focused TextField.
+    ///      With no API key the retry loop ran ~every 0.7s, so the
+    ///      field was wiped mid-keystroke and the user couldn't type
+    ///      ANYTHING — including the API key that would have stopped
+    ///      the loop. A catch-22. (Diagnosed from a user's logs,
+    ///      2026-06-04: filler failing every ~0.7s, displayName focus
+    ///      flapping, no keystrokes landing.)
+    ///
+    /// LLM-backed UI translation is now exclusively user-triggered via
+    /// Settings → System → Refresh translations (and the language
+    /// switch flow), both of which call `LocalizationFiller.fill`
+    /// directly and post the update notification themselves. Bundled
+    /// `.lproj` translations still apply automatically with zero LLM
+    /// work — Foundation resolves e.g. `zh-Hans-CN` to the shipped
+    /// `zh-Hans` catalog. Strings the bundle doesn't cover stay in the
+    /// source language until the user runs a refresh.
+    ///
+    /// The signature is kept (rather than deleting call sites) so the
+    /// swizzle / OSLocalizer can keep calling it harmlessly; the
+    /// `recordEncountered` call they make separately is what feeds the
+    /// Refresh button's source list.
     func queueMissingForTranslation(_ source: String, language: String) {
-        guard !source.isEmpty else { return }
-        guard language != "en", !language.hasPrefix("en-") else { return }
-        // Already cached — nothing to do.
-        if store[language]?[source] != nil { return }
-        // Already queued — don't re-add.
-        if pendingForFill.contains(source) { return }
-        pendingForFill.insert(source)
-        scheduleFillRun(for: language)
-    }
-
-    private func scheduleFillRun(for language: String) {
-        if pendingFillTask != nil { return }
-        pendingFillTask = Task { @MainActor in
-            // Debounce so a render pass that touches dozens of new
-            // strings ends up in a single LLM call.
-            try? await Task.sleep(nanoseconds: 600_000_000)
-            let batch = Array(self.pendingForFill)
-            self.pendingForFill.removeAll()
-            self.pendingFillTask = nil
-            guard !batch.isEmpty else { return }
-            _ = await LocalizationFiller.fill(
-                sources: batch,
-                targetLanguage: language
-            )
-            // Tell observers (root views) that fresh translations
-            // are available so they can force a re-render and the
-            // English-fallback strings flip to the new language.
-            NotificationCenter.default.post(name: Self.didUpdateNotification, object: nil)
-        }
+        // Intentionally empty — see doc comment. No automatic fills.
     }
 
     private var pendingEncounteredWrite = false
