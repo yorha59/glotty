@@ -47,22 +47,34 @@ jobs:
           KEYCHAIN_PASS_FILE: /Users/sichengzu/projects/miner/.keychain-pass
         run: bash scripts/make-dmg-signed.sh
 
-      - name: Create ZIP artifact
-        # ZIP distributes better than DMG via messaging apps (Feishu,
-        # WeChat, etc.): macOS quarantines DMG-mounted apps when the
-        # DMG was downloaded by a sandboxed app, blocking execution
-        # with "File created by an AppSandbox, exec/open not allowed".
-        # ZIP avoids this — the extracted app inherits the stapled
-        # ticket and verifies offline without the quarantine propagation
-        # issue.  ditto preserves code signatures and resource forks.
+      - name: Create ZIP artifacts
+        # Two ZIP outputs:
+        #   1. Glotty-<ver>.zip — bare app (for advanced users / CI)
+        #   2. Glotty-Installer.zip — app ZIP + install script for
+        #      messaging-app distribution (Feishu, WeChat).  The script
+        #      clears macOS quarantine flags that sandboxed downloaders
+        #      trigger ("File created by an AppSandbox, exec/open not
+        #      allowed"), then installs to /Applications.  Works fully
+        #      offline — the app carries a stapled notarization ticket.
         run: |
           DMG_FILE=$(ls dist/*.dmg | head -1)
           VERSION=$(echo "$DMG_FILE" | sed 's/.*Glotty-\(.*\)\.dmg/\1/')
           MNT=$(hdiutil attach "$DMG_FILE" -nobrowse -noautoopen 2>/dev/null | grep -oE "/Volumes/.*" | head -1)
+
+          # 1. Bare app ZIP
           ditto -c -k --keepParent "$MNT/Glotty.app" "dist/Glotty-$VERSION.zip"
+
+          # 2. Installer bundle (app ZIP + .command script)
+          INSTDIR=$(mktemp -d)
+          ditto -c -k --keepParent "$MNT/Glotty.app" "$INSTDIR/Glotty-$VERSION.zip"
+          cp scripts/install-glotty.command "$INSTDIR/安装Glotty.command"
+          chmod +x "$INSTDIR/安装Glotty.command"
+          ditto -c -k "$INSTDIR" "dist/Glotty-Installer.zip"
+
           hdiutil detach "$MNT" -quiet 2>/dev/null || true
-          echo "=== ZIP ==="
-          ls -lh dist/Glotty-*.zip
+          rm -rf "$INSTDIR"
+          echo "=== Artifacts ==="
+          ls -lh dist/Glotty-*.zip dist/Glotty-*.dmg
 
       - name: Copy artifact to persistent location
         run: |
@@ -82,9 +94,11 @@ jobs:
         run: |
           GITEA_TOKEN=$(cat ~/projects/miner/.git-token)
           DMG_FILE=$(ls dist/*.dmg | head -1)
-          ZIP_FILE=$(ls dist/*.zip | head -1)
+          ZIP_FILE=$(ls dist/Glotty-0*.zip | head -1)
+          INSTALLER_FILE=$(ls dist/Glotty-Installer.zip | head -1)
           DMG_NAME=$(basename "$DMG_FILE")
           ZIP_NAME=$(basename "$ZIP_FILE")
+          INSTALLER_NAME=$(basename "$INSTALLER_FILE")
           RELEASE_TAG="latest-build"
           API="http://truenas.local:30008/api/v1/repos/hemoon/glotty"
 
@@ -117,6 +131,16 @@ jobs:
             -H "Authorization: token $GITEA_TOKEN" \
             -F "attachment=@$ZIP_FILE" \
             "$API/releases/$RELEASE_ID/assets?name=$ZIP_NAME" | python3 -c "
+          import json,sys
+          r=json.load(sys.stdin)
+          print('Uploaded:', r.get('name','?'), f\"({r.get('size','?')} bytes)\")
+          print('Download:', r.get('browser_download_url','?'))"
+
+          # Upload Installer
+          curl -sf --ipv4 -X POST \
+            -H "Authorization: token $GITEA_TOKEN" \
+            -F "attachment=@$INSTALLER_FILE" \
+            "$API/releases/$RELEASE_ID/assets?name=$INSTALLER_NAME" | python3 -c "
           import json,sys
           r=json.load(sys.stdin)
           print('Uploaded:', r.get('name','?'), f\"({r.get('size','?')} bytes)\")
