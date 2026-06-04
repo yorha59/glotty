@@ -11,6 +11,21 @@
 #   Label("…", …)
 #   LabeledContent("…", …)
 #   sectionLabel("…")      Glotty internal helper
+#   Section("…")           Form/List section header
+#   Toggle("…", …)         toggle label
+#   Stepper("…", …)        stepper label
+#   TextField("…", …)      field label / placeholder
+#   SecureField("…", …)    secure field label / placeholder
+#   Menu("…")              menu label
+#   DisclosureGroup("…")   disclosure group label
+#   GroupBox("…")          group box label
+#   Link("…", …)           hyperlink label
+#   summary: "…"           LLM model-preset blurb (shown via Text(.t))
+#   .navigationTitle("…")  window / pane title
+#   .navigationSubtitle("…")
+#   .help("…")             tooltip / accessibility help
+#   .confirmationDialog("…", …) dialog title
+#   .alert("…", …)         alert title
 #   String(localized: "…") explicit Foundation localization
 #   NSMenuItem(title: "…", …)
 #   addButton(withTitle: "…")
@@ -42,7 +57,16 @@ trap 'rm -f "$TMP_LIST"' EXIT
 # like format placeholders, file paths, or debug logging
 # (heuristic: skip strings containing only whitespace, only
 # punctuation, or starting with a slash).
-grep -rhE '(Text|Button|Picker|Label|LabeledContent|sectionLabel)\("([^"\\]|\\.)+"' \
+grep -rhE '(Text|Button|Picker|Label|LabeledContent|sectionLabel|Section|Toggle|Stepper|TextField|SecureField|Menu|DisclosureGroup|GroupBox|Link|navigationTitle|navigationSubtitle|help|confirmationDialog|alert)\("([^"\\]|\\.)+"' \
+    Glotty --include="*.swift" 2>/dev/null \
+    | grep -oE '"([^"\\]|\\.)+"' >> "$TMP_LIST" || true
+
+# Model-preset `summary:` descriptions. These are struct fields, not
+# SwiftUI call sites, but they ARE shown in the Language Model tab
+# (each preset's blurb under the model picker) via `Text(summary.t)`,
+# so they need catalog coverage. Interpolated summaries (containing
+# `\(…)`) are dropped by the junk filter below.
+grep -rhE 'summary:\s*"([^"\\]|\\.)+"' \
     Glotty --include="*.swift" 2>/dev/null \
     | grep -oE '"([^"\\]|\\.)+"' >> "$TMP_LIST" || true
 
@@ -67,17 +91,27 @@ grep -rhE '\.title\s*=\s*"([^"\\]|\\.)+"' \
 #   - pure punctuation
 #   - paths
 #   - interpolated fragments (contain `\(` or unbalanced `(` / `)`)
-#   - escape-only strings starting with `\u{`
+#   - SF Symbol names (e.g. `arrow.clockwise`): swept in from
+#     `Label("…", systemImage: "…")` lines but never displayed as
+#     text, so they must not be translated
 #   - overlong (likely concatenation noise)
+#
+# Swift string escapes (`\u{XXXX}`, `\"`, `\\`, `\/`, `\n`, `\t`) are
+# DECODED to the actual character: at runtime SwiftUI resolves the
+# literal before localization, so the catalog key must hold the real
+# char (e.g. `Export…`, or a straight `"`) — the raw `Export\u{2026}`
+# / `\"` forms would never be looked up. `\(` is deliberately NOT
+# decoded so the interpolation-fragment filter below still catches it.
 sort -u "$TMP_LIST" \
     | sed 's/^"//;s/"$//' \
+    | perl -CSD -pe 's{\\(u\{[0-9A-Fa-f]+\}|["\\/nt])}{my $e=$1; if($e=~/^u\{([0-9A-Fa-f]+)\}$/){chr hex $1}elsif($e eq "n"){"\n"}elsif($e eq "t"){"\t"}else{$e}}ge' \
     | awk '
         length == 0 { next }
         /^[[:space:][:punct:]]*$/ { next }
         /^\// { next }
         /\\\(/ { next }                # interpolated template — skip
-        /^\\u\{/ { next }              # starts with unicode escape
-        length > 200 { next }
+        /^[a-z][a-z0-9]*(\.[a-z0-9]+)+$/ { next }  # SF Symbol name — skip
+        length > 400 { next }
         # Heuristic: real UI strings have balanced parentheses or
         # none. Fragments captured mid-interpolation often have
         # unbalanced ones. Counting is awk-friendly.
@@ -113,9 +147,9 @@ def is_junk(key: str) -> bool:
         return True
     if "\\\\(" in key:           # interpolated template fragment
         return True
-    if key.startswith("\\\\u{"):  # raw unicode escape
+    if re.match(r'^[a-z][a-z0-9]*(\\.[a-z0-9]+)+$', key):  # SF Symbol name
         return True
-    if len(key) > 200:
+    if len(key) > 400:
         return True
     opens = key.count("(")
     closes = key.count(")")
@@ -125,8 +159,41 @@ def is_junk(key: str) -> bool:
         return True
     return False
 
-# Cleanup pass — drop junk that prior extractor runs left behind.
+def decode_escapes(key: str) -> str:
+    """Decode Swift string escapes (unicode, quote, backslash, slash,
+    newline, tab) to the actual character, so a catalog key migrated
+    from an older run matches the runtime-resolved localization key.
+    Mirrors the perl decode applied to freshly-extracted strings."""
+    def repl(m):
+        e = m.group(1)
+        if e.startswith("u{"):
+            return chr(int(e[2:-1], 16))
+        return {"n": chr(10), "t": chr(9)}.get(e, e)
+    return re.sub(r'\\\\(u\{[0-9A-Fa-f]+\}|["\\\\/nt])', repl, key)
+
 all_strings = catalog.setdefault("strings", {})
+
+# Migration pass — older runs stored keys with raw \u{…} escapes
+# that never matched at runtime. Decode them to the real character,
+# carrying the existing (good) translations onto the correct key.
+migrated = 0
+for key in list(all_strings.keys()):
+    decoded = decode_escapes(key)
+    if decoded == key:
+        continue
+    entry = all_strings.pop(key)
+    # If the decoded key already exists, keep whichever has more
+    # filled-in localizations (prefer the migrated entry's data
+    # only for languages the existing one lacks).
+    if decoded in all_strings:
+        dst = all_strings[decoded].setdefault("localizations", {})
+        for lang, loc in entry.get("localizations", {}).items():
+            dst.setdefault(lang, loc)
+    else:
+        all_strings[decoded] = entry
+    migrated += 1
+
+# Cleanup pass — drop junk that prior extractor runs left behind.
 removed = 0
 for key in list(all_strings.keys()):
     if is_junk(key):
@@ -144,5 +211,5 @@ for src in sources:
 with open(CATALOG, "w", encoding="utf-8") as f:
     json.dump(catalog, f, ensure_ascii=False, indent=2, sort_keys=True)
 
-print(f"Catalog now lists {len(all_strings)} strings (+{added} new, -{removed} junk)")
+print(f"Catalog now lists {len(all_strings)} strings (+{added} new, -{removed} junk, ~{migrated} migrated)")
 EOF

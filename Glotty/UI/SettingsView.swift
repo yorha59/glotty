@@ -399,7 +399,7 @@ struct LanguageModelSettingsSection: View {
         }
 
         if let summary = preset.model(forID: modelBinding(for: preset).wrappedValue)?.summary {
-            Text(summary)
+            Text(summary.t)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -571,7 +571,7 @@ struct LanguageModelSettingsSection: View {
         }
 
         if let summary = DeepSeekProvider.model(for: deepseekModelBinding.wrappedValue)?.summary {
-            Text(summary)
+            Text(summary.t)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -624,7 +624,7 @@ struct LanguageModelSettingsSection: View {
         }
 
         if let summary = KimiCodingProvider.model(for: kimiModelBinding.wrappedValue)?.summary {
-            Text(summary)
+            Text(summary.t)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1317,7 +1317,7 @@ private struct DictionarySettingsSection: View {
     }
 
     private var bilingualDictionaryTitle: String {
-        "\(LanguageOptions.localizedName(for: effectivePair.source))-\(LanguageOptions.localizedName(for: effectivePair.target)) dictionaries"
+        String(localized: "\(LanguageOptions.localizedName(for: effectivePair.source))-\(LanguageOptions.localizedName(for: effectivePair.target)) dictionaries")
     }
 
     private var visibleDictionaries: [DictionaryLookup.DictionaryInfo] {
@@ -1426,9 +1426,9 @@ private struct DictionarySettingsSection: View {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 8) {
                             dictionaryArea(title: bilingualDictionaryTitle, dictionaries: bilingualDictionaries)
-                            dictionaryArea(title: "\(LanguageOptions.localizedName(for: effectivePair.source)) dictionaries", dictionaries: sourceMonolingualDictionaries)
-                            dictionaryArea(title: "\(LanguageOptions.localizedName(for: effectivePair.target)) dictionaries", dictionaries: targetMonolingualDictionaries)
-                            dictionaryArea(title: "Other dictionaries", dictionaries: uncategorizedMonolingualDictionaries)
+                            dictionaryArea(title: String(localized: "\(LanguageOptions.localizedName(for: effectivePair.source)) dictionaries"), dictionaries: sourceMonolingualDictionaries)
+                            dictionaryArea(title: String(localized: "\(LanguageOptions.localizedName(for: effectivePair.target)) dictionaries"), dictionaries: targetMonolingualDictionaries)
+                            dictionaryArea(title: String(localized: "Other dictionaries"), dictionaries: uncategorizedMonolingualDictionaries)
                         }
                     }
                     .scrollIndicators(.automatic)
@@ -1984,9 +1984,9 @@ private struct DictionarySettingsSection: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         installDictionaryArea(title: bilingualDictionaryTitle, dictionaries: displayedBilingualInstallDictionaries)
-                        installDictionaryArea(title: "\(LanguageOptions.localizedName(for: effectivePair.source)) dictionaries", dictionaries: displayedSourceMonolingualInstallDictionaries)
-                        installDictionaryArea(title: "\(LanguageOptions.localizedName(for: effectivePair.target)) dictionaries", dictionaries: displayedTargetMonolingualInstallDictionaries)
-                        installDictionaryArea(title: "Other dictionaries", dictionaries: displayedUncategorizedMonolingualInstallDictionaries)
+                        installDictionaryArea(title: String(localized: "\(LanguageOptions.localizedName(for: effectivePair.source)) dictionaries"), dictionaries: displayedSourceMonolingualInstallDictionaries)
+                        installDictionaryArea(title: String(localized: "\(LanguageOptions.localizedName(for: effectivePair.target)) dictionaries"), dictionaries: displayedTargetMonolingualInstallDictionaries)
+                        installDictionaryArea(title: String(localized: "Other dictionaries"), dictionaries: displayedUncategorizedMonolingualInstallDictionaries)
                     }
                 }
                 .frame(height: 260)
@@ -2305,10 +2305,10 @@ private struct DictionarySettingsSection: View {
         let effective = DictionarySelection.dictionaryKind(for: dict)
         let label: String = {
             switch (override, effective) {
-            case (.some(.monolingual), _): return "Mono ✓"
-            case (.some(.bilingual), _):   return "Bi ✓"
-            case (nil, .monolingual):      return "Mono"
-            case (nil, .bilingual):        return "Bi"
+            case (.some(.monolingual), _): return "Mono".t + " ✓"
+            case (.some(.bilingual), _):   return "Bi".t + " ✓"
+            case (nil, .monolingual):      return "Mono".t
+            case (nil, .bilingual):        return "Bi".t
             }
         }()
         let color: Color = override != nil ? Color.accentColor : .secondary
@@ -2858,7 +2858,7 @@ private struct MemorySettingsSection: View {
                     }
                 Picker("Show records from", selection: $rangeRaw) {
                     ForEach(MemoryTimeRange.allCases) { range in
-                        Text(range.label).tag(range.rawValue)
+                        Text(range.label.t).tag(range.rawValue)
                     }
                 }
                 .pickerStyle(.menu)
@@ -2964,7 +2964,7 @@ private struct MemorySettingsSection: View {
     @ViewBuilder
     private func historyRow(_ event: MemoryEvent) -> some View {
         HStack(spacing: 12) {
-            Text(historyKindLabel(event.kind))
+            Text(historyKindLabel(event.kind).t)
                 .font(.caption2.bold())
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
@@ -3136,7 +3136,7 @@ private struct PracticeSettingsSection: View {
                 HStack(spacing: 6) {
                     Text(ChatDay.displayLabel(for: thread.dayKey))
                         .font(.callout.bold())
-                    Text("\(userTurns) from you")
+                    Text(String(format: "%@ from you".t, "\(userTurns)"))
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                     Spacer()
@@ -3288,7 +3288,7 @@ private struct UsageSettingsSection: View {
 
     private func metric(label: String, value: String, bold: Bool) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label)
+            Text(label.t)
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text(value)
@@ -3306,7 +3306,9 @@ private struct UsageSettingsSection: View {
         HStack {
             Text(label)
             Spacer()
-            Text("\(numberFormatted(totals.total)) tokens · \(numberFormatted(totals.calls)) call\(totals.calls == 1 ? "" : "s")")
+            Text(String(format: "%@ tokens · %@ calls".t,
+                        numberFormatted(totals.total),
+                        numberFormatted(totals.calls)))
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .monospacedDigit()

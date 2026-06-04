@@ -145,8 +145,8 @@ struct PolishCommonMistakesSection: View {
                 Image(systemName: showingAll ? "chevron.up" : "chevron.down")
                     .font(.caption2)
                 Text(showingAll
-                     ? "Show top \(defaultTopN)"
-                     : "Show all (\(totalCategoriesInRange))")
+                     ? String(format: "Show top %@".t, "\(defaultTopN)")
+                     : String(format: "Show all (%@)".t, "\(totalCategoriesInRange)"))
                     .font(.caption)
             }
             .foregroundStyle(.secondary)

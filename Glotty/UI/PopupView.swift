@@ -2015,7 +2015,7 @@ struct PopupView: View {
     private func suggestionCard(_ memory: LearnedMemory) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(memory.kind.label)
+                Text(memory.kind.label.t)
                     .font(.caption2.bold())
                     .padding(.horizontal, 5)
                     .padding(.vertical, 1)

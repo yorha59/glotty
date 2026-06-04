@@ -123,7 +123,7 @@ KEYCHAIN_ARGS=()
 codesign --force --timestamp --options runtime \
     --sign "$SIGN_IDENTITY" \
     --entitlements "$ENTITLEMENTS_FILE" \
-    "${KEYCHAIN_ARGS[@]}" \
+    ${KEYCHAIN_ARGS[@]+"${KEYCHAIN_ARGS[@]}"} \
     "$APP_SRC"
 
 # Resolve version — prefer CFBundleShortVersionString (e.g. 1.0),
@@ -167,7 +167,7 @@ echo "==> Signing DMG"
 # omitted here.
 codesign --force --timestamp \
     --sign "$SIGN_IDENTITY" \
-    "${KEYCHAIN_ARGS[@]}" \
+    ${KEYCHAIN_ARGS[@]+"${KEYCHAIN_ARGS[@]}"} \
     "$DMG_PATH"
 
 echo "==> Submitting to Apple notary service"
@@ -179,7 +179,7 @@ NOTARYTOOL_KEYCHAIN_ARGS=()
 [ -n "$CODESIGN_KEYCHAIN" ] && NOTARYTOOL_KEYCHAIN_ARGS=(--keychain "$CODESIGN_KEYCHAIN")
 xcrun notarytool submit "$DMG_PATH" \
     --keychain-profile "$NOTARY_PROFILE" \
-    "${NOTARYTOOL_KEYCHAIN_ARGS[@]}" \
+    ${NOTARYTOOL_KEYCHAIN_ARGS[@]+"${NOTARYTOOL_KEYCHAIN_ARGS[@]}"} \
     --wait
 
 echo "==> Stapling notarization ticket onto DMG"

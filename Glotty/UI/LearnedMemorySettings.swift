@@ -396,7 +396,7 @@ struct LearnedMemorySettingsSection: View {
     // MARK: - Helpers
 
     private func kindBadge(_ kind: LearnedMemoryKind) -> some View {
-        Text(kind.label)
+        Text(kind.label.t)
             .font(.caption2.bold())
             .padding(.horizontal, 6)
             .padding(.vertical, 2)

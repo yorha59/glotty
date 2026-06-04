@@ -40,8 +40,8 @@ enum ChatDay {
                              calendar: Calendar = .current) -> String {
         let today = key(for: now, calendar: calendar)
         let yesterday = key(for: now.addingTimeInterval(-86400), calendar: calendar)
-        if dayKey == today    { return "Today" }
-        if dayKey == yesterday { return "Yesterday" }
+        if dayKey == today    { return String(localized: "Today") }
+        if dayKey == yesterday { return String(localized: "Yesterday") }
         guard let anchor = anchor(for: dayKey, calendar: calendar) else { return dayKey }
         let f = DateFormatter()
         f.dateStyle = .medium

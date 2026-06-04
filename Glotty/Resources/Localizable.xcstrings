@@ -1,6 +1,236 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ dictionaries": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Wörterbücher"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "diccionarios %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ dictionnaires"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 辞書"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 사전"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 词典"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 字典"
+          }
+        }
+      }
+    },
+    "%@ from you": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ von Ihnen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ de ti"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ de vous"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたからの%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "당신의 %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来自您的 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 來自您"
+          }
+        }
+      }
+    },
+    "%@ tokens · %@ calls": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Token · %@ Anrufe"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ tokens · %@ llamadas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ tokens · %@ appels"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@トークン · %@コール"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 토큰 · %@ 통화"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ token · %@ 次调用"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ token · %@ 次呼叫"
+          }
+        }
+      }
+    },
+    "%@ → %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ → %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ → %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ → %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ → %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ → %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ → %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ → %@"
+          }
+        }
+      }
+    },
+    "%@-%@ dictionaries": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@-%@ Wörterbücher"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "diccionarios %@-%@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@-%@ dictionnaires"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@-%@ 辞書"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@-%@ 사전"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@-%@ 词典"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@-%@ 字典"
+          }
+        }
+      }
+    },
     "%d memories": {
       "extractionState": "manual",
       "localizations": {
@@ -130,7 +360,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "(除外)"
+            "value": "（除外）"
           }
         },
         "ko": {
@@ -142,13 +372,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "(excluded)"
+            "value": "（已排除）"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "(已排除)"
+            "value": "（已排除）"
           }
         }
       }
@@ -602,6 +832,52 @@
         }
       }
     },
+    "API key": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-Schlüssel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clave de API"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API key"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API key"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API key"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API key"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API key"
+          }
+        }
+      }
+    },
     "API keys": {
       "localizations": {
         "de": {
@@ -924,6 +1200,52 @@
         }
       }
     },
+    "Active memory context": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktiver Speicherkontext"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contexto de memoria activa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contexte mémoire actif"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクティブメモリコンテキスト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "활성 메모리 컨텍스트"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活动内存上下文"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用中的記憶內容"
+          }
+        }
+      }
+    },
     "Activity history": {
       "localizations": {
         "de": {
@@ -1012,6 +1334,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "新增"
+          }
+        }
+      }
+    },
+    "Add custom provider": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benutzerdefinierten Anbieter hinzufügen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aprovechador personalizado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter un fournisseur personnalisé"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタムプロバイダーを追加"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사용자 정의 공급자 추가"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加自定义服务提供者"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增自訂提供者"
           }
         }
       }
@@ -1200,6 +1568,98 @@
         }
       }
     },
+    "Anthropic via OpenAI-compatible shim. Strong rewriting; pricier per token.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anthropic über OpenAI-kompatiblen Shim. Starke Textumformulierung; teurer pro Token."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anthropic a través de un shim compatible con OpenAI. Reescritura potente; más caro por token."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anthropic via un adaptateur compatible avec OpenAI. Réécriture puissante ; plus cher par jeton."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OpenAI互換シャム経由のAnthropic。強力なリライトですが、トークンあたりの価格は高めです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anthropic via OpenAI-compatible shim. 강한 재작성; 토큰당 더 비쌈."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过 OpenAI 兼容层调用 Anthropic。强力重写；按令牌计价更高。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透過 OpenAI 相容介面連接至 Anthropic。強大的重寫功能；每個 token 成本較高。"
+          }
+        }
+      }
+    },
+    "Any service that speaks the OpenAI chat completions wire format works. The API key goes in the main Language Model panel after you save.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeder Dienst, der das OpenAI-Chat-Completion-Protokoll unterstützt, funktioniert. Der API-Schlüssel wird im Haupt-Sprachmodell-Panel gespeichert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cualquier servicio que hable con el formato de cable de completaciones de chat de OpenAI funciona. La clave de API va en el panel principal de Modelo de lenguaje después de guardar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout service qui utilise le format wire des complétions de chat d'OpenAI fonctionne. La clé API va dans le panneau principal du modèle de langage après l'enregistrement."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OpenAIのチャット完了形式に対応するサービスならどれでも動作します。保存すると、APIキーはメインの言語モデルパネルに設定されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OpenAI 채팅 완성 와이어 형식을 지원하는 모든 서비스가 작동합니다. 저장하면 API 키가 메인 언어 모델 패널에 들어갑니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任何支持 OpenAI 聊天完成消息格式协议的服务均可使用。保存后，API 密钥将输入到主要语言模型面板。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任何支援 OpenAI 聊天完成格式的服務都可以使用。儲存後，API 金鑰會出現在主要的語言模型面板中。"
+          }
+        }
+      }
+    },
     "Apple Intelligence": {
       "localizations": {
         "de": {
@@ -1246,6 +1706,98 @@
         }
       }
     },
+    "Apple Intelligence is downloading": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence wird heruntergeladen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La inteligencia de Apple se está descargando"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence est en cours de téléchargement"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligenceをダウンロード中です"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence가 다운로드 중입니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence 正在下载"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence 正在下載"
+          }
+        }
+      }
+    },
+    "Apple Intelligence is off": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence ist aus"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La inteligencia de Apple está desactivada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence est désactivé"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligenceがオフです"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence가 꺼짐"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence 已关闭"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence 已關閉"
+          }
+        }
+      }
+    },
     "Apple Intelligence requires an Apple Silicon Mac with sufficient memory. Use a cloud LLM provider instead.": {
       "localizations": {
         "de": {
@@ -1288,6 +1840,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apple Intelligence 需要具有足記憶體的 Apple Silicon Mac。請改用雲端 LLM 提供商。"
+          }
+        }
+      }
+    },
+    "Apple Support": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Support"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Soporte de Apple"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Support Apple"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appleサポート"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Support"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Support"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Support"
           }
         }
       }
@@ -1380,6 +1978,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apple Translation 無法翻譯此語言對"
+          }
+        }
+      }
+    },
+    "Apple's Dictionary user guide — covers reinstalling system apps.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benutzerhandbuch für Apples Wörterbuch — behandelt das Neuinstallieren von System-Apps."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guía de usuario del Diccionario de Apple — cubre reinstalación de aplicaciones del sistema."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guide utilisateur du Dictionnaire d'Apple — couvre la réinstallation des applications système."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appleの辞書ユーザーガイド — システムアプリの再インストールについて説明しています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple의 사전 사용자 가이드 — 시스템 앱 재설치에 관한 내용을 다룹니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 词典用户指南 — 介绍重新安装系统应用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 的字典使用指南 — 涵含重新安裝系統應用程式。"
           }
         }
       }
@@ -1568,6 +2212,144 @@
         }
       }
     },
+    "Auto-approve": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch genehmigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aprobación automática"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Approuver automatiquement"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動承認"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 승인"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动批准"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動批准"
+          }
+        }
+      }
+    },
+    "Auto-fetched from DeepSeek. No bundled description.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch von DeepSeek abgerufen. Keine integrierte Beschreibung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtenido automáticamente de DeepSeek. Sin descripción adjunta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Récupéré automatiquement depuis DeepSeek. Aucune description intégrée."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepSeekから自動取得。バンドルされた説明はありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepSeek에서 자동 가져옴. 번들된 설명 없음."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从 DeepSeek 自动获取。无捆绑描述。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動從 DeepSeek 取得。未包含描述。"
+          }
+        }
+      }
+    },
+    "Auto-fetched from Kimi. No bundled description.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch von Kimi abgerufen. Keine integrierte Beschreibung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtenido automáticamente de Kimi. Sin descripción adjunta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Récupéré automatiquement depuis Kimi. Aucune description intégrée."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kimiから自動取得。バンドルされた説明はありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kimi에서 자동으로 가져옴. 번들된 설명 없음."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从 Kimi 自动获取。无捆绑描述。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動從 Kimi 取得。未包含描述。"
+          }
+        }
+      }
+    },
     "Automatic": {
       "extractionState": "manual",
       "localizations": {
@@ -1617,6 +2399,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "自動"
+          }
+        }
+      }
+    },
+    "Available": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verfügbar"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disponible"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disponible"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "利用可能"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사용 가능"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可用"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可用"
           }
         }
       }
@@ -2548,6 +3376,98 @@
         }
       }
     },
+    "Chat reminder frequency": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Häufigkeit der Chat-Erinnerungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frecuencia de recordatorios de chat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fréquence des rappels de discussion"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チャットのリマインダー頻度"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "채팅 알림 빈도"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聊天提醒频率"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聊天提醒頻率"
+          }
+        }
+      }
+    },
+    "Chat reply language": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprache der Chat-Antwort"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma de respuesta de chat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langue de réponse de la discussion"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チャット返信言語"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "채팅 응답 언어"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聊天回复语言"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聊天回覆語言"
+          }
+        }
+      }
+    },
     "Chat with Glotty": {
       "localizations": {
         "de": {
@@ -2689,6 +3609,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chatty"
+          }
+        }
+      }
+    },
+    "Cheapest tier. Use when polishing high volumes of short text and latency matters more than depth.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Günstigste Stufe. Verwenden Sie bei der Überarbeitung großer Mengen kurzer Texte, wenn Latenz wichtiger ist als Tiefe."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarifa más económica. Úsalo para pulir grandes volúmenes de texto corto y cuando la latencia importa más que la profundidad."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niveau le moins cher. À utiliser pour polir de grands volumes de texte court quand la latence prime sur la profondeur."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最も安価なティア。短文を大量に仕上げる際に使用し、遅延よりも深さよりも重要です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가장 저렴한 등급. 짧은 텍스트를 대량으로 다듬을 때, 지연 시간이 깊이보다 더 중요할 때 사용합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最便宜层级。适用于大量短文本润色，延迟比深度更重要时。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最便宜的等級。適用於大量短文本潤色，當延遲比深度更重要時使用。"
           }
         }
       }
@@ -2923,6 +3889,52 @@
         }
       }
     },
+    "Clear all token-usage history?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesamte Token-Nutzungshistorie löschen?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Limpiar historial de uso de tokens?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer tout l'historique d'utilisation des jetons ?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのトークン使用履歴をクリアしますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 토큰 사용 기록을 삭제하시겠습니까?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除所有令牌使用历史？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除所有使用記錄？"
+          }
+        }
+      }
+    },
     "Clear all usage history": {
       "localizations": {
         "de": {
@@ -3153,6 +4165,98 @@
         }
       }
     },
+    "Click to copy the polished version (native-language translation shown below for reference)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klicken, um die polierte Version zu kopieren (Muttersprachliche Übersetzung zur Referenz unten angezeigt)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haz clic para copiar la versión pulida (se muestra la traducción al idioma nativo de referencia a continuación)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cliquez pour copier la version améliorée (la traduction en langue originale est affichée ci-dessous à titre de référence)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クリックして磨き上げられたバージョンをコピーします（参考のため、ネイティブ言語の翻訳が下に表示されています）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클릭하여 수정된 버전을 복사합니다 (참조를 위해 아래에 원어 번역이 표시됨)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击复制润色版本（下方显示的是原生语言翻译以供参考）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點擊複製潤色後版本（下方顯示的為原文作為參考）"
+          }
+        }
+      }
+    },
+    "Click to copy the translation": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klicken, um die Übersetzung zu kopieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haz clic para copiar la traducción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cliquez pour copier la traduction"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クリックして翻訳をコピーします"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클릭하여 번역을 복사합니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击复制翻译"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點擊複製翻譯"
+          }
+        }
+      }
+    },
     "Close": {
       "localizations": {
         "de": {
@@ -3195,6 +4299,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "關閉"
+          }
+        }
+      }
+    },
+    "Coding-focused model on Moonshot's Anthropic-compatible API. Single canonical id; aliases like k2p5 / k2p6 normalize to this.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf Code spezialisiertes Modell auf Moonshots Anthropic-kompatibler API. Ein kanonischer ID; Aliase wie k2p5 / k2p6 werden auf diesen normiert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo enfocado en programación en la API de Anthropic-compatible de Moonshot. ID canónico único; alias como k2p5 / k2p6 se normalizan a este."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle axé sur la programmation sur l'API compatible Anthropic de Moonshot. ID unique ; les alias comme k2p5 / k2p6 se normalisent vers celui-ci."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonshotのAnthropic互換API上のコーディング向けモデル。単一の規定IDであり、k2p5/k2p6のような別名はこれに正規化されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문샷의 앤트로픽 호환 API에 있는 코딩 중심 모델. 단일 정규 ID; k2p5 / k2p6 같은 별칭은 이것으로 정규화됩니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonshot 的 Anthropic 兼容 API 上的编程专用模型。单个规范 ID；别名如 k2p5 / k2p6 会规范化为此。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moonshot 的 Anthropic 相容 API 上的程式碼專注模型。單一規範 ID；像 k2p5 / k2p6 這別名會標準化為此 ID。"
           }
         }
       }
@@ -3287,6 +4437,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "完成"
+          }
+        }
+      }
+    },
+    "Confirm": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bestätigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確認"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "확인"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确认"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確認"
           }
         }
       }
@@ -3425,6 +4621,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "情境讓您可以保留並行的記憶集合。當情境作用中時，其記憶會與全域記憶一同注入；作用於其他情境的記憶會保持非作用狀態。"
+          }
+        }
+      }
+    },
+    "Current default — replaces V3 (deepseek-chat/reasoner). $0.14/1M input · $0.28/1M output. Thinking mode is on by default, so chat/explain shows a brief \"thinking\" preamble. Polish disables thinking automatically to keep JSON output snappy.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktueller Standard — ersetzt V3 (deepseek-chat/reasoner). $0.14/1M Eingabe · $0.28/1M Ausgabe. Denken-Modus ist standardmäßig eingeschaltet, sodass Chat/Erklärung eine kurze \"Denken\"-Einleitung zeigt. Überarbeitung schaltet Denken automatisch aus, um JSON-Ausgabe schnell zu halten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Predeterminado actual — reemplaza a V3 (deepseek-chat/reasoner). $0.14/1M de entrada · $0.28/1M de salida. El modo de pensamiento está activado por defecto, por lo que chat/explain muestra un breve preámbulo \"pensando\". Polish desactiva el pensamiento automáticamente para mantener la salida JSON rápida."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Défaut actuel — remplace V3 (deepseek-chat/reasoner). $0.14/1M entrées · $0.28/1M sorties. Le mode de pensée est activé par défaut, donc chat/explain montre un bref préambule \"pense\". Polish désactive automatiquement la pensée pour garder la sortie JSON réactive."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在のデフォルト — V3（deepseek-chat/reasoner）に置き換えられます。入力$0.14/100万・出力$0.28/100万。思考モードはデフォルトでオンなので、チャット/説明には短い「思考」プレリュードが表示されます。仕上げはJSON出力を素早くするために自動的に思考を無効にします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 기본값 — V3(deepseek-chat/reasoner)를 대체합니다. $0.14/1M 입력 · $0.28/1M 출력. 사고 모드는 기본값으로 켜져 있어, 채팅/설명에서 짧은 \"사고\" 서문이 표시됩니다. 다듬기는 JSON 출력이 빠르게 유지되도록 자동으로 사고를 비활성화합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前默认模型 — 替代 V3 (deepseek-chat/reasoner)。$0.14/1M 输入 · $0.28/1M 输出。思考模式默认开启，因此聊天/解释会显示简短的\"thinking\"前言。润色会自动禁用思考以保持 JSON 输出简洁。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "當前預設 — 取代 V3 (deepseek-chat/reasoner)。輸入 $0.14/百萬 · 輸出 $0.28/百萬。思考模式預設開啟，因此聊天/解說會顯示簡短的「思考」前言。潤色會自動停用思考模式以保持 JSON 輸出快速。"
           }
         }
       }
@@ -3719,6 +4961,52 @@
         }
       }
     },
+    "Default — fast, very cheap, strong on Japanese / Korean / Chinese. Best all-rounder for polish and explain.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard — schnell, sehr günstig, stark bei Japanisch / Koreanisch / Chinesisch. Bester Allrounder für Überarbeitung und Erklärung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Predeterminado — rápido, muy barato, fuerte en japonés / coreano / chino. Mejor todoterreno para pulir y explicar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Défaut — rapide, très économique, performant en japonais / coréen / chinois. Le meilleur polyvalent pour polir et expliquer."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デフォルト — 高速、非常に安価、日本語/韓国語/中国語に強い。仕上げと説明に最適なオールラウンダー。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본값 — 빠르고 매우 저렴하며, 일본어 / 한국어 / 중국어에 강합니다. 다듬기와 설명에 가장 좋은 만능 모델입니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "默认 — 快速，非常便宜，在日语/韩语/中文方面表现优秀。润色和解释的最佳全能模型。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "預設 — 快速、非常便宜，日語/韓語/中文表現強。潤色和解說的最佳全能型選擇。"
+          }
+        }
+      }
+    },
     "Delete": {
       "localizations": {
         "de": {
@@ -3761,6 +5049,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "刪除"
+          }
+        }
+      }
+    },
+    "Delete this day's chat": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat dieses Tages löschen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar el chat de este día"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer la discussion de ce jour"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この日のチャットを削除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘의 채팅 삭제"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除今日聊天"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除這一天的聊天記錄"
           }
         }
       }
@@ -4041,6 +5375,98 @@
         }
       }
     },
+    "Dictionary.app": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wörterbuch.app"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary.app"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary.app"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary.app"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary.app"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary.app"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary.app"
+          }
+        }
+      }
+    },
+    "Dictionary.app is missing on this Mac": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wörterbuch.app fehlt auf diesem Mac"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary.app no está presente en este Mac"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary.app est manquant sur cet Mac"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacにDictionary.appがありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 Mac에 Dictionary.app가 없습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 Mac 上缺少 Dictionary.app"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 Mac 上沒有 Dictionary.app"
+          }
+        }
+      }
+    },
     "Discuss with Glotty": {
       "localizations": {
         "de": {
@@ -4129,6 +5555,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部關閉"
+          }
+        }
+      }
+    },
+    "Display": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anzeige"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visualizar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표시"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示"
           }
         }
       }
@@ -4317,6 +5789,52 @@
         }
       }
     },
+    "Drag to reorder": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ziehen zum Neuordnen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastra para reorganizar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faites glisser pour réorganiser"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドラッグして並び替え"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "드래그하여 순서 변경"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖动以重新排序"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖曳以重新排序"
+          }
+        }
+      }
+    },
     "Edit": {
       "localizations": {
         "de": {
@@ -4359,6 +5877,98 @@
           "stringUnit": {
             "state": "translated",
             "value": "編輯"
+          }
+        }
+      }
+    },
+    "Enable in System Settings → Apple Intelligence & Siri.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In den Systemeinstellungen → Apple Intelligence & Siri aktivieren."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Habilitar en Configuración del sistema → Inteligencia de Apple y Siri."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activer dans les Réglages système → Apple Intelligence et Siri."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システム設定 → Apple Intelligence & Siriで有効にします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시스템 설정 → Apple Intelligence 및 Siri에서 활성화합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在\"系统设置\"→\"Apple Intelligence & Siri\"中启用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在「系統設定」→「Apple Intelligence & Siri」中啟用。"
+          }
+        }
+      }
+    },
+    "Endpoint": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpunkt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Punto final"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "엔드포인트"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "端点"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endpoint"
           }
         }
       }
@@ -4639,6 +6249,52 @@
         }
       }
     },
+    "Everything matching is already installed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle übereinstimmenden Elemente sind bereits installiert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todo lo coincidente ya está instalado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout ce qui correspond est déjà installé"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一致するものはすべてインストール済みです"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일치하는 모든 항목이 이미 설치되어 있습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有匹配项均已安装"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有相符項目已安裝"
+          }
+        }
+      }
+    },
     "Explain": {
       "localizations": {
         "de": {
@@ -4883,52 +6539,6 @@
         }
       }
     },
-    "Export\\u{2026}": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Export…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exportar\\u{2026}"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exporter\\u{2026}"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "エクスポート…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내보내기…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "导出…"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "匯出…"
-          }
-        }
-      }
-    },
     "Export…": {
       "localizations": {
         "de": {
@@ -5021,6 +6631,52 @@
         }
       }
     },
+    "Fast and cheap default — good for polish/explain on short text.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schneller und günstiger Standard — gut für Überarbeitung/Erklärung bei kurzen Texten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Predeterminado rápido y barato — bueno para pulir/explicar en texto corto."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Défaut rapide et économique — bon pour polir/expliquer sur de courts textes."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高速で安価なデフォルト — 短文の仕上げ/説明に適しています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빠르고 저렴한 기본 설정 — 짧은 텍스트 다듬기/설명에 적합합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快速且便宜的默认模型 — 适用于短文本润色/解释。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快速便宜的預設 — 適合用於短文本的潤色/解說。"
+          }
+        }
+      }
+    },
     "Female": {
       "localizations": {
         "de": {
@@ -5067,6 +6723,144 @@
         }
       }
     },
+    "Fetch this provider's current model list from its /models endpoint": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuelle Modellliste dieses Anbieters von dessen /models-Endpunkt abrufen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtener la lista actual de modelos de este proveedor desde su punto final /models"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Récupérer la liste des modèles actuels de ce fournisseur depuis son endpoint /models"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "/エンドポイントからこのプロバイダーの現在のモデルリストを取得します"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "/models 엔드포인트에서 이 공급자의 현재 모델 목록을 가져옵니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从此服务提供者的 /models 端点获取当前模型列表"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從此提供者的 /models 端點擷取目前的模型列表"
+          }
+        }
+      }
+    },
+    "Flagship multimodal model. Higher quality, ~10x the cost.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flagship-Multimodell. Höhere Qualität, ~10x der Kosten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo multimodal de gama alta. Mayor calidad, ~10 veces el coste."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle phare multimodal. Qualité supérieure, ~10x le coût."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フラッグシップマルチモーダルモデル。より高い品質、約10倍のコスト。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "플래그십 멀티모달 모델. 더 높은 품질이지만, 약 10배의 비용이 듭니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旗舰多模态模型。质量更高，成本约为 10 倍。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旗艦多模態模型。品質更高，成本約為 10 倍。"
+          }
+        }
+      }
+    },
+    "Flagship — highest quality, slower and more expensive. Default.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flagship — höchste Qualität, langsamer und teurer. Standard."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gama alta — máxima calidad, más lento y caro. Predeterminado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phare — meilleure qualité, plus lent et plus cher. Défaut."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フラッグシップ — 最高の品質、遅く、より高価です。デフォルトです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "플래그십 — 최고 품질이지만 느리고 더 비쌉니다. 기본값입니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旗舰 — 最高质量，较慢且更昂贵。默认。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旗艦 — 最高品質，較慢且更昂貴。預設值。"
+          }
+        }
+      }
+    },
     "Fn held": {
       "localizations": {
         "de": {
@@ -5109,6 +6903,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fn 按住"
+          }
+        }
+      }
+    },
+    "Forces macOS to add Glotty to the toggle list. Use this if the row is missing in System Settings.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erzwingt, dass macOS Glotty zur Umschaltliste hinzufügt. Verwenden Sie diese Option, wenn die Zeile in Systemeinstellungen fehlt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obliga a macOS a añadir Glotty a la lista de alternancia. Utiliza esto si la fila falta en Ajustes del sistema."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Force macOS à ajouter Glotty à la liste de bascule. Utilisez cette option si la ligne est absente dans les Paramètres Système."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOSにGlottyをトグルリストに追加させます。システム設定に行が表示されない場合に使用してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS에 Glotty를 토글 목록에 추가하도록 강제합니다. 시스템 설정에 해당 행이 없을 경우 이 옵션을 사용하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "强制 macOS 将 Glotty 添加到切换列表。如果在系统设置中缺少此项，请使用此选项。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "強制 macOS 將 Glotty 加入切換列表。如果 System Settings 中缺少該列，請使用此選項。"
           }
         }
       }
@@ -5251,6 +7091,52 @@
         }
       }
     },
+    "Get an API key →": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API-Schlüssel abrufen →"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtener una clave de API →"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtenir une clé API →"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "APIキーを取得 →"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API 키 받기 →"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "获取 API 密钥 →"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取得 API 金鑰 →"
+          }
+        }
+      }
+    },
     "Global": {
       "localizations": {
         "de": {
@@ -5339,6 +7225,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "全域記憶"
+          }
+        }
+      }
+    },
+    "Global only (no context)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur global (kein Kontext)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo global (sin contexto)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uniquement global (sans contexte)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グローバルのみ（コンテキストなし）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전역 전용(컨텍스트 없음)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅全局（无上下文）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "僅全域 (無上下文)"
           }
         }
       }
@@ -5580,7 +7512,7 @@
         }
       }
     },
-    "Glotty is thinking\\u{2026}": {
+    "Glotty is thinking…": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -5863,6 +7795,98 @@
         }
       }
     },
+    "Glotty reads the dictionary catalog Apple's built-in **Dictionary** app populates. Open it once — it pulls the available list down — then come back here.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty liest das Wörterbuchverzeichnis, das die integrierte **Dictionary**-App von Apple füllt. Öffnen Sie sie einmal — sie lädt die verfügbare Liste herunter — und kommen Sie dann hierher zurück."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty lee el catálogo de diccionarios que la aplicación nativa de **Dictionary** de Apple llena. Ábrela una vez — descarga la lista disponible — y luego vuelve aquí."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty lit le catalogue de dictionnaire que l'application **Dictionary** intégrée d'Apple remplit. Ouvrez-la une seule fois — elle télécharge la liste disponible — puis revenez ici."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glottyは、Appleの標準**辞書**アプリが提供する辞書カタログを読み取ります。一度それを開くと、利用可能なリストが取得され、ここに戻ってください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty는 Apple의 기본 내장 **Dictionary** 앱이 채우는 사전 카탈로그를 읽습니다. 한 번 열어 - 사용 가능한 목록을 가져온 후 - 다시 이곳으로 돌아오세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 读取苹果内置的**词典**应用填充的词典目录。请打开一次该应用 — 它会下载可用列表 — 然后返回此处。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 讀取 Apple 內建 **Dictionary** 應用程式填充的字典目錄。開啟它一次 — 它會拉取可用列表 — 然後回到此處。"
+          }
+        }
+      }
+    },
+    "Glotty relies on Apple's built-in **Dictionary** app, normally at /System/Applications/Dictionary.app. It's part of macOS — to restore it, run a System Update or use Migration Assistant. Glotty's other features (Translate, Polish, Explain, Chat) still work without it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty basiert auf der integrierten **Dictionary**-App von Apple, normalerweise unter /System/Applications/Dictionary.app. Sie ist Teil von macOS — um sie wiederherzustellen, führen Sie eine Systemaktualisierung durch oder verwenden Sie den Migrations-Assistenten. Andere Glotty-Funktionen (Übersetzen, Polieren, Erklären, Chat) funktionieren weiterhin ohne sie."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty depende de la aplicación nativa de **Dictionary** de Apple, normalmente en /System/Applications/Dictionary.app. Es parte de macOS — para restaurarla, ejecuta una Actualización del sistema o usa el Asistente de Migración. Las demás características de Glotty (Traducir, Pulir, Explicar, Chatear) funcionan igual sin ella."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty dépend de l'application **Dictionary** intégrée d'Apple, généralement située à /System/Applications/Dictionary.app. Elle fait partie de macOS — pour la restaurer, effectuez une Mise à jour du système ou utilisez l'Assistant Migration. Les autres fonctionnalités de Glotty (Traduction, Correction, Explication, Chat) fonctionnent toujours sans elle."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glottyは、通常 /System/Applications/Dictionary.app にあるAppleの標準**辞書**アプリに依存しています。これはmacOSの一部です — 復元するには、システム更新を実行するか、移行アシスタントを使用してください。Glottyのその他の機能（翻訳、校正、説明、チャット）は、これがなくても引き続き機能します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty는 일반적으로 /System/Applications/Dictionary.app에 있는 Apple의 기본 내장 **Dictionary** 앱에 의존합니다. 이 앱은 macOS의 일부이며 - 복원하려면 시스템 업데이트를 실행하거나 이전 데이터 도우미를 사용하세요. Glotty의 다른 기능(번역, 다듬기, 설명, 채팅)은 이 앱 없이도 계속 작동합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 依赖苹果内置的**词典**应用，通常位于 /System/Applications/Dictionary.app。它是 macOS 的一部分 — 要恢复它，请运行系统更新或使用迁移助理。Glotty 的其他功能（翻译、润色、解释、聊天）无需它仍可正常工作。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 依賴 Apple 的內建 **Dictionary** 應用程式，通常位於 /System/Applications/Dictionary.app。它是 macOS 的一部分 — 若要還原它，請執行系統更新或使用遷移助理。Glotty 的其他功能 (翻譯、潤飾、解釋、聊天) 在沒有它的情况下仍然有效。"
+          }
+        }
+      }
+    },
     "Glotty saves what you searched and which mistakes Polish flagged. Stored locally in Application Support; never sent off-device. The time range only filters the lists below — history itself is never pruned.": {
       "localizations": {
         "de": {
@@ -5905,6 +7929,98 @@
           "stringUnit": {
             "state": "translated",
             "value": "Glotty 會儲存您查詢的內容以及 Polish 標示的錯誤。儲存在本地的 Application Support 中；絕不會發送到外部設備。時間範圍僅用於過濾下方的清單 — 歷記錄本身永不會被修剪。"
+          }
+        }
+      }
+    },
+    "Glotty targets macOS 26+; this status should never appear in a normal build.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty unterstützt macOS 26+; dieser Status sollte niemals in einer normalen Build-Version erscheinen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty requiere macOS 26+; este estado nunca debería aparecer en una compilación normal."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty cible macOS 26+ ; ce statut ne devrait jamais apparaître dans une build normale."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GlottyはmacOS 26+を対象としています。この状態は通常のビルドでは決して表示されるべきではありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty는 macOS 26+를 대상으로 합니다. 이 상태는 정상 빌드에서는 절대 나타나지 않아야 합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 针对 macOS 26+；此状态在正常构建中不应出现。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 支援 macOS 26+；此狀態不應出現在正常建置中。"
+          }
+        }
+      }
+    },
+    "Glotty's Translate uses the dictionaries macOS has activated. You don't have any activated yet — open Settings → Dictionaries to enable the ones you need (English, Chinese, Japanese, and more are included with macOS).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glottys Übersetzungsfunktion verwendet die von macOS aktivierten Wörterbücher. Sie haben noch keine aktiviert — öffnen Sie Einstellungen → Wörterbücher, um die benötigten zu aktivieren (Englisch, Chinesisch, Japanisch und weitere sind in macOS enthalten)."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traducir de Glotty utiliza los diccionarios que macOS tiene activados. Aún no tienes ninguno activado — abre Ajustes → Diccionarios para habilitar los que necesitas (Inglés, Chino, Japonés y más están incluidos con macOS)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La Traduction de Glotty utilise les dictionnaires activés par macOS. Vous n'en avez activé aucun pour le moment — ouvrez Paramètres → Dictionnaires pour activer ceux dont vous avez besoin (l'anglais, le chinois, le japonais et plus sont inclus avec macOS)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glottyの翻訳機能は、macOSで有効になっている辞書を使用します。まだ有効になっている辞書はありません — 設定 → 辞書を開いて、必要な辞書を有効にしてください（英語、中国語、日本語などはmacOSに含まれています）。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty의 번역 기능은 macOS에서 활성화한 사전을 사용합니다. 아직 활성화된 사전이 없습니다 - 설정 → 사전으로 이동하여 필요한 사전을 활성화하세요(영어, 중국어, 일본어 등 macOS에 포함되어 있습니다)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 的翻译功能使用 macOS 已启用的词典。您尚未激活任何词典 — 打开设置 → 词典，以启用您需要的词典（英语、中文、日语等已包含在 macOS 中）。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 的翻譯功能使用 macOS 已啟用的字典。您尚未啟用任何字典 — 開啟設定 → 字典以啟用您需要的字典 (英文、中文、日文等均包含在 macOS 中)。"
           }
         }
       }
@@ -6054,6 +8170,52 @@
         }
       }
     },
+    "Glotty's name": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name von Glotty"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nombre de Glotty"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nom de Glotty"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glottyの名前"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty의 이름"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 的名称"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 的名稱"
+          }
+        }
+      }
+    },
     "Glotty's persona": {
       "localizations": {
         "de": {
@@ -6096,6 +8258,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "Glotty 的角色"
+          }
+        }
+      }
+    },
+    "Google's fast multilingual model. Good for non-English polish.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Googles schnelles mehrsprachiges Modell. Gut für Nicht-Englisch-Überarbeitung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo multilingüe rápido de Google. Bueno para pulir texto no inglés."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle multilingue rapide de Google. Bon pour le polissage non anglais."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Googleの高速多言語モデル。非英語の仕上げに適しています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google의 빠른 다국어 모델. 비영어권 텍스트 다듬기에 적합합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google 的快速多语言模型。适用于非英语润色。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google 的快速多語言模型。適合用於非英文文本潤色。"
           }
         }
       }
@@ -6245,6 +8453,52 @@
         }
       }
     },
+    "Highest-quality general model. Slower; recommended only for hard rewrites.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Höchstwertiges Allzweckmodell. Langsamer; nur für schwierige Textumformulierungen empfohlen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo general de máxima calidad. Más lento; recomendado solo para reescrituras difíciles."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle général de la plus haute qualité. Plus lent ; recommandé uniquement pour les réécritures difficiles."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最高品質の汎用モデル。遅いです。厳しい書き換えにのみ推奨されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고품질 일반 모델. 속도가 느립니다. 어려운 다시 쓰기에만 권장됩니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最高质量通用模型。较慢；仅推荐用于困难重写。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最高品質的通用模型。較慢；僅建議用於困難重寫。"
+          }
+        }
+      }
+    },
     "Highlight any text in another app (browser, PDF, Notes, etc.).": {
       "localizations": {
         "de": {
@@ -6287,6 +8541,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "在任何其他應用程式中（瀏覽器、PDF、備忘錄等）選取文字。"
+          }
+        }
+      }
+    },
+    "Highlight the word below in any app — your browser, a doc, Notes — then press Fn → T. Glotty's popup should appear with the definition and translation.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heben Sie das Wort unten in einer beliebigen App hervor — Ihrem Browser, einem Dokument, Notizen — und drücken Sie dann Fn → T. Glottys Pop-up sollte mit der Definition und Übersetzung erscheinen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resalta la palabra siguiente en cualquier aplicación — tu navegador, un documento, Notas — luego presiona Fn → T. El emergente de Glotty debería aparecer con la definición y traducción."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sélectionnez le mot ci-dessus dans n'importe quelle application — votre navigateur, un document, Notes — puis appuyez sur Fn → T. La popup de Glotty devrait apparaître avec la définition et la traduction."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下の単語を、ブラウザ、ドキュメント、メモなどの任意のアプリで強調表示してから、Fn → Tを押してください。Glottyのポップアップが定義と翻訳とともに表示されるはずです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아래 단어를 어떤 앱에서든 - 브라우저, 문서, 노트 등 - 강조한 다음 Fn → T를 누르세요. Glotty의 팝업이 정의와 번역과 함께 나타나야 합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在任何应用中（浏览器、文档、备忘录等）高亮显示下方的词，然后按 Fn → T。Glotty 的弹窗应会出现，显示定义和翻译。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在任何應用程式中高亮顯示下方單字 — 瀏覽器、文件、筆記本 — 然後按下 Fn → T。Glotty 的快顯應該會出現，包含定義和翻譯。"
           }
         }
       }
@@ -6521,52 +8821,6 @@
         }
       }
     },
-    "Import\\u{2026}": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importieren…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importar…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importer…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "インポート…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "가져오기…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "导入…"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "匯入…"
-          }
-        }
-      }
-    },
     "Import…": {
       "localizations": {
         "de": {
@@ -6751,6 +9005,52 @@
         }
       }
     },
+    "Installed ✓": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installiert ✓"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instalado ✓"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installé ✓"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インストール済み ✓"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설치됨 ✓"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已安装 ✓"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已安裝 ✓"
+          }
+        }
+      }
+    },
     "Issues": {
       "localizations": {
         "de": {
@@ -6793,6 +9093,98 @@
           "stringUnit": {
             "state": "translated",
             "value": "問題"
+          }
+        }
+      }
+    },
+    "LLM provider": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LLM-Anbieter"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proveedor de LLM"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fournisseur LLM"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LLMプロバイダー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LLM 제공자"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LLM 提供商"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LLM 提供者"
+          }
+        }
+      }
+    },
+    "Language Glotty replies in for this chat.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprache, in der Glotty in diesem Chat antwortet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma en el que Glotty responde en esta conversación."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langue dans laquelle Glotty répond pour ce chat."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このチャットでGlottyが返信する言語。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 채팅에 대해 Glotty가 응답하는 언어."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 在此对话中回复使用的语言。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 在此聊天中使用的回覆語言。"
           }
         }
       }
@@ -7126,6 +9518,236 @@
         }
       }
     },
+    "Legacy V3 non-thinking. Same behavior as v4-flash with thinking disabled. DeepSeek will retire this id on 2026-07-24 — pick v4-flash for new setups.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legacy V3 ohne Denken. Gleiches Verhalten wie v4-flash mit ausgeschaltetem Denken. DeepSeek wird diese ID am 2026-07-24 zurückziehen — v4-flash für neue Setups wählen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "V3 heredado sin modo de pensamiento. Mismo comportamiento que v4-flash con el pensamiento desactivado. DeepSeek retirará este ID el 2026-07-24 — elige v4-flash para nuevas configuraciones."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "V3 hérité sans mode de pensée. Même comportement que v4-flash avec le mode de pensée désactivé. DeepSeek mettra à la retraite cet ID le 2026-07-24 — choisissez v4-flash pour les nouveaux paramètres."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レガシーV3非思考型。思考を無効にしたv4-flashと同じ動作です。DeepSeekはこのIDを2026-07-24に廃止します — 新しいセットアップにはv4-flashを選択してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "레거시 V3 비생각 모드. 생각 기능이 비활성화된 v4-flash와 동일한 동작합니다. DeepSeek는 2026-07-24에 이 ID를 폐기할 예정입니다. 새로운 설정에는 v4-flash를 선택하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "传统 V3 无思考模式。与禁用思考的 v4-flash 行为相同。DeepSeek 将在 2026-07-24 停用此 ID — 新设置请选择 v4-flash。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "傳統 V3 非思考模式。與停用思考模式的 v4-flash 行為相同。DeepSeek 將於 2026-07-24 停用此 ID — 新設定請選擇 v4-flash。"
+          }
+        }
+      }
+    },
+    "Legacy V3 thinking. Same behavior as v4-flash with thinking enabled. Retiring 2026-07-24 — pick v4-flash or v4-pro for new setups.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legacy V3 mit Denken. Gleiches Verhalten wie v4-flash mit eingeschaltetem Denken. Rückzug am 2026-07-24 — v4-flash oder v4-pro für neue Setups wählen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "V3 heredado con modo de pensamiento. Mismo comportamiento que v4-flash con el pensamiento activado. Se retirará el 2026-07-24 — elige v4-flash o v4-pro para nuevas configuraciones."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "V3 hérité avec mode de pensée. Même comportement que v4-flash avec le mode de pensée activé. Mise à la retraite le 2026-07-24 — choisissez v4-flash ou v4-pro pour les nouveaux paramètres."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レガシーV3思考型。思考を有効にしたv4-flashと同じ動作です。2026-07-24に廃止されます — 新しいセットアップにはv4-flashまたはv4-proを選択してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "레거시 V3 생각 모드. 생각 기능이 활성화된 v4-flash와 동일한 동작합니다. 2026-07-24에 폐기 예정입니다. 새로운 설정에는 v4-flash 또는 v4-pro를 선택하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "传统 V3 思考模式。与启用思考的 v4-flash 行为相同。2026-07-24 停用 — 新设置请选择 v4-flash 或 v4-pro。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "傳統 V3 思考模式。與啟用思考模式的 v4-flash 行為相同。將於 2026-07-24 停用 — 新設定請選擇 v4-flash 或 v4-pro。"
+          }
+        }
+      }
+    },
+    "Legacy fast tier. Keep as fallback if 2.0 ever has availability issues in your region.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legacy-Schnellstufe. Als Rückfall behalten, falls 2.0 jemals Verfügbarkeitsprobleme in Ihrer Region hat."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarifa rápida heredada. Mantén como alternativa si 2.0 tiene problemas de disponibilidad en tu región."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niveau rapide hérité. Conservez comme solution de secours si 2.0 rencontre des problèmes de disponibilité dans votre région."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レガシーファストティア。2.0が地域で利用できない問題が発生した場合のフォールバックとして保持してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "레거시 빠른 티어. 2.0이 귀하의 지역에서 이용 가능성 문제를 겪는 경우 대체로 유지하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "传统快速层级。如果在您的区域 2.0 出现可用性问题，请保留为备用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "傳統快速等級。如果 2.0 在您所在區域有可用性問題，請保留作為後備。"
+          }
+        }
+      }
+    },
+    "Lightest and fastest. Best for short polishes where latency matters; quality is the lowest of the lineup.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leichtestes und schnellstes. Am besten für kurze Überarbeitungen, bei denen Latenz wichtig ist; Qualität ist die niedrigste der Reihe."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El más ligero y rápido. Mejor para pulidos cortos donde importa la latencia; la calidad es la más baja de la gama."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le plus léger et le plus rapide. Idéal pour de courts polissages où la latence compte ; la qualité est la plus faible de la gamme."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最も軽量で高速。遅延が重要な短い仕上げに最適です。品質はラインナップで最も低いです。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가장 가볍고 빠릅니다. 지연 시간이 중요한 짧은 수정에 가장 적합하나, 품질은 라인업 중 가장 낮습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最轻量和最快。适用于延迟重要的短文本润色；质量是系列中最低的。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最輕量且快速。適合延遲重要的短文本潤色；品質是產品線中最低的。"
+          }
+        }
+      }
+    },
+    "Lines show how often Polish flagged each top category over the selected range. Click a legend entry to reopen the most recent run that flagged it.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Linien zeigen, wie oft Polieren jede Hauptkategorie im ausgewählten Bereich markiert hat. Klicken Sie auf einen Legendeintrag, um die jüngste Ausführung zu öffnen, die sie markiert hat."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las líneas muestran con qué frecuencia Pulir marcó cada categoría superior en el rango seleccionado. Haz clic en una entrada de la leyenda para volver a abrir la ejecución más reciente que la marcó."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les lignes indiquent à quelle fréquence la Correction a signalé chaque catégorie principale sur la période sélectionnée. Cliquez sur une entrée de la légende pour rouvrir la dernière exécution qui l'a signalée."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "線は、選択された範囲でPolishが各トップカテゴリーをフラグした回数を示します。凡例のエントリをクリックすると、それをフラグした最近の実行を再度開きます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선들은 선택된 기간 동안 Polish가 각 상위 카테고리를 표시한 빈도를 보여줍니다. 범례 항목을 클릭하여 해당 항목을 표시한 가장 최근 실행을 다시 엽니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "线条显示在所选范围内，润色功能标记每个顶级类别的频率。点击图例条目可重新打开最近标记该类别的运行结果。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "線條顯示在選定範圍內，潤飾功能標記各主要類別的頻率。點擊圖例項目可重新開啟最近標記過它的運行。"
+          }
+        }
+      }
+    },
     "Loading dictionaries…": {
       "localizations": {
         "de": {
@@ -7214,6 +9836,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "僅限本機。"
+          }
+        }
+      }
+    },
+    "Localization": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lokalisierung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Localización"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Localisation"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ローカライズ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현지화"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本地化"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本地化"
           }
         }
       }
@@ -7356,48 +10024,48 @@
         }
       }
     },
-    "Manage\\u{2026}": {
+    "Manage memory": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verwalten…"
+            "value": "Speicher verwalten"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Administrar…"
+            "value": "Gestionar memoria"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gérer…"
+            "value": "Gérer la mémoire"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "管理…"
+            "value": "メモリを管理"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "관리…"
+            "value": "메모리 관리"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "管理…"
+            "value": "管理内存"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "管理…"
+            "value": "管理記憶體"
           }
         }
       }
@@ -7738,6 +10406,98 @@
         }
       }
     },
+    "Memory-affected only": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur speicherbeeinflusst"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo afectado por memoria"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uniquement affecté par la mémoire"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモリにのみ影響"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "메모리 영향만"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅受内存影响"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "僅受記憶體影響"
+          }
+        }
+      }
+    },
+    "Mid-tier reasoning model. Solid quality, moderate speed.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mittelklasse-Reasoning-Modell. Solide Qualität, moderate Geschwindigkeit."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo de razonamiento de gama media. Calidad sólida, velocidad moderada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle de raisonnement de niveau moyen. Qualité solide, vitesse modérée."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミッドティア推論モデル。確実な品質、適度な速度。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "중간 등급 추론 모델. 안정적인 품질, 중간 속도."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中级推理模型。质量可靠，速度适中。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中階推理模型。穩定品質，適中速度。"
+          }
+        }
+      }
+    },
     "Model": {
       "localizations": {
         "de": {
@@ -7780,6 +10540,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "模型"
+          }
+        }
+      }
+    },
+    "Modify settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen ändern"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modificar ajustes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier les paramètres"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定を変更"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정 수정"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改设置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改設定"
           }
         }
       }
@@ -7872,6 +10678,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "單語的"
+          }
+        }
+      }
+    },
+    "Move to a different scope": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In einen anderen Bereich verschieben"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mover a un ámbito diferente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déplacer vers un autre champ d'application"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別のスコープに移動"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 범위로 이동"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移动到不同的范围"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移至不同的範圍"
           }
         }
       }
@@ -8010,6 +10862,144 @@
           "stringUnit": {
             "state": "translated",
             "value": "新上下文名稱"
+          }
+        }
+      }
+    },
+    "New flagship — stronger reasoning, slower, ~3× the price of Flash ($0.435/1M input · $0.87/1M output). Worth it for hard rewrites where Flash falls short.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neues Flagship — stärkeres Reasoning, langsamer, ~3× der Preis von Flash ($0.435/1M Eingabe · $0.87/1M Ausgabe). Es lohnt sich für schwierige Textumformulierungen, wo Flash nicht ausreicht."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nueva gama alta — razonamiento más potente, más lento, ~3× el precio de Flash ($0.435/1M de entrada · $0.87/1M de salida). Vale la pena para reescrituras difíciles donde Flash no es suficiente."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouveau phare — raisonnement plus fort, plus lent, ~3× le prix de Flash ($0.435/1M entrées · $0.87/1M sorties). Vaut la peine pour les réécritures difficiles où Flash manque de performance."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいフラッグシップ — 強力な推論、遅い、フラッシュの約3倍の価格（入力$0.435/100万・出力$0.87/100万）。フラッシュが不足する厳しい書き換えには価値があります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새로운 플래그십 — 더 강력한 추론 능력, 더 느린 속도, Flash 가격의 약 3배 ($0.435/1M 입력 · $0.87/1M 출력). Flash가 부족한 어려운 재작업에 가치가 있음."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新旗舰 — 推理能力更强，更慢，价格约为 Flash 的 3 倍（$0.435/1M 输入 · $0.87/1M 输出）。对于 Flash 无法胜任的困难重写物有所值。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新旗艦 — 更強的推理能力，較慢，價格約為 Flash 的 3 倍（輸入 $0.435/百萬 · 輸出 $0.87/百萬）。對於 Flash 無法勝任的困難重寫來說值得。"
+          }
+        }
+      }
+    },
+    "Newer small tier with improved instruction-following over 4o-mini.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuere kleine Stufe mit verbesserter Anweisungsbefolgung gegenüber 4o-mini."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nueva tarifa pequeña con mejora en el seguimiento de instrucciones sobre 4o-mini."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niveau petit plus récent avec amélioration du suivi des instructions par rapport à 4o-mini."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4o-miniより改善された指示フォロワーの新しい小さなティア。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4o-mini보다 개선된 명령 따르기 능력을 가진 새로운 소형 등급."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新的小型层级，相比 4o-mini 提升了指令遵循能力。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新的小型等級，相比 4o-mini 改善了指令遵循能力。"
+          }
+        }
+      }
+    },
+    "Newer small/fast tier. Good speed-vs-quality balance for one-shot rewrites.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuere kleine/schnelle Stufe. Guter Geschwindigkeits-vs-Qualitäts-Ausgleich für Einmal-Textumformulierungen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nueva tarifa pequeña/rapida. Buen equilibrio velocidad-calidad para reescrituras únicas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niveau petit/rapide plus récent. Bon équilibre vitesse-qualité pour les réécritures en une seule passe."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しい小さな/高速なティア。ワンショット書き換えに適した速度と品質のバランス。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새로운 소형/빠른 등급. 일회용 재작업에 좋은 속도-품질 밸런스."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新的小型/快速层级。一次性重写的速度与质量平衡良好。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新的小型/快速等級。對於一次性重寫有良好的速度與品質平衡。"
           }
         }
       }
@@ -8205,6 +11195,98 @@
         }
       }
     },
+    "No dictionaries are discoverable yet": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine auffindbaren Wörterbücher"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no se pueden descubrir diccionarios"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun dictionnaire n'est encore détectable"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まだ辞書が見つかりません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 발견 가능한 사전이 없습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚无法发现任何词典"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚無可發現的字典"
+          }
+        }
+      }
+    },
+    "No dictionaries for this language pair": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Wörterbücher für diese Sprachkombination"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay diccionarios para este par de idiomas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun dictionnaire pour cette paire de langues"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この言語ペアには辞書がありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 언어 쌍에 대한 사전이 없습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该语言对没有词典"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此語言對沒有字典"
+          }
+        }
+      }
+    },
     "No global memories yet.": {
       "localizations": {
         "de": {
@@ -8293,6 +11375,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "沒有已安裝的字典符合預設語言配對。"
+          }
+        }
+      }
+    },
+    "No matches for the current search": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Treffer für die aktuelle Suche"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay coincidencias para la búsqueda actual"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun résultat pour la recherche actuelle"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在の検索に一致するものがありません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 검색에 대한 일치 항목이 없습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前搜索无匹配项"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "當前搜索沒有匹配項"
           }
         }
       }
@@ -9008,6 +12136,52 @@
         }
       }
     },
+    "Older flagship — slower and pricier than 2.0 Flash but slightly stronger on long, nuanced rewrites.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Älteres Flagship — langsamer und teurer als 2.0 Flash, aber bei langen, differenzierten Textumformulierungen etwas stärker."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gama anterior más antigua — más lenta y cara que 2.0 Flash pero ligeramente más fuerte en reescrituras largas y matizadas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phare plus ancien — plus lent et plus cher que 2.0 Flash mais légèrement plus performant sur les réécritures longues et nuancées."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "古いフラッグシップ — 2.0フラッシュよりも遅く、高価ですが、長く、ニュアンスのある書き換えでは少し強力です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이전 플래그십 — 2.0 Flash보다 느리고 더 비싸지만, 길고 섬세한 재작업에서는 약간 더 강력함."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "较旧旗舰 — 比 2.0 Flash 更慢更贵，但在长篇幅、细微差别重写方面略强。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "舊版旗艦 — 比 2.0 Flash 更慢且更昂貴，但在長文本細膩重寫上稍強。"
+          }
+        }
+      }
+    },
     "One thread per day (boundary 4 AM local). Click a row to open a read-only view of that conversation. Today's chat resumes on Fn → C until 4 AM rollover.": {
       "localizations": {
         "de": {
@@ -9096,6 +12270,98 @@
           "stringUnit": {
             "state": "translated",
             "value": "只顯示此語言對組尚未安裝的字典。"
+          }
+        }
+      }
+    },
+    "Open Dictionary Settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wörterbucheinstellungen öffnen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir ajustes de Diccionario"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir les paramètres du Dictionnaire"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "辞書設定を開く"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사전 설정 열기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开词典设置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟字典設定"
+          }
+        }
+      }
+    },
+    "Open Dictionary.app": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary.app öffnen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir Diccionario.app"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir Dictionary.app"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "辞書アプリを開く"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary.app 열기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开词典应用"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟 Dictionary.app"
           }
         }
       }
@@ -9199,6 +12465,52 @@
         }
       }
     },
+    "Open System Settings → Software Update": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Systemeinstellungen → Software-Update öffnen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir Ajustes del sistema → Actualización de software"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir les Paramètres Système → Mise à jour logicielle"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システム設定 → ソフトウェア更新を開く"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시스템 설정 → 소프트웨어 업데이트 열기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开系统设置 → 软件更新"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟系統設定 → 軟體更新"
+          }
+        }
+      }
+    },
     "Open conversation to review": {
       "localizations": {
         "de": {
@@ -9245,7 +12557,7 @@
         }
       }
     },
-    "Opening a session\\u{2026}": {
+    "Opening a session…": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -9333,6 +12645,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "可選。用於在練習回饋和聊天回覆中稱呼您。"
+          }
+        }
+      }
+    },
+    "Other dictionaries": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Andere Wörterbücher"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otros diccionarios"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autres dictionnaires"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その他の辞書"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 사전들"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他词典"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他字典"
           }
         }
       }
@@ -9521,6 +12879,52 @@
         }
       }
     },
+    "Persona manner": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personenweise"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modo de personalidad"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ton du personnage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペルソナのスタイル"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "페르소나 방식"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "人格方式"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "角色方式"
+          }
+        }
+      }
+    },
     "Phonetics": {
       "localizations": {
         "de": {
@@ -9563,6 +12967,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "發音"
+          }
+        }
+      }
+    },
+    "Pick from known models": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus bekannten Modellen wählen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seleccionar entre modelos conocidos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir parmi les modèles connus"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "既知のモデルから選択"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "알려진 모델에서 선택"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从已知模型中选择"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從已知模型中選取"
           }
         }
       }
@@ -10745,6 +14195,98 @@
         }
       }
     },
+    "Pronounce": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aussprache"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pronunciar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prononcer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み上げ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "발음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发音"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "發音"
+          }
+        }
+      }
+    },
+    "Pronouns": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pronomen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pronombres"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pronoms"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代名詞"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대명사"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代词"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代名詞"
+          }
+        }
+      }
+    },
     "Provider": {
       "localizations": {
         "de": {
@@ -10787,6 +14329,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "提供者"
+          }
+        }
+      }
+    },
+    "Provider not found. Pick another from the menu above.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anbieter nicht gefunden. Wählen Sie einen anderen aus dem obigen Menü."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proveedor no encontrado. Seleccione otro del menú superior."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fournisseur non trouvé. Choisissez-en un autre dans le menu ci-dessus."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロバイダーが見つかりません。上のメニューから別のものを選択してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제공자를 찾을 수 없습니다. 위 메뉴에서 다른 것을 선택하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不到提供者。请从上方菜单中选择另一个。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不到服務提供者。請從上方選單選擇其他項目。"
           }
         }
       }
@@ -10978,6 +14566,98 @@
           "stringUnit": {
             "state": "translated",
             "value": "透過 LLM 重新以當前語言翻譯介面，並套用您已接受記憶中的任何用詞偏好。"
+          }
+        }
+      }
+    },
+    "Re-translates the UI in the current language via the LLM, applying any wording preferences from your accepted memories. The partial refresh only touches strings that mention a term from your memories — cheaper after a single glossary change.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übersetzt die Benutzeroberfläche in der aktuellen Sprache erneut über das LLM und wendet alle Wortwahl-Vorlieben aus Ihren gespeicherten Erinnerungen an. Die teilweise Aktualisierung betrifft nur Zeichenketten, die einen Begriff aus Ihren Erinnerungen erwähnen — kostengünstiger nach einer einzigen Glossaränderung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vuelve a traducir la interfaz en el idioma actual mediante el LLM, aplicando preferencias de redacción de tus memorias aceptadas. La actualización parcial solo afecta a las cadenas que mencionan un término de tus memorias — más económica tras un solo cambio en el glosario."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retraduit l'interface dans la langue actuelle via le LLM, en appliquant les préférences de formulation de vos mémoires acceptées. Le rafraîchissement partiel ne touche qu'aux chaînes de caractères mentionnant un terme de vos mémoires — moins coûteux après un seul changement de glossaire."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LLMを介して現在の言語でUIを再翻訳し、受け入れられたメモリーからの用語選好を適用します。部分的な更新は、メモリーからの用語を含む文字列のみに触れます — 単一の用語集変更後はより効率的です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LLM을 통해 현재 언어로 UI를 다시 번역하며, 승인된 메모리의 단어 선택 기본 설정을 적용합니다. 부분 새로고침은 메모리의 용어를 언급하는 문자열만 처리하므로 — 단일 용어집 변경 후에는 더 저렴합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过大型语言模型重新翻译当前语言的界面，应用你已接受的记忆中的任何措辞偏好。部分刷新只触及提及你记忆中术语的字符串 — 在单一术语表更改后成本更低。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透過 LLM 以目前語言重新翻譯使用者介面，套用您已接受記憶中的詞彙偏好設定。部分重新整理只會觸及包含記憶中術語的字串 — 在單次術典變更後成本更低。"
+          }
+        }
+      }
+    },
+    "Re-trigger macOS's registration so Glotty appears in System Settings. May show a system prompt for Accessibility.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löst die macOS-Registrierung neu aus, damit Glotty in den Systemeinstellungen angezeigt wird. Möglicherweise erscheint eine Systemaufforderung für Bedienungshilfen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vuelva a activar el registro de macOS para que Glotty aparezca en Configuración del sistema. Puede mostrar un mensaje del sistema para Accesibilidad."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déclencher à nouveau l'enregistrement de macOS pour que Glotty apparaisse dans les Réglages Système. Peut afficher une invite système pour l'Accessibilité."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOSの登録を再トリガーしてGlottyがシステム設定に表示されるようにします。アクセシビリティのシステムプロンプトが表示される場合があります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty가 시스템 설정에 나타나도록 macOS의 등록을 다시 트리거합니다. 접근성을 위한 시스템 프롬프트가 나타날 수 있습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新触发 macOS 的注册，使 Glotty 出现在系统设置中。可能会显示可访问性的系统提示。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新觸發 macOS 的註冊，使 Glotty 出現在「系統設定」中。可能會顯示要求輔助功能權限的系統提示。"
           }
         }
       }
@@ -11212,6 +14892,98 @@
         }
       }
     },
+    "Refresh": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktualisieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualizar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualiser"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새로고침"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刷新"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新整理"
+          }
+        }
+      }
+    },
+    "Refresh all": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle aktualisieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualizar todo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualiser tout"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてを更新"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 새로고침"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部刷新"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部重新整理"
+          }
+        }
+      }
+    },
     "Refresh translations": {
       "localizations": {
         "de": {
@@ -11304,6 +15076,98 @@
         }
       }
     },
+    "Relaunch": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu starten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reiniciar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relancer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再起動"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 시작"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新启动"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新啟動"
+          }
+        }
+      }
+    },
+    "Relaunch Glotty for the change to take effect.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starten Sie Glotty neu, damit die Änderung wirksam wird."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reinicia Glotty para que el cambio surta efecto."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relancez Glotty pour que le changement prenne effet."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更を有効にするにはGlottyを再起動してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "변경 사항을 적용하려면 Glotty를 다시 시작합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新启动 Glotty 以使更改生效。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請重新啟動 Glotty 以使變更生效。"
+          }
+        }
+      }
+    },
     "Release": {
       "localizations": {
         "de": {
@@ -11392,6 +15256,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "提醒頻率"
+          }
+        }
+      }
+    },
+    "Rename": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umbenennen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambiar nombre"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renommer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前を変更"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름 변경"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重命名"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新命名"
           }
         }
       }
@@ -11534,6 +15444,98 @@
         }
       }
     },
+    "Reply in your target language…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antworten Sie in Ihrer Zielsprache…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Responder en tu idioma objetivo…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Répondre dans votre langue cible…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターゲット言語で返信…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대상 언어로 답장…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用你的目标语言回复…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以您的目標語言回覆…"
+          }
+        }
+      }
+    },
+    "Requires macOS 26": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erfordert macOS 26"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requiere macOS 26"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nécessite macOS 26"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 26が必要です"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 26이 필요합니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要 macOS 26"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要 macOS 26"
+          }
+        }
+      }
+    },
     "Reset": {
       "localizations": {
         "de": {
@@ -11672,6 +15674,52 @@
         }
       }
     },
+    "Retry polish": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polieren wiederholen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reintentar pulir"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réessayer le polissage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仕上げを再試行"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 다듬기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重试润色"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再次潤飾"
+          }
+        }
+      }
+    },
     "Rewrite your own writing in idiomatic form. Highlight a draft, hold Fn, tap P. Glotty returns 1–3 polished rewrites plus a list of grammar / word-choice issues. Press Esc to dismiss.": {
       "extractionState": "manual",
       "localizations": {
@@ -11721,6 +15769,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "把你自己寫的內容改寫得更道地。選取草稿,按住 Fn,按 P。Glotty 會回傳 1–3 個潤色版本,並列出文法 / 用詞問題。按 Esc 關閉。"
+          }
+        }
+      }
+    },
+    "Same model as OpenAI direct, routed through OpenRouter — useful if you only want one API key.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dasselbe Modell wie bei direkter OpenAI-Anbindung, über OpenRouter geleitet — nützlich, wenn Sie nur einen API-Schlüssel möchten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mismo modelo que OpenAI directo, enrutado a través de OpenRouter — útil si solo quieres una clave de API."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Même modèle qu'OpenAI direct, acheminé via OpenRouter — utile si vous ne voulez qu'une seule clé API."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OpenAI直接と同じモデルですが、OpenRouter経由でルーティングされています — APIキーを1つだけ使用したい場合に役立ちます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OpenAI 직접 사용과 동일한 모델로 OpenRouter를 통해 라우팅됩니다 — 하나의 API 키만 사용하고 싶을 때 유용합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "与OpenAI直接调用使用相同的模型，通过OpenRouter路由 — 如果您只想使用一个API密钥，此选项很有用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "與直接使用 OpenAI 相同的模型，經由 OpenRouter 路由 — 如果您只想使用一個 API 金鑰很有用。"
           }
         }
       }
@@ -11817,6 +15911,52 @@
         }
       }
     },
+    "Search dictionaries": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wörterbücher durchsuchen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar diccionarios"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechercher dans les dictionnaires"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "辞書を検索"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사전 검색"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索词典"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜尋辭典"
+          }
+        }
+      }
+    },
     "Send": {
       "localizations": {
         "de": {
@@ -11905,6 +16045,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "立即傳送聊天提醒"
+          }
+        }
+      }
+    },
+    "Set up Translate": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übersetzung einrichten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurar Traducir"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurer Traduction"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻訳を設定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "번역 설정"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置翻译"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定翻譯"
           }
         }
       }
@@ -12001,6 +16187,98 @@
         }
       }
     },
+    "Show all (%@)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle anzeigen (%@)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar todo (%@)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher tout (%@)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてを表示(%@)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 보기 (%@)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示全部(%@)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示全部 (%@)"
+          }
+        }
+      }
+    },
+    "Show all matching dictionaries": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle passenden Wörterbücher anzeigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar todos los diccionarios coincidentes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher tous les dictionnaires correspondants"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一致する辞書をすべて表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일치하는 모든 사전 표시"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示所有匹配的词典"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示所有符合的辭典"
+          }
+        }
+      }
+    },
     "Show records from": {
       "localizations": {
         "de": {
@@ -12047,6 +16325,98 @@
         }
       }
     },
+    "Show top %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Top %@ anzeigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar principales %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voir les %@ premiers"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トップ%@を表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상위 %@개 보기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示前 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示頂部 %@"
+          }
+        }
+      }
+    },
+    "Show welcome": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Willkommensbildschirm anzeigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar bienvenida"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher l'accueil"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ようこそを表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "환영 표시"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示欢迎"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示歡迎頁面"
+          }
+        }
+      }
+    },
     "Showing the most recent %@ of %@ events. Narrow the time range above to see fewer.": {
       "localizations": {
         "de": {
@@ -12089,6 +16459,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "顯示最近的 %@ 個 %@ 個事件。將上方的時間範圍縮小以查看較少的事件。"
+          }
+        }
+      }
+    },
+    "Skip": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überspringen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omitir"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スキップ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "건너뛰기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳过"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳過"
           }
         }
       }
@@ -12142,6 +16558,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "暫時跳過"
+          }
+        }
+      }
+    },
+    "Software Update": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Software-Update"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualización de software"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mise à jour logicielle"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Software Update"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "소프트웨어 업데이트"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "软件更新"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "軟體更新"
           }
         }
       }
@@ -12772,6 +17234,98 @@
         }
       }
     },
+    "Tap to open": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippen zum Öffnen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tocar para abrir"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appuyer pour ouvrir"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タップして開く"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "눌러 열기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "轻触打开"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點擊開啟"
+          }
+        }
+      }
+    },
+    "Term": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Begriff"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Término"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terme"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用語"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "용어"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "术语"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "術語"
+          }
+        }
+      }
+    },
     "Test connection": {
       "localizations": {
         "de": {
@@ -12814,6 +17368,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "測試連接"
+          }
+        }
+      }
+    },
+    "The engine that powers Fn → R polish. API keys are stored in macOS Keychain. OpenAI-compatible providers (OpenAI, DeepSeek, OpenRouter, Z.AI, plus any custom endpoint you add) share the same wire format. Polish output language and prompt templates live in the Polish tab.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Engine, die das Polieren für Fn → R antreibt. API-Schlüssel werden in macOS Keychain gespeichert. OpenAI-kompatible Anbieter (OpenAI, DeepSeek, OpenRouter, Z.AI sowie jede von Ihnen hinzugefügte benutzerdefinierte Endpoint) verwenden dasselbe Datenformat. Die Ausgabesprache für das Polieren und die Vorlagen für Aufforderungen befinden sich im Register \"Polieren\"."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El motor que potencia el pulido Fn → R. Las claves de API se almacenan en el llavero de macOS. Los proveedores compatibles con OpenAI (OpenAI, DeepSeek, OpenRouter, Z.AI, además de cualquier punto final personalizado que agregues) comparten el mismo formato. El idioma de salida del pulido y las plantillas de prompts se encuentran en la pestaña Pulido."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le moteur qui alimente le polissage Fn → R. Les clés API sont stockées dans le trousseau de macOS. Les fournisseurs compatibles OpenAI (OpenAI, DeepSeek, OpenRouter, Z.AI, ainsi que tout point de terminaison personnalisé que vous ajoutez) partagent le même format de protocole. La langue de sortie du polissage et les modèles de prompt se trouvent dans l'onglet Polissage."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fn → R仕上げを動かすエンジン。APIキーはmacOS Keychainに保存されます。OpenAI互換プロバイダー（OpenAI、DeepSeek、OpenRouter、Z.AI、および追加するカスタムエンドポイント）は同じワイヤ形式を共有します。仕上げの出力言語とプロンプトテンプレートは、仕上げタブにあります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fn → R 광고를 구동하는 엔진입니다. API 키는 macOS 키체인에 저장됩니다. OpenAI 호환 제공자(OpenAI, DeepSeek, OpenRouter, Z.AI, 그리고 추가하는 사용자 지정 엔드포인트)는 동일한 와이어 형식을 공유합니다. 광화 출력 언어 및 프롬프트 템플릿은 광화 탭에 있습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持 Fn → R 润色的引擎。API 密钥存储在 macOS 钥匙串中。OpenAI 兼容提供者（OpenAI、DeepSeek、OpenRouter、Z.AI 以及你添加的任何自定义端点）使用相同的线路格式。润色输出语言和提示模板位于润色标签页中。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提供 Fn → R 潤飾功能的引擎。API 金鑰儲存在 macOS 金鑰圈中。與 OpenAI 相容的服務提供者（OpenAI、DeepSeek、OpenRouter、Z.AI，以及您新增的任何自訂端點）使用相同的通訊格式。潤飾輸出語言和提示範本位於「潤飾」標籤頁。"
           }
         }
       }
@@ -12910,6 +17510,52 @@
         }
       }
     },
+    "The language you speak natively. Drives auto-detected source / target choices and biases translation behavior toward what you're likely reading or writing. Also the language Fn → E (Explain) renders its explanations in, and — unless you've overridden it in the System tab — the language Glotty's UI uses on the next launch.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihre Muttersprache. Bestimmt die automatisch erkannten Quell-/Zielsprachen und verändert das Übersetzungsverhalten zu dem, was Sie wahrscheinlich lesen oder schreiben. Außerdem ist es die Sprache, in der Fn → E (Erklären) seine Erklärungen rendert und — es sei denn, Sie haben es im Register \"System\" überschrieben — die Sprache, die die Benutzeroberfläche von Glotty beim nächsten Start verwendet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El idioma que hablas de forma nativa. Determina las opciones de origen/destino detectadas automáticamente y sesga el comportamiento de traducción hacia lo que probablemente estás leyendo o escribiendo. También es el idioma en el que Fn → E (Explicar) renderiza sus explicaciones, y — a menos que lo hayas anulado en la pestaña Sistema — el idioma que la interfaz de Glotty usa en el siguiente inicio."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La langue que vous parlez nativement. Détermine les choix de source/cible détectés automatiquement et influence le comportement de traduction vers ce que vous lisez ou écrivez probablement. C'est aussi la langue dans laquelle Fn → E (Expliquer) rend ses explications, et — sauf si vous l'avez remplacé dans l'onglet Système — la langue que l'interface de Glotty utilise au prochain lancement."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたが母語として話す言語。自動検出されたソース/ターゲットの選択を駆動し、翻訳の挙動をあなたがおそらく読んだり書いたりしているものに偏らせます。また、Fn → E（説明）がその説明を表示する言語でもあり — システムタブで上書きしない限り — GlottyのUIが次回起動時に使用する言語でもあります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원어민이 사용하는 언어입니다. 자동 감지된 소스/대상 선택을 주도하며, 읽거나 쓸 가능성이 있는 콘텐츠로 번역 동작을 편향시킵니다. 또한 Fn → E(설명)가 설명을 렌더링하는 언어이며 — 시스템 탭에서 재정의하지 않는 한 — Glotty UI의 다음 시작 시 사용되는 언어입니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你母语使用的语言。驱动自动检测的源语言/目标语言选择，并使翻译行为偏向你可能正在阅读或写作的内容。也是 Fn → E（解释）呈现其解释的语言，并且 — 除非你在系统标签页中覆盖了它 — Glotty 的界面在下次启动时使用的语言。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "您母語的語言。驅動自動偵測的來源/目標語言選擇，並使翻譯行為偏向您可能正在閱讀或書寫的內容。同時也是 Fn → E (解釋) 用於呈現解說的語言，並且 — 除非您已在「系統」標籤頁中覆寫 — 是 Glotty 使用者介面在下一次啟動時使用的語言。"
+          }
+        }
+      }
+    },
     "The language you speak natively. Drives auto-detected source / target choices and biases translation behavior toward what you're likely reading or writing. Separate from Glotty's UI language below.": {
       "localizations": {
         "de": {
@@ -12952,6 +17598,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "您的母語。驅動自動偵測的來源/目標選擇，並使翻譯行為偏向您可能正在閱讀或撰寫的內容。與下方的 Glotty 介面語言無關。"
+          }
+        }
+      }
+    },
+    "The model is still downloading. Try again in a few minutes.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Modell wird noch heruntergeladen. Versuchen Sie es in ein paar Minuten erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El modelo todavía se está descargando. Inténtalo de nuevo en unos minutos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le modèle est encore en téléchargement. Réessayez dans quelques minutes."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モデルのダウンロード中です。数分後に再度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모델이 여전히 다운로드 중입니다. 몇 분 후에 다시 시도하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模型仍在下载中。请几分钟后重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模型仍在下載中。請幾分鐘後再試。"
           }
         }
       }
@@ -14258,6 +18950,52 @@
         }
       }
     },
+    "Used for %@ → %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwendet für %@ → %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se utiliza para %@ → %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utilisé pour %@ → %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ → %@ の翻訳に使用"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ → %@에 사용됩니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用于 %@ → %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用於 %@ → %@"
+          }
+        }
+      }
+    },
     "Warm": {
       "localizations": {
         "de": {
@@ -14491,6 +19229,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "套件內容"
+          }
+        }
+      }
+    },
+    "When off, only the top-priority dict in each kind (monolingual + bilingual) is shown in the translation popup.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn ausgeschaltet, wird nur das Wörterbuch mit höchster Priorität jeder Art (einsprachig + zweisprachig) im Übersetzungspopup angezeigt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuando está desactivado, solo se muestra el diccionario de mayor prioridad de cada tipo (monolingüe + bilingüe) en la ventana emergente de traducción."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lorsqu'il est désactivé, seul le dictionnaire de priorité la plus élevée de chaque type (monolingue + bilingue) est affiché dans la popup de traduction."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オフの場合、各種類（単語 + 両方）の最優先辞書のみが翻訳ポップアップに表示されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "꺼져 있을 때, 각 종류(단일 언어 + 이중 언어)에서 우선 순위가 가장 높은 사전만 번역 팝업에 표시됩니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭时，翻译弹窗中仅显示每种类型（单语+双语）中优先级最高的词典。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉時，翻譯彈出視窗中只會顯示每種類型（單語+雙語）中最高優先順序的辭典。"
           }
         }
       }
@@ -14909,53 +19693,99 @@
         }
       }
     },
-    "e.g. \\\"I'm learning German for a job in Berlin. Native English speaker, intermediate level.\\\"": {
+    "e.g. Groq, Together, Local Ollama": {
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "z.B. \\\"Ich lerne Deutsch für einen Job in Berlin. Muttersprache Englisch, fortgeschrittene Niveau.\\\""
+            "value": "z.B. Groq, Together, Local Ollama"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "por ejemplo \\\"Estoy aprendiendo alemán para un trabajo en Berlín. Hablante nativo de inglés, nivel intermedio.\\\""
+            "value": "e.g. Groq, Together, Local Ollama"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "par ex. \\\"J'apprends l'allemand pour un travail à Berlin. Locuteur natif anglais, niveau intermédiaire.\\\""
+            "value": "ex. Groq, Together, Local Ollama"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "例: \\\"ベルリンでの仕事のためにドイツ語を学んでいます。母国語は英語、中級レベルです。\\\""
+            "value": "例えば Groq, Together, Local Ollama"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "예: \\\"베를린에서 일하기 위해 독일어를 배우고 있습니다. 영어 모국어 사용자, 중급 수준.\\\""
+            "value": "예: Groq, Together, Local Ollama"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "例如：\"我正在为在柏林的工作学习德语。英语母语者，中级水平。\""
+            "value": "例如 Groq, Together, Local Ollama"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "例如：\\\"我在柏林找工作，正在學德語。英語母語者，中級水平。\\\""
+            "value": "例如 Groq, Together, Local Ollama"
           }
         }
       }
     },
-    "e.g. \\u{201C}Loves indie games and dry humor. Bilingual in French.\\u{201D}": {
+    "e.g. llama-3.1-70b-versatile": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "z.B. llama-3.1-70b-versatile"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e.g. llama-3.1-70b-versatile"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ex. llama-3.1-70b-versatile"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例えば llama-3.1-70b-versatile"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예: llama-3.1-70b-versatile"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如 llama-3.1-70b-versatile"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如 llama-3.1-70b-versatile"
+          }
+        }
+      }
+    },
+    "e.g. “Loves indie games and dry humor. Bilingual in French.”": {
       "localizations": {
         "de": {
           "stringUnit": {
@@ -15185,6 +20015,52 @@
         }
       }
     },
+    "https://…/v1/chat/completions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "https://…/v1/chat/completions"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "https://…/v1/chat/completions"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "https://…/v1/chat/completions"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "https://…/v1/chat/completions"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "https://…/v1/chat/completions"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "https://…/v1/chat/completions"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "https://…/v1/chat/completions"
+          }
+        }
+      }
+    },
     "memories": {
       "localizations": {
         "de": {
@@ -15227,6 +20103,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "記憶"
+          }
+        }
+      }
+    },
+    "none": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ninguno"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aucun"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "なし"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "없음"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無"
           }
         }
       }
@@ -15411,98 +20333,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "專案"
-          }
-        }
-      }
-    },
-    "square.and.arrow.down": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "square.and.arrow.down"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "square.and.arrow.down"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "square.and.arrow.down"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "square.and.arrow.down"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "square.and.arrow.down"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "下载"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "下載"
-          }
-        }
-      }
-    },
-    "square.and.arrow.up": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "square.and.arrow.up"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "square.and.arrow.up"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "square.and.arrow.up"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "square.and.arrow.up"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "square.and.arrow.up"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "共享"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "上傳"
           }
         }
       }
@@ -15740,6 +20570,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "→"
+          }
+        }
+      }
+    },
+    "⏎ Send · ⇧⏎ New line": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⏎ Senden · ⇧⏎ Neue Zeile"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⏎ Enviar · ⇧⏎ Nueva línea"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⏎ Envoyer · ⇧⏎ Nouvelle ligne"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⏎ 送信 · ⇧⏎ 改行"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⏎ 보내기 · ⇧⏎ 새 줄"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⏎ 发送 · ⇧⏎ 新行"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⏎ 傳送 · ⇧⏎ 新行"
           }
         }
       }
