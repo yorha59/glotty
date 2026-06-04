@@ -235,6 +235,12 @@ final class PopupController {
                 guard let panelRef else { return }
                 self?.dismiss(panelRef)
             },
+            // Chat is minimizable (see createPanel). The custom button
+            // miniaturizes the panel to the Dock; restore via the Dock
+            // tile. nil for non-chat modes hides the minimize button.
+            onMinimize: mode == .chat ? { [weak panelRef] in
+                panelRef?.miniaturize(nil)
+            } : nil,
             onChatExpand: { [weak panelRef] in
                 // Polish panels are user-resizable with a fixed initial
                 // size, so the chat region needs a manual nudge to give
@@ -511,7 +517,15 @@ final class PopupController {
         p.collectionBehavior = minimizable
             ? [.moveToActiveSpace, .fullScreenAuxiliary]
             : [.moveToActiveSpace, .fullScreenAuxiliary, .transient]
-        p.standardWindowButton(.miniaturizeButton)?.isHidden = !minimizable
+        // Hide ALL native traffic-light buttons. With our hidden
+        // titlebar + full-size content view they render on top of the
+        // source text at the top-left ("a close button on the left of
+        // the selection"). PopupView draws its own minimize/close
+        // controls in the top-trailing corner instead. `.miniaturizable`
+        // stays in the styleMask for chat so the custom button's
+        // `panel.miniaturize(nil)` still works.
+        p.standardWindowButton(.closeButton)?.isHidden = true
+        p.standardWindowButton(.miniaturizeButton)?.isHidden = true
         p.standardWindowButton(.zoomButton)?.isHidden = true
         return p
     }

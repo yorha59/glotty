@@ -184,6 +184,9 @@ struct PopupView: View {
     /// is pre-populated from this payload in `init`.
     let replay: PopupReplayPayload?
     let onClose: () -> Void
+    /// Minimize the popup window (chat only). `nil` for modes that
+    /// aren't minimizable, which hides the minimize button.
+    let onMinimize: (() -> Void)?
     /// True when this popup was opened by a proactive trigger (chat
     /// reminder notification) rather than the user explicitly hitting
     /// Fn → C. The opening tutor turn leans in harder when this is
@@ -216,6 +219,7 @@ struct PopupView: View {
          proactive: Bool = false,
          onboarding: Bool = false,
          onClose: @escaping () -> Void,
+         onMinimize: (() -> Void)? = nil,
          onChatExpand: (() -> Void)? = nil,
          registerExtractionTrigger: ((@escaping () -> Void) -> Void)? = nil) {
         self.sourceText = sourceText
@@ -224,6 +228,7 @@ struct PopupView: View {
         self.proactive = proactive
         self.onboarding = onboarding
         self.onClose = onClose
+        self.onMinimize = onMinimize
         self.onChatExpand = onChatExpand
         self.registerExtractionTrigger = registerExtractionTrigger
 
@@ -492,7 +497,7 @@ struct PopupView: View {
             // X in the top-trailing corner wired to the same dismiss
             // path. (Reported: chat couldn't be closed by ESC or the
             // red button.)
-            .overlay(alignment: .topTrailing) { closeButton }
+            .overlay(alignment: .topTrailing) { windowControls }
             .localizationAware()
             .onAppear { setupConfiguration() }
             .task(id: mode == .polish ? "polish-\(sourceText)-\(polishRetryCounter)" : "") {
@@ -617,25 +622,42 @@ struct PopupView: View {
     /// styleMask and this view lets its frame stretch to the panel size
     /// (no `.fixedSize`, with `maxWidth` / `maxHeight` set to `.infinity`).
     /// The initial width is the same `contentWidth` either way.
-    /// Small X in the top-trailing corner — a reliable, always-visible
-    /// way to dismiss the popup (calls the same `onClose` the window
-    /// red-button / ESC use). Kept subtle so it doesn't compete with
-    /// content; brightens on hover.
-    private var closeButton: some View {
-        Button(action: {
-            Log.debug(.popup, "X close button tapped — mode=\(mode)", op: "close")
-            onClose()
-        }) {
-            Image(systemName: "xmark.circle.fill")
-                .font(.system(size: 15))
-                .foregroundStyle(.secondary)
-                .symbolRenderingMode(.hierarchical)
-                .padding(8)
-                .contentShape(Rectangle())
+    /// Window controls in the top-trailing corner. The native macOS
+    /// traffic-light buttons are hidden (they'd sit on top of the
+    /// source text in our hidden-titlebar, full-size-content panel —
+    /// "a close button on the left of the selection"), so these are
+    /// the popup's only window chrome: minimize (chat only) + close.
+    /// Subtle so they don't compete with content; brighten on hover.
+    private var windowControls: some View {
+        HStack(spacing: 2) {
+            if let onMinimize {
+                Button(action: onMinimize) {
+                    Image(systemName: "minus.circle.fill")
+                        .font(.system(size: 15))
+                        .foregroundStyle(.secondary)
+                        .symbolRenderingMode(.hierarchical)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 4)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Minimize")
+            }
+            Button(action: {
+                Log.debug(.popup, "X close button tapped — mode=\(mode)", op: "close")
+                onClose()
+            }) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.secondary)
+                    .symbolRenderingMode(.hierarchical)
+                    .padding(8)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Close")
+            .keyboardShortcut(.cancelAction)  // also fires on ⌘. / Esc
         }
-        .buttonStyle(.plain)
-        .help("Close")
-        .keyboardShortcut(.cancelAction)  // also fires on ⌘. / Esc
     }
 
     private var outerLayout: some View {
