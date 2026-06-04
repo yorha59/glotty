@@ -6,9 +6,16 @@ import Foundation
 /// back to a known-good state", not partial restore (the user picked
 /// replace-on-import as the default behavior — see `BackupService`).
 ///
+/// Included as of v2:
+///   - API keys for every provider (read from Keychain). This makes
+///     the bundle a complete machine-migration artifact — but also
+///     sensitive, which is why exports are always password-encrypted
+///     (see BackupCrypto). The plaintext bundle never touches disk.
+///   - Dictionary + LLM provider settings (see BackupPreferences).
+///
 /// Excluded by design:
-///   - API keys (live in Keychain; bundle would become sensitive).
 ///   - Token usage (not requested).
+///   - Model-list caches (re-fetched on demand; not worth persisting).
 ///   - Anything in Application Support that isn't an enumerated
 ///     store below — keeps the bundle deterministic / auditable.
 struct BackupBundle: Codable {
@@ -16,8 +23,10 @@ struct BackupBundle: Codable {
     /// before attempting to apply.
     static let format = "glotty-backup"
     /// Bump when the bundle shape changes incompatibly. Importer
-    /// rejects unknown versions to avoid silent data loss.
-    static let currentVersion = 1
+    /// accepts the current version and the listed older ones.
+    /// v1 → v2: added `apiKeys` + dictionary/LLM preference keys.
+    static let currentVersion = 2
+    static let supportedVersions: Set<Int> = [1, 2]
 
     let format: String
     let version: Int
@@ -29,6 +38,45 @@ struct BackupBundle: Codable {
     let contexts: [MemoryContext]
     let chatThreads: [DailyChatThread]
     let historyEvents: [MemoryEvent]
+    /// Keychain account → secret. Absent in v1 bundles, hence
+    /// optional; defaults to empty on decode of an older file.
+    let apiKeys: [String: String]
+
+    enum CodingKeys: String, CodingKey {
+        case format, version, exportedAt, appVersion
+        case preferences, memories, contexts, chatThreads, historyEvents, apiKeys
+    }
+
+    init(format: String, version: Int, exportedAt: Date, appVersion: String,
+         preferences: [String: BackupPreferenceValue], memories: [LearnedMemory],
+         contexts: [MemoryContext], chatThreads: [DailyChatThread],
+         historyEvents: [MemoryEvent], apiKeys: [String: String]) {
+        self.format = format
+        self.version = version
+        self.exportedAt = exportedAt
+        self.appVersion = appVersion
+        self.preferences = preferences
+        self.memories = memories
+        self.contexts = contexts
+        self.chatThreads = chatThreads
+        self.historyEvents = historyEvents
+        self.apiKeys = apiKeys
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        format = try c.decode(String.self, forKey: .format)
+        version = try c.decode(Int.self, forKey: .version)
+        exportedAt = try c.decode(Date.self, forKey: .exportedAt)
+        appVersion = try c.decode(String.self, forKey: .appVersion)
+        preferences = try c.decode([String: BackupPreferenceValue].self, forKey: .preferences)
+        memories = try c.decode([LearnedMemory].self, forKey: .memories)
+        contexts = try c.decode([MemoryContext].self, forKey: .contexts)
+        chatThreads = try c.decode([DailyChatThread].self, forKey: .chatThreads)
+        historyEvents = try c.decode([MemoryEvent].self, forKey: .historyEvents)
+        // v1 bundles predate apiKeys — tolerate its absence.
+        apiKeys = try c.decodeIfPresent([String: String].self, forKey: .apiKeys) ?? [:]
+    }
 }
 
 /// JSON-friendly type-preserving wrapper for UserDefaults values.
@@ -40,9 +88,18 @@ enum BackupPreferenceValue: Codable, Equatable {
     case int(Int)
     case double(Double)
     case bool(Bool)
+    /// A key whose UserDefaults value is raw `Data` (Codable structs
+    /// the app persists itself — e.g. `glotty.customProviders`,
+    /// `glotty.dictionarySelectionsByPairAndKind`). Stored base64.
+    case data(Data)
+    /// A container value (dictionary / array) that isn't scalar and
+    /// isn't raw Data — e.g. `glotty.dictionaryKindOverrides`
+    /// ([String:String]). Captured as a binary property list so any
+    /// plist-representable structure round-trips. Stored base64.
+    case plist(Data)
 
     private enum CodingKeys: String, CodingKey { case type, value }
-    private enum Kind: String, Codable { case string, int, double, bool }
+    private enum Kind: String, Codable { case string, int, double, bool, data, plist }
 
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -59,6 +116,12 @@ enum BackupPreferenceValue: Codable, Equatable {
         case .bool(let v):
             try c.encode(Kind.bool, forKey: .type)
             try c.encode(v, forKey: .value)
+        case .data(let v):
+            try c.encode(Kind.data, forKey: .type)
+            try c.encode(v.base64EncodedString(), forKey: .value)
+        case .plist(let v):
+            try c.encode(Kind.plist, forKey: .type)
+            try c.encode(v.base64EncodedString(), forKey: .value)
         }
     }
 
@@ -70,19 +133,26 @@ enum BackupPreferenceValue: Codable, Equatable {
         case .int:    self = .int(try c.decode(Int.self, forKey: .value))
         case .double: self = .double(try c.decode(Double.self, forKey: .value))
         case .bool:   self = .bool(try c.decode(Bool.self, forKey: .value))
+        case .data:
+            let b64 = try c.decode(String.self, forKey: .value)
+            self = .data(Data(base64Encoded: b64) ?? Data())
+        case .plist:
+            let b64 = try c.decode(String.self, forKey: .value)
+            self = .plist(Data(base64Encoded: b64) ?? Data())
         }
     }
 
-    /// Construct from a raw UserDefaults value if it's one of the
-    /// supported scalar types. Returns nil for arrays / dicts / data
-    /// — Glotty doesn't currently store those as preferences, so a
-    /// nil return signals "skip this key".
+    /// Construct from a raw UserDefaults value. Scalars map to their
+    /// case; raw `Data` maps to `.data`; any other plist-serializable
+    /// container (dict/array) maps to `.plist`. Returns nil only for
+    /// values that can't be represented at all.
     static func from(_ any: Any) -> BackupPreferenceValue? {
         // Bool check must come before Int — NSNumber satisfies both.
         if let b = any as? Bool, !(any is Int) { return .bool(b) }
         if let i = any as? Int { return .int(i) }
         if let d = any as? Double { return .double(d) }
         if let s = any as? String { return .string(s) }
+        if let data = any as? Data { return .data(data) }
         // NSNumber that wasn't picked up above.
         if let n = any as? NSNumber {
             // CFBoolean special-case — NSNumber may wrap a Bool.
@@ -90,6 +160,12 @@ enum BackupPreferenceValue: Codable, Equatable {
                 return .bool(n.boolValue)
             }
             return .int(n.intValue)
+        }
+        // Containers (dictionary / array) → binary plist.
+        if PropertyListSerialization.propertyList(any, isValidFor: .binary),
+           let plist = try? PropertyListSerialization.data(
+               fromPropertyList: any, format: .binary, options: 0) {
+            return .plist(plist)
         }
         return nil
     }
@@ -101,6 +177,10 @@ enum BackupPreferenceValue: Codable, Equatable {
         case .int(let v):    return v
         case .double(let v): return v
         case .bool(let v):   return v
+        case .data(let v):   return v
+        case .plist(let v):
+            return (try? PropertyListSerialization.propertyList(
+                from: v, options: [], format: nil)) ?? Data()
         }
     }
 }
@@ -129,6 +209,30 @@ enum BackupPreferences {
 
         // Polish
         "glotty.polishLang",
+
+        // LLM provider selection + per-provider endpoint/model.
+        // API keys themselves live in Keychain and are carried in
+        // BackupBundle.apiKeys, not here.
+        "glotty.llmProvider",
+        "glotty.openai.endpoint",     "glotty.openai.model",
+        "glotty.gemini.endpoint",     "glotty.gemini.model",
+        "glotty.openrouter.endpoint", "glotty.openrouter.model",
+        "glotty.zai.endpoint",        "glotty.zai.model",
+        "glotty.deepseek.endpoint",   "glotty.deepseek.model",
+        "glotty.kimi.endpoint",       "glotty.kimi.model",
+        "glotty.customProviders",     // [CustomProviderConfig] as Data
+
+        // Chat / tutor behavior
+        "glotty.chat.tutorLanguage",
+        "glotty.chat.autoApproveTools",
+        "glotty.chat.allowSettingsChanges",
+
+        // Dictionary selection + classification
+        "glotty.dictionary.showAllMatches",
+        "glotty.dictionaries.guidanceShown",
+        "glotty.dictionaryKindOverrides",            // [String:String]
+        "glotty.dictionarySelectionsByPairAndKind",  // Data
+        "glotty.dictionarySelectionsByPair",         // legacy Data
 
         // Prompt template overrides (rare — power-user)
         "glotty.explainPrompt",

@@ -21,6 +21,12 @@ enum BackupService {
                 prefs[key] = wrapped
             }
         }
+        var keys: [String: String] = [:]
+        for account in knownKeychainAccounts() {
+            if let secret = Keychain.read(account: account), !secret.isEmpty {
+                keys[account] = secret
+            }
+        }
         return BackupBundle(
             format: BackupBundle.format,
             version: BackupBundle.currentVersion,
@@ -30,8 +36,22 @@ enum BackupService {
             memories: LearnedMemoryStore.shared.allMemories(),
             contexts: MemoryContextStore.shared.all(),
             chatThreads: ChatStore.shared.allThreads(),
-            historyEvents: MemoryStore.shared.allEvents()
+            historyEvents: MemoryStore.shared.allEvents(),
+            apiKeys: keys
         )
+    }
+
+    /// Every Keychain account that holds a provider API key:
+    /// the four OpenAI-compatible stock presets (account == preset
+    /// id), the two native providers, and one per user-defined
+    /// custom provider. Custom providers are enumerated live so the
+    /// list tracks whatever the user has configured.
+    private static func knownKeychainAccounts() -> [String] {
+        var accounts = OpenAIStockPresets.all.map { $0.id }
+        accounts.append(DeepSeekProvider.keychainAccount)
+        accounts.append(KimiCodingProvider.keychainAccount)
+        accounts.append(contentsOf: CustomProviderStore.all().map { $0.providerID })
+        return accounts
     }
 
     /// Encode a bundle as pretty-printed JSON. Pretty-printed because
@@ -45,11 +65,25 @@ enum BackupService {
         return try encoder.encode(bundle)
     }
 
-    /// Present a save panel and write the bundle on confirm.
-    /// Returns the destination URL on success; nil if the user
-    /// cancelled. Throws on encode or write failure.
+    /// Prompt for an encryption password, present a save panel, and
+    /// write the AES-GCM-encrypted bundle on confirm. Returns the
+    /// destination URL on success; nil if the user cancelled the
+    /// password prompt or the save panel. Throws on encode/encrypt/
+    /// write failure.
+    ///
+    /// The bundle now carries API keys, so the plaintext is encrypted
+    /// before it ever touches disk — there is no unencrypted export
+    /// path.
     @discardableResult
     static func exportInteractive() async throws -> URL? {
+        guard let password = await MainActor.run(body: {
+            promptForPassword(
+                title: String(localized: "Encrypt backup"),
+                message: String(localized: "This backup includes your API keys. Choose a password — you'll need it to restore on another machine."),
+                confirm: true
+            )
+        }) else { return nil }
+
         let panel = NSSavePanel()
         panel.title = String(localized: "Export Glotty backup")
         panel.nameFieldStringValue = defaultFileName()
@@ -58,8 +92,9 @@ enum BackupService {
 
         let result = await MainActor.run { panel.runModal() }
         guard result == .OK, let url = panel.url else { return nil }
-        let data = try encode(makeBundle())
-        try data.write(to: url, options: .atomic)
+        let plaintext = try encode(makeBundle())
+        let encrypted = try BackupCrypto.encrypt(plaintext, password: password)
+        try encrypted.write(to: url, options: .atomic)
         return url
     }
 
@@ -95,7 +130,7 @@ enum BackupService {
         guard bundle.format == BackupBundle.format else {
             throw ImportError.wrongFormat
         }
-        guard bundle.version == BackupBundle.currentVersion else {
+        guard BackupBundle.supportedVersions.contains(bundle.version) else {
             throw ImportError.unsupportedVersion(bundle.version)
         }
         return bundle
@@ -112,6 +147,7 @@ enum BackupService {
         applyContexts(bundle.contexts)
         applyChatThreads(bundle.chatThreads)
         applyHistoryEvents(bundle.historyEvents)
+        applyAPIKeys(bundle.apiKeys)
     }
 
     /// Present an open panel + confirmation alert, then apply.
@@ -129,8 +165,25 @@ enum BackupService {
         let pickResult = await MainActor.run { panel.runModal() }
         guard pickResult == .OK, let url = panel.url else { return nil }
 
-        let data = try Data(contentsOf: url)
-        let bundle = try decode(data)
+        let fileData = try Data(contentsOf: url)
+
+        // Encrypted backups (the current format) need a password to
+        // decrypt; legacy v1 plaintext bundles import directly.
+        let bundleData: Data
+        if BackupCrypto.isEncryptedBackup(fileData) {
+            guard let password = await MainActor.run(body: {
+                promptForPassword(
+                    title: String(localized: "Decrypt backup"),
+                    message: String(localized: "Enter the password this backup was encrypted with."),
+                    confirm: false
+                )
+            }) else { return nil }
+            bundleData = try BackupCrypto.decrypt(fileData, password: password)
+        } else {
+            bundleData = fileData
+        }
+
+        let bundle = try decode(bundleData)
 
         // Replace is destructive — make sure the user really wants it.
         let confirm = await MainActor.run { confirmReplaceAlert(bundle: bundle) }
@@ -193,5 +246,77 @@ enum BackupService {
 
     private static func applyHistoryEvents(_ events: [MemoryEvent]) {
         MemoryStore.shared.replaceAll(with: events)
+    }
+
+    /// Restore provider API keys into the Keychain. Only writes the
+    /// accounts present in the bundle — accounts absent from the
+    /// backup keep whatever's already on this machine rather than
+    /// being wiped, so importing a settings-only backup doesn't
+    /// clobber keys the user already entered here.
+    private static func applyAPIKeys(_ keys: [String: String]) {
+        for (account, secret) in keys where !secret.isEmpty {
+            _ = Keychain.write(secret, account: account)
+        }
+    }
+
+    /// Modal password prompt built on NSAlert + a secure text field.
+    /// When `confirm` is true a second "verify" field is shown and
+    /// the two must match (export, to avoid locking the user out of
+    /// their own backup with a typo). Returns nil if the user
+    /// cancels; loops on mismatch / empty input.
+    private static func promptForPassword(title: String, message: String, confirm: Bool) -> String? {
+        while true {
+            let alert = NSAlert()
+            alert.messageText = title
+            alert.informativeText = message
+            alert.addButton(withTitle: confirm
+                            ? String(localized: "Encrypt")
+                            : String(localized: "Decrypt"))
+            alert.addButton(withTitle: String(localized: "Cancel"))
+
+            let width: CGFloat = 240
+            let pw = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: width, height: 24))
+            pw.placeholderString = String(localized: "Password")
+            if confirm {
+                let verify = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: width, height: 24))
+                verify.placeholderString = String(localized: "Confirm password")
+                let stack = NSStackView(views: [pw, verify])
+                stack.orientation = .vertical
+                stack.spacing = 6
+                stack.frame = NSRect(x: 0, y: 0, width: width, height: 54)
+                alert.accessoryView = stack
+                alert.window.initialFirstResponder = pw
+
+                guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+                let p = pw.stringValue
+                if p.isEmpty {
+                    warn(String(localized: "Password can't be empty."))
+                    continue
+                }
+                if p != verify.stringValue {
+                    warn(String(localized: "Passwords don't match. Try again."))
+                    continue
+                }
+                return p
+            } else {
+                alert.accessoryView = pw
+                alert.window.initialFirstResponder = pw
+                guard alert.runModal() == .alertFirstButtonReturn else { return nil }
+                let p = pw.stringValue
+                if p.isEmpty {
+                    warn(String(localized: "Password can't be empty."))
+                    continue
+                }
+                return p
+            }
+        }
+    }
+
+    private static func warn(_ text: String) {
+        let a = NSAlert()
+        a.messageText = text
+        a.alertStyle = .warning
+        a.addButton(withTitle: String(localized: "OK"))
+        a.runModal()
     }
 }

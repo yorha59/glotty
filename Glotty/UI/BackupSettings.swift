@@ -49,7 +49,7 @@ struct BackupSettingsSection: View {
         } header: {
             Text("Backup & restore")
         } footer: {
-            Text("Use **Export** to write a single JSON file with your Glotty settings, learned memories, chat threads, and activity history. Use **Import** on another machine (or this one, after a wipe) to restore it. Imports REPLACE local data — you'll get a confirmation prompt first.")
+            Text("**Export** writes a single password-encrypted file with your settings, API keys, learned memories, chat threads, and activity history. You'll choose a password — keep it; it's the only way to restore. **Import** on another machine (or this one, after a wipe) asks for that password, then REPLACES local data after a confirmation prompt.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -58,15 +58,17 @@ struct BackupSettingsSection: View {
     private var includedSection: some View {
         Section {
             includedRow(icon: "gearshape", label: "Preferences",
-                        detail: "Profile, persona, languages, hotkeys, memory mode, polish & chat settings.")
+                        detail: "Profile, persona, languages, hotkeys, memory mode, polish, translation & dictionary settings.")
+            includedRow(icon: "cpu", label: "LLM settings",
+                        detail: "Selected provider, endpoints, models, custom providers.")
+            includedRow(icon: "key.fill", label: "API keys",
+                        detail: "Every provider key, read from Keychain. The reason the file is encrypted.")
             includedRow(icon: "brain", label: "Memories & contexts",
                         detail: "Accepted memories with scope, pending suggestions, your defined contexts.")
             includedRow(icon: "bubble.left.and.bubble.right", label: "Chat history",
                         detail: "All past daily chat threads with corrections.")
             includedRow(icon: "clock.arrow.circlepath", label: "Activity history",
-                        detail: "Every translate / explain / polish event.")
-            excludedRow(icon: "key", label: "API keys",
-                        detail: "Stored in Keychain. Not included so the bundle stays safe to share.")
+                        detail: "Every translate / explain / polish event, with its discussion thread.")
             excludedRow(icon: "chart.bar", label: "Token usage",
                         detail: "Local to this machine.")
         } header: {
