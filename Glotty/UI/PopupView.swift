@@ -485,6 +485,14 @@ struct PopupView: View {
     var body: some View {
         outerLayout
             .background(containerBackground)
+            // Always-visible close affordance. The popup is a
+            // borderless agent-app panel whose window red-button can be
+            // hard to see (hidden titlebar, full-size content view), and
+            // ESC alone isn't obvious — so every popup gets an explicit
+            // X in the top-trailing corner wired to the same dismiss
+            // path. (Reported: chat couldn't be closed by ESC or the
+            // red button.)
+            .overlay(alignment: .topTrailing) { closeButton }
             .localizationAware()
             .onAppear { setupConfiguration() }
             .task(id: mode == .polish ? "polish-\(sourceText)-\(polishRetryCounter)" : "") {
@@ -609,6 +617,24 @@ struct PopupView: View {
     /// styleMask and this view lets its frame stretch to the panel size
     /// (no `.fixedSize`, with `maxWidth` / `maxHeight` set to `.infinity`).
     /// The initial width is the same `contentWidth` either way.
+    /// Small X in the top-trailing corner — a reliable, always-visible
+    /// way to dismiss the popup (calls the same `onClose` the window
+    /// red-button / ESC use). Kept subtle so it doesn't compete with
+    /// content; brightens on hover.
+    private var closeButton: some View {
+        Button(action: onClose) {
+            Image(systemName: "xmark.circle.fill")
+                .font(.system(size: 15))
+                .foregroundStyle(.secondary)
+                .symbolRenderingMode(.hierarchical)
+                .padding(8)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Close")
+        .keyboardShortcut(.cancelAction)  // also fires on ⌘. / Esc
+    }
+
     private var outerLayout: some View {
         VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
             scrollableContent

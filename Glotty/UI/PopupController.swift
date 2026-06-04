@@ -40,6 +40,22 @@ final class PopupPanel: NSPanel {
     /// (where the IME consumes it for commit), and skip the rest of
     /// the dispatch chain that would trigger `.onSubmit`.
     override func sendEvent(_ event: NSEvent) {
+        // ESC (keyCode 53): close the panel. We handle it here, before
+        // responder dispatch, because in chat the composer TextField
+        // holds first responder and its field editor swallows ESC
+        // (cancelOperation) before it reaches this panel — so the popup
+        // wouldn't close. Translate/explain have no focused field, so
+        // their ESC reaches `cancelOperation` normally; this just makes
+        // chat behave the same. While an IME is composing, ESC instead
+        // cancels the composition (defer to the system).
+        if event.type == .keyDown, event.keyCode == 53 {
+            if Self.responderChainHasMarkedText(from: firstResponder) {
+                super.sendEvent(event)
+                return
+            }
+            onCancel?()
+            return
+        }
         if event.type == .keyDown,
            (event.keyCode == 36 || event.keyCode == 76),  // Return / numpad Enter
            !event.modifierFlags.contains(.shift) {
