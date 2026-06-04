@@ -289,6 +289,13 @@ private struct WelcomeView: View {
     /// and lands in the cache that the readers see on next render.
     @State private var permissionsTick: Int = 0
 
+    /// Status line under the "Import config" button on step 0. nil
+    /// until the user attempts an import; holds an error message if
+    /// the import fails (success relaunches, so no success message).
+    @State private var importStatus: String?
+    /// Disables the import button while an import is mid-flight.
+    @State private var importing = false
+
     /// User's UI-language locale identifier (e.g. "zh-Hans"). Used to
     /// pick the demo translation output in step 1.1 so the example
     /// shows what the user would actually see when they translate
@@ -376,12 +383,17 @@ private struct WelcomeView: View {
 
     // MARK: - Step content
 
+    // Note: each title/body literal is passed inline to
+    // OSLocalizer.string("…") (rather than via a `key` variable) so
+    // scripts/extract-strings.sh can find it and add it to the
+    // bundled catalog — otherwise these welcome strings only get
+    // translated by the runtime LLM fill, which a fresh install
+    // (no cache, maybe no API key) can't do, leaving them English.
     private var currentTitle: String {
-        let key: String
         switch step {
-        case 0: key = "Welcome to Glotty"
-        case 1: key = "1. Grant permissions"
-        case 2: key = "2.1 Translate (Fn → T)"
+        case 0: return OSLocalizer.string("Welcome to Glotty")
+        case 1: return OSLocalizer.string("1. Grant permissions")
+        case 2: return OSLocalizer.string("2.1 Translate (Fn → T)")
         // Use "Refine" instead of "Polish" as the verb here. Earlier
         // "Polish" was being preserved by the LLM as a proper-noun
         // brand name (and could also read as "Polish, the language"),
@@ -390,33 +402,30 @@ private struct WelcomeView: View {
         // "Refine your draft" is unambiguously a verb-noun phrase and
         // translates cleanly to "润色你的草稿". The user-facing action
         // chord (Fn → P) still points at the same Polish feature.
-        case 3: key = "2.2 Refine your draft (Fn → P)"
-        case 4: key = "2.3 Explain a word or phrase (Fn → E)"
-        case 5: key = "3. Set up your AI provider"
-        default: key = "4. Let's get to know each other"
+        case 3: return OSLocalizer.string("2.2 Refine your draft (Fn → P)")
+        case 4: return OSLocalizer.string("2.3 Explain a word or phrase (Fn → E)")
+        case 5: return OSLocalizer.string("3. Set up your AI provider")
+        default: return OSLocalizer.string("4. Let's get to know each other")
         }
-        return OSLocalizer.string(key)
     }
 
     private var currentBody: String {
-        let key: String
         switch step {
         case 0:
-            key = "Glotty is a language tutor that lives in your menu bar. We'll start with the permissions Glotty needs, then tour the three core actions, set up an LLM, and chat briefly so I know how to address you."
+            return OSLocalizer.string("Glotty is a language tutor that lives in your menu bar. We'll start with the permissions Glotty needs, then tour the three core actions, set up an LLM, and chat briefly so I know how to address you.")
         case 1:
-            key = "Glotty reads the text you've selected, listens for the Fn-leader chord, and sends you the occasional practice reminder. The OS keeps these behind dedicated permission switches — grant each one in System Settings and the status here will update automatically."
+            return OSLocalizer.string("Glotty reads the text you've selected, listens for the Fn-leader chord, and sends you the occasional practice reminder. The OS keeps these behind dedicated permission switches — grant each one in System Settings and the status here will update automatically.")
         case 2:
-            key = "Decode foreign text into a chosen language. Highlight any text, hold Fn, then within 600ms tap T. A popup shows the translation; press Esc to dismiss. Runs locally via Apple's translation — no LLM required."
+            return OSLocalizer.string("Decode foreign text into a chosen language. Highlight any text, hold Fn, then within 600ms tap T. A popup shows the translation; press Esc to dismiss. Runs locally via Apple's translation — no LLM required.")
         case 3:
-            key = "Rewrite your own writing in idiomatic form. Highlight a draft, hold Fn, tap P. Glotty returns 1–3 polished rewrites plus a list of grammar / word-choice issues. Press Esc to dismiss."
+            return OSLocalizer.string("Rewrite your own writing in idiomatic form. Highlight a draft, hold Fn, tap P. Glotty returns 1–3 polished rewrites plus a list of grammar / word-choice issues. Press Esc to dismiss.")
         case 4:
-            key = "Deeper explanation in your native language — meaning, tone, usage, and how it shifts across contexts. Highlight a word, idiom, or sentence, hold Fn, tap E. Glotty streams a four-section explanation. Press Esc to dismiss."
+            return OSLocalizer.string("Deeper explanation in your native language — meaning, tone, usage, and how it shifts across contexts. Highlight a word, idiom, or sentence, hold Fn, tap E. Glotty streams a four-section explanation. Press Esc to dismiss.")
         case 5:
-            key = "Polish, Explain, and Chat call out to an LLM, so Glotty needs at least one provider configured before they work. Pick a stock provider — OpenAI, Google Gemini, Z.AI, DeepSeek, Kimi — or paste any OpenAI-compatible endpoint and API key. Come back when you're done."
+            return OSLocalizer.string("Polish, Explain, and Chat call out to an LLM, so Glotty needs at least one provider configured before they work. Pick a stock provider — OpenAI, Google Gemini, Z.AI, DeepSeek, Kimi — or paste any OpenAI-compatible endpoint and API key. Come back when you're done.")
         default:
-            key = "Last step — Glotty will open a short chat to learn how you'd like to be addressed. Your answers automatically configure the relevant settings; you can change anything later from the menu bar."
+            return OSLocalizer.string("Last step — Glotty will open a short chat to learn how you'd like to be addressed. Your answers automatically configure the relevant settings; you can change anything later from the menu bar.")
         }
-        return OSLocalizer.string(key)
     }
 
     /// Step-specific embedded content. Step 1 shows the permissions
@@ -428,6 +437,8 @@ private struct WelcomeView: View {
     @ViewBuilder
     private var currentExtra: some View {
         switch step {
+        case 0:
+            importConfigCard
         case 1:
             permissionsChecklist
         case 2:
@@ -463,6 +474,61 @@ private struct WelcomeView: View {
             .controlSize(.large)
         default:
             EmptyView()
+        }
+    }
+
+    /// Step 0 affordance: returning users who already configured
+    /// Glotty on another Mac can restore everything from an encrypted
+    /// backup instead of walking the whole onboarding. A successful
+    /// import applies the config, marks onboarding done, and relaunches
+    /// — so the remaining welcome steps are skipped entirely.
+    private var importConfigCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Button {
+                    Task { await runImport() }
+                } label: {
+                    Label(OSLocalizer.string("Import a backup…"),
+                          systemImage: "square.and.arrow.down")
+                }
+                .controlSize(.large)
+                .disabled(importing)
+                if importing {
+                    ProgressView().controlSize(.small)
+                }
+            }
+            if let importStatus {
+                Text(importStatus)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text(OSLocalizer.string("Already set up Glotty on another Mac? Import its encrypted backup to restore your settings, API keys, memories, and history — then you can skip the rest of this setup."))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// Run the interactive import. On success the imported config is
+    /// already applied (preferences, keychain, stores), so we mark
+    /// onboarding complete and relaunch to let UI language / provider
+    /// selection / etc. take effect cleanly — which also dismisses the
+    /// welcome flow. On failure we surface the message and stay put.
+    @MainActor
+    private func runImport() async {
+        importStatus = nil
+        importing = true
+        defer { importing = false }
+        do {
+            guard try await BackupService.importInteractive() != nil else {
+                return  // user cancelled the open panel / password / confirm
+            }
+            // Onboarding is unnecessary for an imported install.
+            UserDefaults.standard.set(true, forKey: WelcomeWindowController.userDefaultsKey)
+            SystemLanguageManager.relaunch()
+        } catch {
+            importStatus = error.localizedDescription
         }
     }
 

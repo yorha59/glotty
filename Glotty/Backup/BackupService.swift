@@ -78,17 +78,20 @@ enum BackupService {
     static func exportInteractive() async throws -> URL? {
         guard let password = await MainActor.run(body: {
             promptForPassword(
-                title: String(localized: "Encrypt backup"),
-                message: String(localized: "This backup includes your API keys. Choose a password — you'll need it to restore on another machine."),
+                title: "Encrypt backup".t,
+                message: "This backup includes your API keys. Choose a password — you'll need it to restore on another machine.".t,
                 confirm: true
             )
         }) else { return nil }
 
         let panel = NSSavePanel()
-        panel.title = String(localized: "Export Glotty backup")
+        panel.title = "Export Glotty backup".t
         panel.nameFieldStringValue = defaultFileName()
         panel.canCreateDirectories = true
-        panel.allowedContentTypes = [.json]
+        // No content-type constraint → the panel won't append an
+        // extension, so the saved file keeps the bare name above.
+        panel.allowedContentTypes = []
+        panel.allowsOtherFileTypes = true
 
         let result = await MainActor.run { panel.runModal() }
         guard result == .OK, let url = panel.url else { return nil }
@@ -157,10 +160,12 @@ enum BackupService {
     @discardableResult
     static func importInteractive() async throws -> BackupBundle? {
         let panel = NSOpenPanel()
-        panel.title = String(localized: "Import Glotty backup")
+        panel.title = "Import Glotty backup".t
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.json]
+        // Backups have no extension; allow any file so the user can
+        // pick one. Validity is checked by decoding, not extension.
+        panel.allowedContentTypes = []
 
         let pickResult = await MainActor.run { panel.runModal() }
         guard pickResult == .OK, let url = panel.url else { return nil }
@@ -173,8 +178,8 @@ enum BackupService {
         if BackupCrypto.isEncryptedBackup(fileData) {
             guard let password = await MainActor.run(body: {
                 promptForPassword(
-                    title: String(localized: "Decrypt backup"),
-                    message: String(localized: "Enter the password this backup was encrypted with."),
+                    title: "Decrypt backup".t,
+                    message: "Enter the password this backup was encrypted with.".t,
                     confirm: false
                 )
             }) else { return nil }
@@ -198,24 +203,27 @@ enum BackupService {
     private static func defaultFileName() -> String {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd-HHmm"
-        return "Glotty backup \(f.string(from: Date())).json"
+        // No extension — the file is an opaque encrypted blob, not a
+        // user-editable .json. The importer detects it by content
+        // (BackupCrypto envelope), not by extension.
+        return "Glotty backup \(f.string(from: Date()))"
     }
 
     private static func confirmReplaceAlert(bundle: BackupBundle) -> Bool {
         let alert = NSAlert()
-        alert.messageText = String(localized: "Replace local data with backup?")
+        alert.messageText = "Replace local data with backup?".t
         alert.informativeText = """
-        \(String(localized: "This will OVERWRITE existing preferences, memories, contexts, chat history, and activity history on this machine."))
+        \("This will OVERWRITE existing preferences, memories, contexts, chat history, and activity history on this machine.".t)
 
-        \(String(localized: "Bundle contents:"))
-          \(bundle.preferences.count) \(String(localized: "preferences"))
-          \(bundle.memories.count) \(String(localized: "memories")), \(bundle.contexts.count) \(String(localized: "contexts"))
-          \(bundle.chatThreads.count) \(String(localized: "days of chat"))
-          \(bundle.historyEvents.count) \(String(localized: "activity events"))
+        \("Bundle contents:".t)
+          \(bundle.preferences.count) \("preferences".t)
+          \(bundle.memories.count) \("memories".t), \(bundle.contexts.count) \("contexts".t)
+          \(bundle.chatThreads.count) \("days of chat".t)
+          \(bundle.historyEvents.count) \("activity events".t)
         """
         alert.alertStyle = .warning
-        alert.addButton(withTitle: String(localized: "Replace"))
-        alert.addButton(withTitle: String(localized: "Cancel"))
+        alert.addButton(withTitle: "Replace".t)
+        alert.addButton(withTitle: "Cancel".t)
         return alert.runModal() == .alertFirstButtonReturn
     }
 
@@ -270,36 +278,47 @@ enum BackupService {
     /// their own backup with a typo). Returns nil if the user
     /// cancels; loops on mismatch / empty input.
     private static func promptForPassword(title: String, message: String, confirm: Bool) -> String? {
+        // Layout constants for the accessory. We lay the secure fields
+        // out with explicit frames inside a plain NSView container
+        // rather than an NSStackView: NSAlert sizes its accessoryView
+        // from that view's frame, and a stack view (which positions
+        // arranged subviews via constraints, ignoring their frames)
+        // rendered the fields collapsed/misaligned inside the alert.
+        let width: CGFloat = 260
+        let fieldH: CGFloat = 24
+        let gap: CGFloat = 8
+
         while true {
             let alert = NSAlert()
             alert.messageText = title
             alert.informativeText = message
-            alert.addButton(withTitle: confirm
-                            ? String(localized: "Encrypt")
-                            : String(localized: "Decrypt"))
-            alert.addButton(withTitle: String(localized: "Cancel"))
+            alert.addButton(withTitle: (confirm ? "Encrypt" : "Decrypt").t)
+            alert.addButton(withTitle: "Cancel".t)
 
-            let width: CGFloat = 240
-            let pw = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: width, height: 24))
-            pw.placeholderString = String(localized: "Password")
+            let pw = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: width, height: fieldH))
+            pw.placeholderString = "Password".t
+
             if confirm {
-                let verify = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: width, height: 24))
-                verify.placeholderString = String(localized: "Confirm password")
-                let stack = NSStackView(views: [pw, verify])
-                stack.orientation = .vertical
-                stack.spacing = 6
-                stack.frame = NSRect(x: 0, y: 0, width: width, height: 54)
-                alert.accessoryView = stack
+                let verify = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: width, height: fieldH))
+                verify.placeholderString = "Confirm password".t
+                // AppKit origin is bottom-left: password on top, confirm below.
+                let container = NSView(frame: NSRect(x: 0, y: 0, width: width, height: fieldH * 2 + gap))
+                pw.frame = NSRect(x: 0, y: fieldH + gap, width: width, height: fieldH)
+                verify.frame = NSRect(x: 0, y: 0, width: width, height: fieldH)
+                container.addSubview(pw)
+                container.addSubview(verify)
+                pw.nextKeyView = verify
+                alert.accessoryView = container
                 alert.window.initialFirstResponder = pw
 
                 guard alert.runModal() == .alertFirstButtonReturn else { return nil }
                 let p = pw.stringValue
                 if p.isEmpty {
-                    warn(String(localized: "Password can't be empty."))
+                    warn("Password can't be empty.".t)
                     continue
                 }
                 if p != verify.stringValue {
-                    warn(String(localized: "Passwords don't match. Try again."))
+                    warn("Passwords don't match. Try again.".t)
                     continue
                 }
                 return p
@@ -309,7 +328,7 @@ enum BackupService {
                 guard alert.runModal() == .alertFirstButtonReturn else { return nil }
                 let p = pw.stringValue
                 if p.isEmpty {
-                    warn(String(localized: "Password can't be empty."))
+                    warn("Password can't be empty.".t)
                     continue
                 }
                 return p
@@ -321,7 +340,7 @@ enum BackupService {
         let a = NSAlert()
         a.messageText = text
         a.alertStyle = .warning
-        a.addButton(withTitle: String(localized: "OK"))
+        a.addButton(withTitle: "OK".t)
         a.runModal()
     }
 }

@@ -74,6 +74,25 @@ grep -rhE 'String\(localized:\s*"([^"\\]|\\.)+"' \
     Glotty --include="*.swift" 2>/dev/null \
     | grep -oE '"([^"\\]|\\.)+"' >> "$TMP_LIST" || true
 
+# Permission enum displayName / purpose — localizable strings the
+# enum returns, shown via `.t` (Settings) or OSLocalizer (Welcome)
+# at the call site with a VARIABLE, so the literal lives in the enum
+# `return "…"` and isn't at any recognized call site. Scoped to
+# Glotty/Permissions so we don't sweep in internal return strings
+# from elsewhere.
+grep -rhE 'return "([^"\\]|\\.)+"' \
+    Glotty/Permissions --include="*.swift" 2>/dev/null \
+    | grep -oE '"([^"\\]|\\.)+"' >> "$TMP_LIST" || true
+
+# OSLocalizer.string("…") — the Welcome / Translate-guide windows
+# localize against the OS-preferred language (not the in-app picker)
+# via this helper instead of `.t`. Same need for catalog coverage:
+# a fresh install resolves these from the bundled .lproj, so they
+# must be pre-translated rather than relying on the runtime LLM fill.
+grep -rhE 'OSLocalizer\.string\(\s*"([^"\\]|\\.)+"' \
+    Glotty --include="*.swift" 2>/dev/null \
+    | grep -oE '"([^"\\]|\\.)+"' >> "$TMP_LIST" || true
+
 grep -rhE 'NSMenuItem\(title:\s*"([^"\\]|\\.)+"' \
     Glotty --include="*.swift" 2>/dev/null \
     | grep -oE '"([^"\\]|\\.)+"' >> "$TMP_LIST" || true
@@ -108,6 +127,14 @@ sort -u "$TMP_LIST" \
     | awk '
         length == 0 { next }
         /^[[:space:][:punct:]]*$/ { next }
+        # Symbol-only strings with no ASCII letter/digit — e.g. the
+        # Unicode arrows / ellipsis (→ ▸ …) swept in from chord labels.
+        # The source language is English, so every real UI string has
+        # at least one ASCII alphanumeric; a string with none is a
+        # bare glyph that renders identically in every locale and must
+        # not be sent for translation. (ASCII [[:punct:]] above misses
+        # these because they're non-ASCII symbols.)
+        !/[[:alnum:]]/ { next }
         /^\// { next }
         /\\\(/ { next }                # interpolated template — skip
         /^[a-z][a-z0-9]*(\.[a-z0-9]+)+$/ { next }  # SF Symbol name — skip

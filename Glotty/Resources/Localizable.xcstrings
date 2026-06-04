@@ -337,6 +337,98 @@
         }
       }
     },
+    "**Export** writes a single password-encrypted file with your settings, API keys, learned memories, chat threads, and activity history. You'll choose a password — keep it; it's the only way to restore. **Import** on another machine (or this one, after a wipe) asks for that password, then REPLACES local data after a confirmation prompt.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Export** schreibt eine einzige passwortgeschützte Datei mit Ihren Einstellungen, API-Schlüsseln, gelernten Erinnerungen, Chat-Threads und Aktivitätsverlauf. Sie wählen ein Passwort — behalten Sie es; es ist der einzige Weg zum Wiederherstellen. **Import** auf einem anderen Gerät (oder diesem nach einem Zurücksetzen) fragt nach diesem Passwort und ERSETZT dann lokale Daten nach einer Bestätigungsaufforderung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Exportar** escribe un solo archivo protegido con contraseña con tu configuración, claves de API, memorias aprendidas, hilos de chat e historial de actividad. Eligirás una contraseña — guárdala; es la única forma de restaurar. **Importar** en otra máquina (o esta misma, después de un borrado) solicita esa contraseña, luego REEMPLAZA los datos locales después de una solicitud de confirmación."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Export** écrit un fichier unique chiffré par mot de passe avec vos paramètres, API keys, mémoires apprises, conversations de chat et historique d'activité. Vous choisirez un mot de passe — gardez-le ; c'est la seule façon de restaurer. **Import** sur un autre appareil (ou celui-ci, après un effacement) demande ce mot de passe, puis REMPLACE les données locales après un message de confirmation."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**エクスポート**は、設定、APIキー、学習された記憶、チャット履歴、および活動履歴を含む単一のパスワードで暗号化されたファイルを作成します。パスワードを選択します — それを保持してください。それは復元するための唯一の方法です。別のマシン（またはこのマシン、初期化後）での**インポート**はそのパスワードを要求し、確認プロンプト後にローカルデータを置き換えます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**내보내기**는 설정, API 키, 학습된 기억, 채팅 스레드 및 활동 기록이 포함된 단일 비밀번호 암호화 파일을 작성합니다. 비밀번호를 선택하게 되는데 — 이를 기억해 두십시오; 이것이 복원하는 유일한 방법입니다. 다른 장치(또는 이 장치를 초기화한 후)에서 **가져오기**는 해당 비밀번호를 요청한 다음, 확인 프롬프트 후 로컬 데이터를 **대체합니다**."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**导出** 会创建一个密码加密的单一文件，包含您的设置、API密钥、学习记忆、聊天记录和活动历史。您需要选择一个密码—请务必记住；这是恢复数据的唯一方法。在其他设备（或在清空数据后的本设备上）使用**导入**功能时，系统会要求输入该密码，并在确认后替换本地数据。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**匯出**會寫入一個密碼加密的檔案，其中包含您的設定、API金鑰、學習到的記憶、對話串和活動歷史記錄。您將需要選擇一個密碼 — 請務必保存；這是還原的唯一方式。在另一台機器上（或在重新設定本機後）執行「**匯入**」時，系統會要求輸入該密碼，並在確認提示後取代本機資料。"
+          }
+        }
+      }
+    },
+    "1. Grant permissions": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Berechtigungen gewähren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Conceder permisos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Accorder les autorisations"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. 権限を付与"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. 권한 허용"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. 授予权限"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. 授權權限"
+          }
+        }
+      }
+    },
     "1. In System Settings → Accessibility, click the (–) minus button to remove every Glotty entry, then relaunch Glotty and grant fresh.": {
       "localizations": {
         "de": {
@@ -641,6 +733,144 @@
         }
       }
     },
+    "2.1 Translate (Fn → T)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.1 Übersetzen (Fn → T)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.1 Traducir (Fn → T)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.1 Traduire (Fn → T)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.1 翻訳 (Fn → T)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.1 번역 (Fn → T)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.1 翻译 (Fn → T)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.1 翻譯 (Fn → T)"
+          }
+        }
+      }
+    },
+    "2.2 Refine your draft (Fn → P)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.2 Ihren Entwurf verfeinern (Fn → P)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.2 Refinar tu borrador (Fn → P)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.2 Affiner votre brouillon (Fn → P)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.2 下書きを修正 (Fn → P)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.2 초안 수정 (Fn → P)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.2 优化草稿 (Fn → P)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.2 潤飾您的草稿 (Fn → P)"
+          }
+        }
+      }
+    },
+    "2.3 Explain a word or phrase (Fn → E)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.3 Ein Wort oder einen Begriff erklären (Fn → E)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.3 Explicar una palabra o frase (Fn → E)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.3 Expliquer un mot ou une expression (Fn → E)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.3 単語やフレーズを説明 (Fn → E)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.3 단어 또는 구문 설명 (Fn → E)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.3 解释单词或短语 (Fn → E)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.3 解釋單字或片語 (Fn → E)"
+          }
+        }
+      }
+    },
     "3. Let's get to know each other": {
       "extractionState": "manual",
       "localizations": {
@@ -690,6 +920,98 @@
           "stringUnit": {
             "state": "translated",
             "value": "3. 互相認識一下"
+          }
+        }
+      }
+    },
+    "3. Set up your AI provider": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. Ihren KI-Anbieter einrichten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. Configurar tu proveedor de IA"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. Configurer votre fournisseur d'IA"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. AIプロバイダーの設定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. AI 공급자 설정"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. 设置您的AI提供商"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3. 設定您的AI提供者"
+          }
+        }
+      }
+    },
+    "4. Let's get to know each other": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4. Lassen Sie uns uns kennenlernen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4. Vamos a conocernos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4. Apprenons à nous connaître"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4. 互いに知り合いましょう"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4. 서로를 알아가요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4. 让我们互相认识"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4. 讓我們互相認識"
           }
         }
       }
@@ -1058,6 +1380,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "已接受的記憶（帶範圍）、待處理的建議，以及您定義的上下文。"
+          }
+        }
+      }
+    },
+    "Accessibility": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bedienungshilfen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accesibilidad"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accessibilité"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクセシビリティ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보조 기능"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "辅助功能"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輔助功能"
           }
         }
       }
@@ -1518,6 +1886,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部時間"
+          }
+        }
+      }
+    },
+    "Already set up Glotty on another Mac? Import its encrypted backup to restore your settings, API keys, memories, and history — then you can skip the rest of this setup.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty bereits auf einem anderen Mac eingerichtet? Importieren Sie dessen gesicherte verschlüsselte Kopie, um Ihre Einstellungen, API-Schlüssel, Erinnerungen und Verlauf wiederherzustellen – dann können Sie den Rest dieser Einrichtung überspringen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Ya tienes Glotty configurado en otro Mac? Importa su copia de seguridad cifrada para restaurar tu configuración, claves de API, memorias e historial — así puedes saltarte el resto de esta configuración."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous avez déjà configuré Glotty sur un autre Mac ? Importez sa sauvegarde chiffrée pour restaurer vos paramètres, clés d'API, mémoires et historique — ainsi vous pouvez sauter le reste de cette configuration."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すでに別のMacでGlottyをセットアップしていますか？その暗号化されたバックアップをインポートして、設定、APIキー、記憶、履歴を復元できます。これにより、このセットアップ残りの手順をスキップできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 Mac에 이미 Glotty를 설정했나요? 암호화된 백업을 가져와서 설정, API 키, 기억, 및 기록을 복원할 수 있습니다 — 그러면 이 설정의 나머지 부분을 건너뛸 수 있습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已经在另一台 Mac 上设置了 Glotty？导入其加密备份以恢复您的设置、API 密钥、记忆和历史记录 — 这样您就可以跳过此设置的其余部分。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已經在其他 Mac 上設定過 Glotty 嗎？匯入其加密備份以還原您的設定、API 金鑰、記憶和歷史記錄 — 如此您就可以跳過其餘的設定步驟。"
           }
         }
       }
@@ -4441,6 +4855,52 @@
         }
       }
     },
+    "Confirm password": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort bestätigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmar contraseña"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmer le mot de passe"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワードの確認"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비밀번호 확인"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确认密码"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確認密碼"
+          }
+        }
+      }
+    },
     "Context": {
       "localizations": {
         "de": {
@@ -4766,6 +5226,98 @@
           "stringUnit": {
             "state": "translated",
             "value": "將外文翻譯成你選定的語言。選取任意文字,按住 Fn,在 600 毫秒內按 T。彈出視窗會顯示譯文;按 Esc 關閉。透過 Apple 本機翻譯執行,無需 LLM。"
+          }
+        }
+      }
+    },
+    "Decrypt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entschlüsseln"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descifrar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déchiffrer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "復号化"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복호화"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解密"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解密"
+          }
+        }
+      }
+    },
+    "Decrypt backup": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sicherung entschlüsseln"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descifrar copia de seguridad"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déchiffrer la sauvegarde"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バックアップを復号化"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "백업 복호화"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解密备份"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解密備份"
           }
         }
       }
@@ -5099,6 +5651,52 @@
         }
       }
     },
+    "Deliver proactive practice reminders when it's time for a quick quiz on your recent mistakes.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proaktive Erinnerungen zum Üben senden, wenn es Zeit für eine kurze Quiz über deine letzten Fehler ist."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar recordatorios proactivos de práctica cuando sea hora de un rápido cuestionario sobre tus errores recientes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyer des rappels de pratique proactifs lorsqu'il est temps pour un quiz rapide sur vos erreurs récentes."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近の間違いに関するクイックの時間になったら、能動的な練習リマインダーを届ける。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최근 실수에 대한 빠른 퀴즈를 할 시간이 되면 능동적 학습 알림을 전송합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当应该对最近的错误进行快速复习时，主动提供练习提醒。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "當是時候快速測驗您最近的錯誤時，提供主動練習提醒。"
+          }
+        }
+      }
+    },
     "Detailed": {
       "localizations": {
         "de": {
@@ -5141,6 +5739,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "詳細"
+          }
+        }
+      }
+    },
+    "Detect the Fn → T hotkey via a low-level event tap.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Fn → T-Tastenkombination über ein Ereignisabfangen auf niedriger Ebene erkennen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detectar el atajo Fn → T mediante un tap de eventos de bajo nivel."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Détecter le raccourci Fn → T via un événement de bas niveau."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "低レベルイベントタップ経由で Fn → T ホットキーを検出する。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저수준 이벤트 탭을 통해 Fn → T 단축키를 감지합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过低级别事件监听检测 Fn → T 热键。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "透過低層級事件監測偵測 Fn → T 快速鍵。"
           }
         }
       }
@@ -5927,6 +6571,98 @@
         }
       }
     },
+    "Encrypt": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verschlüsseln"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cifrar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiffrer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暗号化"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "암호화"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加密"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加密"
+          }
+        }
+      }
+    },
+    "Encrypt backup": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sicherung verschlüsseln"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cifrar copia de seguridad"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiffrer la sauvegarde"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バックアップを暗号化"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "백업 암호화"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加密备份"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加密備份"
+          }
+        }
+      }
+    },
     "Endpoint": {
       "localizations": {
         "de": {
@@ -5969,6 +6705,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "Endpoint"
+          }
+        }
+      }
+    },
+    "Enter the password this backup was encrypted with.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib das Passwort ein, mit dem diese Sicherung verschlüsselt wurde."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Introduce la contraseña con la que se cifró esta copia de seguridad."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entrez le mot de passe avec lequel cette sauvegarde a été chiffrée."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このバックアップを暗号化したパスワードを入力してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 백업이 암호화된 비밀번호를 입력하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入此备份的加密密码。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請輸入此備份的加密密碼。"
           }
         }
       }
@@ -7466,6 +8248,52 @@
         }
       }
     },
+    "Glotty is a language tutor that lives in your menu bar. We'll start with the permissions Glotty needs, then tour the three core actions, set up an LLM, and chat briefly so I know how to address you.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty ist ein Sprachtutor, der in Ihrer Menüleiste lebt. Wir beginnen mit den Berechtigungen, die Glotty benötigt, führen dann die drei Kernaktionen durch, richten eine KI ein und unterhalten uns kurz, damit ich weiß, wie ich Sie ansprechen soll."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty es un tutor de idiomas que vive en tu barra de menús. Empezaremos con los permisos que Glotty necesita, luego daremos un vistazo a las tres acciones principales, configuraremos un LLM y chatearemos brevemente para que sepa cómo dirigirme a usted."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty est un tuteur de langues qui vit dans votre barre de menus. Nous commencerons par les permissions dont Glotty a besoin, puis nous explorerons les trois actions principales, configurerons un LLM et discuterons brièvement pour que je sache comment vous adresser."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glottyはメニューバーに常駐する言語学習アプリです。まずGlottyが必要とする権限を設定し、その後3つの主要機能を案内して、LLMの設定を行い、簡単にお話しするので、どのようにお呼びすればよいか知ることができます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty는 메뉴 바에 있는 언어 튜터입니다. 먼저 Glotty가 필요한 권한 설정부터 시작한 다음, 세 가지 핵심 기능을 살펴보고, LLM을 설정하고, 짧은 대화를 나누어서 당신을 어떻게 불러야 할지 알게 될 거예요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 是一个位于菜单栏的语言导师。我们将先开始设置 Glotty 所需的权限，然后介绍三个核心操作，设置一个 LLM，并简单聊天以便我知道如何称呼您。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 是一個位於您選單列的語言學習軟體。我們將先設定 Glotty 所需的權限，然後介紹三個核心功能、設定 LLM，並簡短對話讓我知道如何稱呼您。"
+          }
+        }
+      }
+    },
     "Glotty is ready!": {
       "localizations": {
         "de": {
@@ -7883,6 +8711,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "Glotty 讀取 Apple 內建 **Dictionary** 應用程式填充的字典目錄。開啟它一次 — 它會拉取可用列表 — 然後回到此處。"
+          }
+        }
+      }
+    },
+    "Glotty reads the text you've selected, listens for the Fn-leader chord, and sends you the occasional practice reminder. The OS keeps these behind dedicated permission switches — grant each one in System Settings and the status here will update automatically.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty liest den Text, den Sie ausgewählt haben, lauscht nach der Fn-Leader-Taste und sendet Ihnen gelegentliche Erinnerungen zum Üben. Das Betriebssystem hält diese Funktionen hinter dedizierten Berechtigungsschaltern — gewähren Sie jede einzelne in den Systemeinstellungen und der Status hier wird sich automatisch aktualisieren."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty lee el texto que ha seleccionado, escucha el acorde Fn-leader y le envía recordatorios ocasionales para practicar. El sistema operativo mantiene estas funciones detrás de interruptores de permiso dedicados: conceda cada una en la Configuración del sistema y el estado aquí se actualizará automáticamente."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty lit le texte que vous avez sélectionné, écoute l'accord Fn-leader et vous envoie des rappels d'exercice occasionnels. Le système d'exploitation conserve ces fonctionnalités derrière des commutateurs de permissions dédiés - accordez chacune dans les Paramètres système et le statut ici se mettra à jour automatiquement."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glottyは選択したテキストを読み取り、Fnリーダーコードを待機し、定期的に練習リマインダーを送信します。OSはこれらを専用の権限スイッチの裏に保持しています — System Settingsでそれぞれの権限を許可すると、ここの状態が自動的に更新されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty는 선택한 텍스트를 읽고, Fn-키 조합을 듣고, 가끔 연습 알림을 보냅니다. 운영체제는 이들을 전용 권한 스위치 뒤에 두고 있습니다 — 시스템 설정에서 각 권한을 허용하면 여기의 상태가 자동으로 업데이트됩니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 会读取您选择的文本，监听 Fn-leader 组合键，并偶尔发送练习提醒。操作系统将这些都放在专门的权限开关后面 — 请在系统设置中授予每项权限，此处的状态将自动更新。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 會讀取您選取的文字，監聽 Fn 領導鍵組，並偶爾發送練習提醒。作業系統將這些功能放在專屬的權限開關後 — 請在系統設定中授予每一項權限，這裡的狀態將自動更新。"
           }
         }
       }
@@ -8350,6 +9224,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "Google 的快速多語言模型。適合用於非英文文本潤色。"
+          }
+        }
+      }
+    },
+    "Granted": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genehmigt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concedido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accordé"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "許可済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "허용됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已授权"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已授予"
           }
         }
       }
@@ -8867,6 +9787,52 @@
         }
       }
     },
+    "Import a backup…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importieren Sie eine Sicherungskopie…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importar una copia de seguridad…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importer une sauvegarde…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バックアップをインポート…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "백업 가져오기…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入备份…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入備份…"
+          }
+        }
+      }
+    },
     "Import…": {
       "localizations": {
         "de": {
@@ -8909,6 +9875,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "匯入…"
+          }
+        }
+      }
+    },
+    "Input Monitoring": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eingabeüberwachung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supervisión de entrada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Surveillance des entrées"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力監視"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "입력 모니터링"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入监控"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輸入監測"
           }
         }
       }
@@ -9001,6 +10013,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "安裝所選項目"
+          }
+        }
+      }
+    },
+    "Installed": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installiert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instalado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installé"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インストール済み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설치됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已安装"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已安裝"
           }
         }
       }
@@ -12129,6 +13187,98 @@
         }
       }
     },
+    "Notifications": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benachrichtigungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notificaciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "알림"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知"
+          }
+        }
+      }
+    },
+    "OK": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aceptar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "확인"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "确定"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確定"
+          }
+        }
+      }
+    },
     "Off": {
       "extractionState": "manual",
       "localizations": {
@@ -12829,6 +13979,144 @@
           "stringUnit": {
             "state": "translated",
             "value": "套件未安裝"
+          }
+        }
+      }
+    },
+    "Password": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contraseña"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mot de passe"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワード"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "암호"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密码"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密碼"
+          }
+        }
+      }
+    },
+    "Password can't be empty.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Passwort darf nicht leer sein."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La contraseña no puede estar vacía."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le mot de passe ne peut pas être vide."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワードは空にできません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비밀번호는 비어 있을 수 없습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密码不能为空。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密碼不能為空。"
+          }
+        }
+      }
+    },
+    "Passwords don't match. Try again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Passwörter stimmen nicht überein. Versuchen Sie es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las contraseñas no coinciden. Inténtalo de nuevo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les mots de passe ne correspondent pas. Réessayez."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワードが一致しません。再試行してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비밀번호가 일치하지 않습니다. 다시 시도해 주세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密码不匹配，请重试。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密碼不相符。請再試一次。"
           }
         }
       }
@@ -14704,6 +15992,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新觸發 macOS 的註冊，使 Glotty 出現在「系統設定」中。可能會顯示要求輔助功能權限的系統提示。"
+          }
+        }
+      }
+    },
+    "Read selected text from the focused application so it can be translated.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lese ausgewählten Text aus der fokussierten Anwendung, damit er übersetzt werden kann."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leer el texto seleccionado de la aplicación en foco para poder traducirlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lire le texte sélectionné depuis l'application en focus afin qu'il puisse être traduit."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォーカスされたアプリケーションから選択されたテキストを読み取り、それを翻訳できるようにする。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "포커스된 애플리케이션에서 선택한 텍스트를 읽어서 번역할 수 있도록 합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "读取聚焦应用程序中的所选文本以便翻译。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從焦點應用程式讀取選取的文字，以便進行翻譯。"
           }
         }
       }
@@ -17970,6 +19304,52 @@
         }
       }
     },
+    "This backup includes your API keys. Choose a password — you'll need it to restore on another machine.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Sicherung enthält Ihre API-Schlüssel. Wählen Sie ein Passwort — Sie werden es benötigen, um auf einem anderen Gerät wiederherzustellen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta copia de seguridad incluye tus claves de API. Elige una contraseña — la necesitarás para restaurar en otra máquina."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette sauvegarde inclut vos clés API. Choisissez un mot de passe — vous en aurez besoin pour restaurer sur un autre appareil."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このバックアップにはAPIキーが含まれています。パスワードを選択してください — 別のマシンで復元する際に必要になります。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "백업에는 API 키가 포함되어 있습니다. 비밀번호를 선택하십시오 - 다른 컴퓨터에서 복원할 때 필요합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此备份包含您的 API 密钥。请选择一个密码 — 您将需要它来在另一台机器上恢复数据。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此備份包含您的 API 金鑰。請選擇一個密碼 — 您將需要在另一台機器上還原時使用它。"
+          }
+        }
+      }
+    },
     "This deletes every recorded lookup and polish issue. Cannot be undone.": {
       "localizations": {
         "de": {
@@ -19555,6 +20935,52 @@
         }
       }
     },
+    "You can grant the missing ones now or skip this step and come back from the menu bar → Settings → Permissions later. The Translate/Polish/Explain demos in the next steps won't work until Accessibility and Input Monitoring are on.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie können die fehlenden Berechtigungen jetzt erteilen oder diesen Schritt überspringen und später aus der Menüleiste → Einstellungen → Berechtigungen zurückkehren. Die Translate/Polish/Explain-Demos in den nächsten Schritten funktionieren nicht, bis die Zugänglichkeit und die Eingabeüberwachung aktiviert sind."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puedes conceder las faltantes ahora o omitir este paso y volver desde la barra de menú → Configuración → Permisos más tarde. Las demostraciones de Traducir/Corregir/Explicar en los siguientes pasos no funcionarán hasta que Accesibilidad y Monitoreo de entrada estén activados."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous pouvez accorder les permissions manquantes maintenant ou ignorer cette étape et revenir plus tard depuis la barre de menus → Paramètres → Autorisations. Les démos de Traduire/Corriger/Expliquer dans les étapes suivantes ne fonctionneront pas tant que l'Accessibilité et le Contrôle des entrées ne seront pas activés."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今すぐ欠けている権限を付与するか、このステップをスキップして後でメニューバー → 設定 → 権限から戻ってくることができます。次のステップの翻訳/校正/説明のデモは、アクセシビリティと入力監視が有効になるまで機能しません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 누락된 권한을 부여하거나 이 단계를 건너뛰고 나중에 메뉴 바 → 설정 → 권한에서 다시 올 수 있습니다. 다음 단계의 번역/교정/설명 데모는 접근성 및 입력 모니터링이 켜지지 않으면 작동하지 않습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "您现在可以授予缺失的权限或跳过此步骤，稍后可通过菜单栏 → 设置 → 权限返回。下一步的翻译/润色/解释演示功能将在开启辅助功能和输入监控后才能使用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "您現在可以授予缺少的權限，或跳過此步驟，稍後從功能表列 → 設定 → 權限中返回。直到啟用輔助功能和輸入監控，下一步的翻譯/潤飾/解釋示範才能正常運作。"
+          }
+        }
+      }
+    },
     "Your native language": {
       "localizations": {
         "de": {
@@ -20666,144 +22092,6 @@
         }
       }
     },
-    "·": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "·"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "·"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "·"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "·"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "·"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "·"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "·"
-          }
-        }
-      }
-    },
-    "…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "…"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "…"
-          }
-        }
-      }
-    },
-    "→": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "→"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "→"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "→"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "→"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "→"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "→"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "→"
-          }
-        }
-      }
-    },
     "⏎ Send · ⇧⏎ New line": {
       "localizations": {
         "de": {
@@ -20846,52 +22134,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "⏎ 傳送 · ⇧⏎ 新行"
-          }
-        }
-      }
-    },
-    "▸": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "▸"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "▸"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "▸"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "▸"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "▸"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "▸"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "▸"
           }
         }
       }

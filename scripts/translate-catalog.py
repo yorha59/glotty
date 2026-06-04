@@ -63,14 +63,31 @@ LANG_NAMES = {
 # user's keychain almost certainly has a ZAI key; if not, set
 # OPENAI_API_KEY env var to whatever you have.
 DEFAULT_BASE_URL = "https://api.z.ai/api/coding/paas/v4"
-DEFAULT_MODEL = "glm-4.5-air"
+# glm-4.5-flash — the fast, non-reasoning model that actually works
+# here. Tradeoffs found the hard way:
+#   - glm-4.5-air / glm-4.5: reasoning models that burn the whole
+#     max_tokens budget on hidden reasoning_content and return EMPTY
+#     content (finish_reason=length) → nothing gets written.
+#   - glm-4.6: returns real content but is SLOW — a single long
+#     (200+ char) UI string can take >60s, and a batch of them blew
+#     past even a 180s timeout, stalling on retries.
+#   - glm-4.5-flash: returns the translation directly, ~20s for a
+#     long string, fast enough to batch under the timeout.
+DEFAULT_MODEL = "glm-4.5-flash"
 
 # Batch size — the LLM gets N strings per call and returns N
 # translations. Smaller batches use more API calls but tolerate
 # parse failures better; larger batches are faster but a single
-# malformed JSON wastes the whole call. 25 is a balanced default.
-BATCH_SIZE = 25
-REQUEST_TIMEOUT = 60
+# malformed JSON wastes the whole call. 8 keeps each request well
+# under the timeout even for long multi-sentence UI strings (the
+# welcome-page bodies run 200+ chars; a batch of 25 of those made
+# glm-4.6 exceed 60s and the whole batch timed out + retried,
+# burning ~7 min and writing nothing).
+BATCH_SIZE = 8
+# Generous per-request timeout — a batch of long strings can take
+# 60-120s on glm-4.6. Better one 120s response than five 60s
+# timeouts with exponential backoff (which wrote zero).
+REQUEST_TIMEOUT = 180
 
 
 def load_api_key() -> str:
