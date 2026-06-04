@@ -139,52 +139,6 @@
         }
       }
     },
-    "%@ → %@": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ → %@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ → %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ → %@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ → %@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ → %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ → %@"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ → %@"
-          }
-        }
-      }
-    },
     "%@-%@ dictionaries": {
       "localizations": {
         "de": {
@@ -5283,6 +5237,52 @@
         }
       }
     },
+    "Diagnostics": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnose"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnóstico"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostics"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "診断"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "진단"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "诊断"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "診斷"
+          }
+        }
+      }
+    },
     "Dictionaries": {
       "localizations": {
         "de": {
@@ -6535,6 +6535,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "匯出 Glotty 備份"
+          }
+        }
+      }
+    },
+    "Export logs": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Protokolle exportieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportar registros"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporter les journaux"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログをエクスポート"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그 내보내기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出日志"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯出日誌"
           }
         }
       }
@@ -15911,6 +15957,52 @@
         }
       }
     },
+    "Saves Glotty's debug log to your Desktop and reveals it in Finder. Attach it when reporting an issue.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichert Glottys Debugprotokoll auf Ihrem Desktop und öffnet es im Finder. Fügen Sie es beim Melden eines Problems hinzu."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guarda el registro de depuración de Glotty en tu Escritorio y lo muestra en Finder. Adjúntalo al informar de un problema."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistre le journal de débogage de Glotty sur votre Bureau et l'affiche dans Finder. Joignez-le lors du signalement d'un problème."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glottyのデバッグログをデスクトップに保存し、Finderで表示します。問題を報告する際に添付してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty의 디버그 로그를 데스크톱에 저장하고 Finder에서 열어 문제를 보고할 때 첨부하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将Glotty的调试日志保存到您的桌面，并在Finder中显示它。报告问题时请附加该日志。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將 Glotty 的除錯日誌儲存到您的桌面並在 Finder 中顯示它。在回報問題時附加此檔案。"
+          }
+        }
+      }
+    },
     "Search dictionaries": {
       "localizations": {
         "de": {
@@ -16183,6 +16275,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "設定…"
+          }
+        }
+      }
+    },
+    "Shortcuts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tastenkürzel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atajos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raccourcis"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ショートカット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축키"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快捷键"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快捷鍵"
           }
         }
       }
@@ -17598,6 +17736,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "您的母語。驅動自動偵測的來源/目標選擇，並使翻譯行為偏向您可能正在閱讀或撰寫的內容。與下方的 Glotty 介面語言無關。"
+          }
+        }
+      }
+    },
+    "The leader is the first key of every shortcut. Hold it, then tap the command key below.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Leitertaste ist die erste Taste jeder Verknüpfung. Halten Sie sie gedrückt, tippen Sie dann auf die untenstehende Befehlstaste."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tecla líder es la primera tecla de cada atajo. Mantén pulsada esta tecla, luego pulsa la tecla de comando de abajo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La touche principale est la première touche de chaque raccourci. Maintenez-la enfoncée, puis tapez sur la touche de commande ci-dessous."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リーダーキーはすべてのショートカットの最初のキーです。これを押し続け、その下のコマンドキーをタップしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "리더는 모든 단축키의 첫 번째 키입니다. 이 키를 누른 상태에서 아래의 명령 키를 탭하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "引导键是每个快捷键的第一个键。按住它，然后轻点下面的命令键。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "首鍵是每個快捷鍵的第一個按鍵。按住它，然後點擊下方的指令按鍵。"
           }
         }
       }
@@ -20478,6 +20662,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "垃圾桶"
+          }
+        }
+      }
+    },
+    "·": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "·"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "·"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "·"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "·"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "·"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "·"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "·"
           }
         }
       }

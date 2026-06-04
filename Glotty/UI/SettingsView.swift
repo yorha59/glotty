@@ -2645,7 +2645,15 @@ private struct HotkeySettingsSection: View {
         Section {
             LeaderRecorderRow(leader: leaderBinding,
                               defaultLeader: Keycode.defaultLeader)
+        } header: {
+            Text("Leader key")
+        } footer: {
+            Text("The leader is the first key of every shortcut. Hold it, then tap the command key below.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
 
+        Section {
             KeyRecorderRow(
                 title: "Translate (target → native)",
                 prefix: "\(leaderBinding.wrappedValue.label) →",
@@ -2681,7 +2689,7 @@ private struct HotkeySettingsSection: View {
                     .foregroundStyle(.orange)
             }
         } header: {
-            Text("Hotkey")
+            Text("Shortcuts")
         } footer: {
             Text("Press **Record**, then tap the key you want as the second step of the hotkey. **Esc** during recording cancels. **Reset** restores the default.")
                 .font(.caption)
