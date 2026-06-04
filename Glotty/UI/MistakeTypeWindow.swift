@@ -81,6 +81,7 @@ final class MistakeTypeWindowController {
         w.makeKeyAndOrderFront(nil)
         w.orderFrontRegardless()
         Self.diag("show NEW window size=\(w.frame.size) visible=\(w.isVisible)")
+        Log.activationSnapshot(window: w, name: "MistakeType", op: "open-mistake-type")
     }
 
     private func handleWindowClosed() {

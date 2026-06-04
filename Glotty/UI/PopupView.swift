@@ -1716,6 +1716,9 @@ struct PopupView: View {
                     .lineLimit(1...6)
                     .focused($tutorInputFocused)
                     .onChange(of: tutorInputFocused) { _, gained in
+                        Log.debug(.popup,
+                            "chat composer focus → \(gained) keyWindow=\(NSApp.keyWindow?.title ?? "nil")",
+                            op: "chat-input")
                         guard gained else { return }
                         NSApp.activate(ignoringOtherApps: true)
                     }

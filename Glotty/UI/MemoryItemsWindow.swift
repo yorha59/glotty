@@ -67,6 +67,7 @@ final class MemoryItemsWindowController {
         }
         w.makeKeyAndOrderFront(nil)
         w.orderFrontRegardless()
+        Log.activationSnapshot(window: w, name: "Memory", op: "open-memory")
     }
 
     private static func titleFor(scope: MemoryScope) -> String {

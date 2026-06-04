@@ -99,6 +99,7 @@ final class SettingsWindowController {
         }
         w.makeKeyAndOrderFront(nil)
         w.orderFrontRegardless()
+        Log.activationSnapshot(window: w, name: "Settings", op: "open-settings")
     }
 
     /// Idempotent cleanup. Called from both the willClose observer

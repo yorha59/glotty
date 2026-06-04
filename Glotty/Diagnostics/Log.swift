@@ -144,6 +144,60 @@ enum Log {
         return dest
     }
 
+    /// One-shot snapshot of the system's focus / activation state at
+    /// the moment a managed window opens. Logs the handful of
+    /// properties that disagree when a window opens into a bad
+    /// activation state (the failure fengchu hit: window visually
+    /// front + key, but system frontmost stayed with a full-screen
+    /// source app, so keystrokes went elsewhere).
+    ///
+    /// Read the line by looking for contradictions, e.g.
+    /// `windowIsKey=true` together with `frontmost=com.apple.Safari`
+    /// and `appIsActive=false` means "we think we own focus, the
+    /// system disagrees" — and `frontmostIsFullScreen=true` is why.
+    @MainActor
+    static func activationSnapshot(window: NSWindow?, name: String, op: String,
+                                   file: String = #fileID, line: Int = #line) {
+        // Defer one runloop tick: key-window and app-active status are
+        // granted asynchronously after makeKeyAndOrderFront, so reading
+        // them synchronously always reports false. By the next tick the
+        // window manager has settled and the snapshot reflects reality.
+        let behavior = window?.collectionBehavior.rawValue ?? 0
+        DispatchQueue.main.async { [weak window] in
+            let policy = NSApp.activationPolicy().rawValue
+            let isActive = NSApp.isActive
+            let frontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "nil"
+            let fullScreen = frontmostIsFullScreen()
+            let isKey = window?.isKeyWindow ?? false
+            info(.activation, "opened window=\(name) policy=\(policy) appIsActive=\(isActive) "
+                 + "frontmost=\(frontmost) frontmostIsFullScreen=\(fullScreen) "
+                 + "windowIsKey=\(isKey) collectionBehavior=\(behavior)",
+                 op: op, file: file, line: line)
+        }
+    }
+
+    /// True if the current frontmost app (not Glotty) has a window in
+    /// native full-screen. Mirrors the AppDelegate's private check;
+    /// kept self-contained here so the diagnostics module has no
+    /// dependency on app internals.
+    @MainActor
+    private static func frontmostIsFullScreen() -> Bool {
+        guard let frontmost = NSWorkspace.shared.frontmostApplication else { return false }
+        if frontmost.bundleIdentifier == Bundle.main.bundleIdentifier { return false }
+        let axApp = AXUIElementCreateApplication(frontmost.processIdentifier)
+        var windowsRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+              let windows = windowsRef as? [AXUIElement] else { return false }
+        for window in windows {
+            var fsRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(window, "AXFullScreen" as CFString, &fsRef) == .success,
+               let isFull = fsRef as? Bool, isFull {
+                return true
+            }
+        }
+        return false
+    }
+
     private static func write(level: LogLevel, category: LogCategory,
                               message: String, op: String,
                               file: String, line: Int) {

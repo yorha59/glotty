@@ -1007,6 +1007,9 @@ private struct UserProfileSection: View {
                             .focused($nameFocused)
                             .onSubmit { nameEditing = false }
                             .onChange(of: nameFocused) { _, focused in
+                                Log.debug(.settings,
+                                    "displayName field focus → \(focused) keyWindow=\(NSApp.keyWindow?.title ?? "nil")",
+                                    op: "open-settings")
                                 if !focused { nameEditing = false }
                             }
                             .transition(.opacity)

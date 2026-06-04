@@ -73,6 +73,7 @@ final class ChatHistoryWindowController {
         }
         w.makeKeyAndOrderFront(nil)
         w.orderFrontRegardless()
+        Log.activationSnapshot(window: w, name: "ChatHistory", op: "open-chat-history")
     }
 
     private func handleWindowClosed() {
