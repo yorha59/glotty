@@ -59,16 +59,25 @@ struct MemoryStoreTests {
         let (store, url) = makeStore()
         defer { try? FileManager.default.removeItem(at: url) }
 
-        // "schedule" looked up 3 times; "appointment" 1.
-        for _ in 0..<3 {
-            store.record(MemoryEvent(kind: .translate, sourceText: "schedule",
-                                     sourceLang: "en", targetLang: "zh-Hans", result: "时间表"))
-        }
+        // "schedule" looked up 3 times, "appointment" 2 — interleaved so
+        // record()'s adjacent-dedup (which intentionally collapses the
+        // SAME lookup repeated back-to-back into one row) doesn't merge
+        // the schedule repeats. This is the realistic shape: a user
+        // bounces between a few words.
+        store.record(MemoryEvent(kind: .translate, sourceText: "schedule",
+                                 sourceLang: "en", targetLang: "zh-Hans", result: "时间表"))
         store.record(MemoryEvent(kind: .explain, sourceText: "appointment",
-                                 sourceLang: "en", targetLang: "zh-Hans", result: "..."))
-        // Polish event — should NOT affect top-lookups.
+                                 sourceLang: "en", targetLang: "zh-Hans", result: "约会"))
+        store.record(MemoryEvent(kind: .translate, sourceText: "schedule",
+                                 sourceLang: "en", targetLang: "zh-Hans", result: "时间表"))
+        store.record(MemoryEvent(kind: .explain, sourceText: "appointment",
+                                 sourceLang: "en", targetLang: "zh-Hans", result: "约会"))
+        store.record(MemoryEvent(kind: .translate, sourceText: "schedule",
+                                 sourceLang: "en", targetLang: "zh-Hans", result: "时间表"))
+        // Polish event — recorded (non-empty result) but must NOT appear
+        // in top-lookups, which only counts translate + explain.
         store.record(MemoryEvent(kind: .polish, sourceText: "i wanna",
-                                 sourceLang: "en", targetLang: "en", result: nil,
+                                 sourceLang: "en", targetLang: "en", result: "I want to",
                                  issues: [PolishIssueSnapshot(category: "Register/tone")]))
 
         let lookups = store.topLookups(limit: 10)
@@ -76,7 +85,7 @@ struct MemoryStoreTests {
         #expect(lookups[0].key == "schedule")
         #expect(lookups[0].count == 3)
         #expect(lookups[1].key == "appointment")
-        #expect(lookups[1].count == 1)
+        #expect(lookups[1].count == 2)
     }
 
     @Test("Case-insensitive aggregation merges 'Hello' and 'hello'")
@@ -127,7 +136,7 @@ struct MemoryStoreTests {
         defer { try? FileManager.default.removeItem(at: url) }
 
         store.record(MemoryEvent(kind: .polish, sourceText: "some draft",
-                                 sourceLang: "en", targetLang: "en", result: nil,
+                                 sourceLang: "en", targetLang: "en", result: "some polished draft",
                                  issues: [
                                     PolishIssueSnapshot(category: nil),
                                     PolishIssueSnapshot(category: "Word choice"),
@@ -145,10 +154,10 @@ struct MemoryStoreTests {
 
         // First-seen casing wins the display label.
         store.record(MemoryEvent(kind: .polish, sourceText: "a",
-                                 sourceLang: "en", targetLang: "en", result: nil,
+                                 sourceLang: "en", targetLang: "en", result: "A",
                                  issues: [PolishIssueSnapshot(category: "Verb tense")]))
         store.record(MemoryEvent(kind: .polish, sourceText: "b",
-                                 sourceLang: "en", targetLang: "en", result: nil,
+                                 sourceLang: "en", targetLang: "en", result: "B",
                                  issues: [PolishIssueSnapshot(category: "verb tense")]))
 
         let issues = store.topGrammarIssues()
@@ -179,14 +188,17 @@ struct MemoryStoreTests {
         let twoDaysAgo = now.addingTimeInterval(-2 * 86_400)
         let tenDaysAgo = now.addingTimeInterval(-10 * 86_400)
 
+        // `record` drops "unfinished" events (nil/empty result), so each
+        // fixture needs a non-empty result to actually be stored — the
+        // aggregation below keys off sourceText, not result.
         store.record(MemoryEvent(kind: .translate, sourceText: "recent",
-                                 sourceLang: "en", targetLang: "zh-Hans", result: nil,
+                                 sourceLang: "en", targetLang: "zh-Hans", result: "结果",
                                  timestamp: now))
         store.record(MemoryEvent(kind: .translate, sourceText: "twoDaysOld",
-                                 sourceLang: "en", targetLang: "zh-Hans", result: nil,
+                                 sourceLang: "en", targetLang: "zh-Hans", result: "结果",
                                  timestamp: twoDaysAgo))
         store.record(MemoryEvent(kind: .translate, sourceText: "tenDaysOld",
-                                 sourceLang: "en", targetLang: "zh-Hans", result: nil,
+                                 sourceLang: "en", targetLang: "zh-Hans", result: "结果",
                                  timestamp: tenDaysAgo))
 
         // 24h cutoff: only "recent" survives.
@@ -211,12 +223,14 @@ struct MemoryStoreTests {
         let now = Date()
         let oldPolish = now.addingTimeInterval(-40 * 86_400)
 
+        // Non-empty result so `record` keeps the event (see lookups test);
+        // topGrammarIssues aggregates off `issues`, not result.
         store.record(MemoryEvent(kind: .polish, sourceText: "recent draft",
-                                 sourceLang: "en", targetLang: "en", result: nil,
+                                 sourceLang: "en", targetLang: "en", result: "polished",
                                  issues: [PolishIssueSnapshot(category: "Register/tone")],
                                  timestamp: now))
         store.record(MemoryEvent(kind: .polish, sourceText: "old draft",
-                                 sourceLang: "en", targetLang: "en", result: nil,
+                                 sourceLang: "en", targetLang: "en", result: "polished",
                                  issues: [PolishIssueSnapshot(category: "Spelling")],
                                  timestamp: oldPolish))
 

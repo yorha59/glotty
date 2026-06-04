@@ -2,7 +2,12 @@ import Testing
 import Foundation
 @testable import Glotty
 
+// PolishPrompt.build reads main-isolated state via MainActor.assumeIsolated,
+// which traps if the test runs off the main actor (Swift Testing uses a
+// background executor by default). Pin the suites that call build to the
+// main actor.
 @Suite("PolishPrompt — variants mode (cross-language)")
+@MainActor
 struct VariantsPromptTests {
     @Test("English target name appears in the instruction")
     func englishTarget() {
@@ -33,6 +38,7 @@ struct VariantsPromptTests {
 }
 
 @Suite("PolishPrompt — proofread mode (same-language)")
+@MainActor
 struct ProofreadPromptTests {
     @Test("Mentions both 'issues' and 'variants' fields")
     func mentionsBothFields() {
@@ -59,6 +65,7 @@ struct ProofreadPromptTests {
 }
 
 @Suite("PolishPrompt — render & override")
+@MainActor
 struct PolishPromptRenderTests {
     @Test("render substitutes ${language} and ${text}")
     func substitution() {
@@ -119,8 +126,13 @@ struct PolishPromptRenderTests {
             forKey: PolishPrompt.variantsTemplateKey
         )
         let prompt = PolishPrompt.build(text: "hello", mode: .variants(target: "zh-Hans", nativeLanguage: nil))
-        #expect(prompt.hasPrefix("CUSTOM Chinese"))
-        #expect(prompt.hasSuffix(":: hello"))
+        // `contains` rather than hasPrefix/hasSuffix: build() prepends
+        // profile / memory context when the host has a user profile set,
+        // so the rendered template sits in the middle. What matters is
+        // that the custom template was used and the default replaced.
+        #expect(prompt.contains("CUSTOM Chinese"))
+        #expect(prompt.contains(":: hello"))
+        #expect(!prompt.contains("STRICT JSON"))  // default signature absent
         UserDefaults.standard.removeObject(forKey: PolishPrompt.variantsTemplateKey)
     }
 }
