@@ -23,7 +23,10 @@ final class PopupPanel: NSPanel {
     override var canBecomeKey: Bool { true }
 
     override func cancelOperation(_ sender: Any?) {
-        if Self.responderChainHasMarkedText(from: firstResponder) {
+        let marked = Self.responderChainHasMarkedText(from: firstResponder)
+        Log.debug(.popup, "cancelOperation — markedText=\(marked) "
+                  + "→ \(marked ? "defer to IME" : "onCancel")", op: "close")
+        if marked {
             // IME owns this key — defer to the system so the candidate
             // window can close (or the marked text can be cleared) without
             // taking the popup with it.
@@ -49,7 +52,11 @@ final class PopupPanel: NSPanel {
         // chat behave the same. While an IME is composing, ESC instead
         // cancels the composition (defer to the system).
         if event.type == .keyDown, event.keyCode == 53 {
-            if Self.responderChainHasMarkedText(from: firstResponder) {
+            let marked = Self.responderChainHasMarkedText(from: firstResponder)
+            Log.debug(.popup, "ESC keyDown — markedText=\(marked) "
+                      + "firstResponder=\(type(of: firstResponder)) "
+                      + "→ \(marked ? "defer to IME" : "onCancel")", op: "close")
+            if marked {
                 super.sendEvent(event)
                 return
             }
@@ -345,6 +352,7 @@ final class PopupController {
         ) { [weak self, weak panelRef] _ in
             guard let panelRef else { return }
             Task { @MainActor in
+                Log.debug(.popup, "willClose fired (red-button / system close)", op: "close")
                 self?.removeFromTracking(panelRef)
             }
         }
@@ -364,6 +372,9 @@ final class PopupController {
     }
 
     func dismiss(_ panel: PopupPanel) {
+        let mode = hosts[ObjectIdentifier(panel)]?.rootView.mode
+        Log.debug(.popup, "dismiss(_) — mode=\(mode.map(String.init(describing:)) ?? "?") "
+                  + "panelsBefore=\(panels.count)", op: "close")
         // Fire post-dismiss memory extraction BEFORE we tear down
         // the host. Use removeValue so removeFromTracking below
         // doesn't double-fire — the X-button (willClose) path goes

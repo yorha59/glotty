@@ -622,7 +622,10 @@ struct PopupView: View {
     /// red-button / ESC use). Kept subtle so it doesn't compete with
     /// content; brightens on hover.
     private var closeButton: some View {
-        Button(action: onClose) {
+        Button(action: {
+            Log.debug(.popup, "X close button tapped — mode=\(mode)", op: "close")
+            onClose()
+        }) {
             Image(systemName: "xmark.circle.fill")
                 .font(.system(size: 15))
                 .foregroundStyle(.secondary)
