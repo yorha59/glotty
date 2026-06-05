@@ -49,7 +49,6 @@ struct PermissionsView: View {
 
     @State private var refreshToken = 0
     @State private var timer: Timer?
-    @State private var showResetConfirm = false
 
     var body: some View {
         // One unified stage that always shows the permission detection
@@ -147,13 +146,6 @@ struct PermissionsView: View {
                      : "All set. Quit & relaunch if you just granted permissions.")
                     .font(.callout)
                 Spacer()
-                Button("Re-register Missing") {
-                    for p in Permission.allCases where !p.isGranted() {
-                        PermissionCheck.requestRegistration(for: p)
-                    }
-                    refreshToken &+= 1
-                }
-                .help("Re-trigger macOS's registration so Glotty appears in System Settings. May show a system prompt for Accessibility.")
                 if let onClose {
                     Button("Close", action: onClose)
                         .keyboardShortcut(.defaultAction)
@@ -173,12 +165,9 @@ struct PermissionsView: View {
             + "Fn → T still does nothing, that toggle belongs to an earlier "
             + "Glotty with a different signature (e.g. a debug copy). macOS "
             + "won't let this build reuse it. Remove that row with the “–” "
-            + "button and re-add Glotty — or reset below and grant again."
+            + "button and re-add Glotty — or hit “Reset & re-register” on the "
+            + "affected permission above to clear it and grant again."
         let explain: String = explainRaw.t
-        let dialogMsgRaw = "This clears Glotty's Accessibility and Input Monitoring "
-            + "permissions so you can grant them fresh — you'll be asked "
-            + "to allow them again. Quit and reopen Glotty afterward."
-        let dialogMsg: String = dialogMsgRaw.t
 
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
@@ -191,27 +180,10 @@ struct PermissionsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Button(role: .destructive) {
-                showResetConfirm = true
-            } label: {
-                Label("Reset Glotty's permissions".t, systemImage: "arrow.counterclockwise")
-            }
-            .controlSize(.small)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
-        .confirmationDialog("Reset Glotty's permissions?".t,
-                            isPresented: $showResetConfirm,
-                            titleVisibility: .visible) {
-            Button("Reset & re-register".t, role: .destructive) {
-                PermissionCheck.resetStaleGrants()
-                refreshToken &+= 1
-            }
-            Button("Cancel".t, role: .cancel) {}
-        } message: {
-            Text(dialogMsg)
-        }
     }
 }
 
@@ -247,11 +219,11 @@ private struct PermissionRow: View {
                 }
                 .disabled(granted)
                 if !granted {
-                    Button("Re-register".t) {
-                        PermissionCheck.requestRegistration(for: permission)
+                    Button("Reset & re-register".t) {
+                        PermissionCheck.resetAndReregister(for: permission)
                     }
                     .controlSize(.small)
-                    .help("Forces macOS to add Glotty to the toggle list. Use this if the row is missing in System Settings.")
+                    .help("Adds Glotty to the toggle list (use if the row is missing), and clears any leftover entry from an earlier, differently-signed build so this one can register fresh.")
                 }
             }
         }

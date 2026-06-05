@@ -163,12 +163,23 @@ enum PermissionCheck {
         return true
     }
 
-    /// Reset the two signature-bound permissions (Accessibility + Input
-    /// Monitoring) — the ones that collide when an earlier, differently-
-    /// signed Glotty already holds the toggle.
-    static func resetStaleGrants() {
-        resetGrant(for: .accessibility)
-        resetGrant(for: .inputMonitoring)
+    /// One-click recovery for a missing permission, merging the old
+    /// "Reset" and "Re-register" actions into a single step:
+    ///   - For signature-bound permissions (Accessibility / Input
+    ///     Monitoring) it first `tccutil reset`s the bundle id — a
+    ///     harmless no-op when nothing's there, and the fix when a
+    ///     differently-signed build's stale entry owns the toggle —
+    ///     then re-registers so this binary appears under its own
+    ///     signature.
+    ///   - For Notifications (not signature-bound) it just re-requests.
+    /// Either way the user ends up with the current build correctly
+    /// registered, whether the row was missing or stale.
+    static func resetAndReregister(for permission: Permission) {
+        if permission.tccServiceName != nil {
+            resetGrant(for: permission)   // tccutil reset + re-register
+        } else {
+            requestRegistration(for: permission)
+        }
     }
 
     private static func debugWrite(_ msg: String, file: String = #fileID, line: Int = #line) {
