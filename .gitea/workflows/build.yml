@@ -1,12 +1,15 @@
 name: Build Glotty PKG
 
-# Manual-only. The runner's glotty-poll-build.sh LaunchAgent is the
-# auto-build path on push to main (act_runner is intermittently
-# unreliable on this network — see doc/release-pipeline.md). Both
-# publish a .pkg to the same `latest-build` release, so running both on
-# every push was redundant and raced. This workflow is kept for manual/
-# on-demand runs via workflow_dispatch; it does NOT trigger on push.
+# Builds the signed/notarized/stapled .pkg on every push to main and
+# publishes it to the `latest-build` release. This (act_runner) is the
+# sole auto-build path: the old glotty-poll-build.sh LaunchAgent on the
+# runner has been disabled so the two don't race on the same release.
+# (If act_runner's LAN flakiness ever returns — see
+# doc/release-pipeline.md — re-enable the poll-builder as a fallback:
+# `launchctl enable gui/<uid>/com.glotty.poll-build` + bootstrap.)
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
