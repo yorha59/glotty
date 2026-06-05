@@ -8287,6 +8287,52 @@
         }
       }
     },
+    "Flagship reasoning model — highest quality, slower and pricier. Best for nuanced explanations.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Flaggschiff-Reasoning-Modell – höchste Qualität, langsamer und teurer. Ideal für nuancierte Erklärungen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo de razonamiento insignia: máxima calidad, más lento y más caro. Ideal para explicaciones matizadas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle de raisonnement phare — qualité maximale, plus lent et plus cher. Idéal pour des explications nuancées."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フラッグシップの推論モデル — 最高品質だが低速で高価。繊細な説明に最適。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "플래그십 추론 모델 — 최고 품질이지만 느리고 비쌈. 섬세한 설명에 가장 적합."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旗舰推理模型——质量最高，较慢且更贵。最适合细致的解释。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旗艦推理模型——品質最高，較慢且更貴。最適合細緻的解釋。"
+          }
+        }
+      }
+    },
     "Flagship — highest quality, slower and more expensive. Default.": {
       "localizations": {
         "de": {
@@ -11623,6 +11669,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "最輕量且快速。適合延遲重要的短文本潤色；品質是產品線中最低的。"
+          }
+        }
+      }
+    },
+    "Lightweight and cheap — best for quick translate/polish where latency and cost matter. Default.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leicht und günstig – ideal für schnelle Übersetzungen/Überarbeitungen, wenn Latenz und Kosten zählen. Standard."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ligero y económico: ideal para traducciones/pulidos rápidos donde importan la latencia y el coste. Predeterminado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Léger et économique — idéal pour des traductions/améliorations rapides où la latence et le coût comptent. Par défaut."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "軽量で安価 — レイテンシとコストが重要な素早い翻訳／推敲に最適。デフォルト。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가볍고 저렴함 — 지연 시간과 비용이 중요한 빠른 번역/다듬기에 적합. 기본값."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "轻量且便宜——适合对延迟和成本敏感的快速翻译/润色。默认。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輕量且便宜——適合對延遲與成本敏感的快速翻譯/潤色。預設。"
           }
         }
       }
@@ -20167,6 +20259,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在從 %@… 串流"
+          }
+        }
+      }
+    },
+    "Strong general model. Good balance of quality and speed for explanations and rewriting.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starkes Allzweckmodell. Gute Balance aus Qualität und Geschwindigkeit für Erklärungen und Umformulierungen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo general potente. Buen equilibrio entre calidad y velocidad para explicaciones y reescritura."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle généraliste puissant. Bon équilibre entre qualité et vitesse pour les explications et la réécriture."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "強力な汎用モデル。説明や書き換えで品質と速度のバランスが良い。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "강력한 범용 모델. 설명과 재작성에서 품질과 속도의 균형이 좋음."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "强大的通用模型。在解释和改写方面兼顾质量与速度。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "強大的通用模型。在解釋與改寫方面兼顧品質與速度。"
           }
         }
       }

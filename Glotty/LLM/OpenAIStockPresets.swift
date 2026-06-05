@@ -94,7 +94,7 @@ enum OpenAIStockPresets {
     /// DeepSeek is intentionally absent — it has a dedicated `DeepSeekProvider`
     /// class to handle reasoner-mode chain-of-thought streaming, which doesn't
     /// fit the generic OpenAI-compatible shape.
-    static let all: [Preset] = [openai, gemini, openrouter, zai]
+    static let all: [Preset] = [openai, gemini, openrouter, zai, grok]
 
     static func find(id: String) -> Preset? { all.first { $0.id == id } }
 
@@ -228,5 +228,36 @@ enum OpenAIStockPresets {
         extraBodyJSON: try? JSONSerialization.data(
             withJSONObject: ["thinking": ["type": "disabled"]]
         )
+    )
+
+    /// xAI Grok. OpenAI-compatible chat-completions API at api.x.ai, so it
+    /// drops straight into `OpenAICompatibleProvider` like the others. The
+    /// hardcoded model list is just a starting point — the provider also
+    /// merges in whatever `/models` returns, so newer Grok models appear in
+    /// the picker automatically once the key is set.
+    static let grok = Preset(
+        id: "grok",
+        displayName: "xAI (Grok)",
+        defaultEndpoint: "https://api.x.ai/v1/chat/completions",
+        defaultModel: "grok-3-mini",
+        models: [
+            ModelOption(
+                id: "grok-3-mini",
+                displayName: "Grok 3 mini",
+                summary: "Lightweight and cheap — best for quick translate/polish where latency and cost matter. Default."
+            ),
+            ModelOption(
+                id: "grok-3",
+                displayName: "Grok 3",
+                summary: "Strong general model. Good balance of quality and speed for explanations and rewriting."
+            ),
+            ModelOption(
+                id: "grok-4",
+                displayName: "Grok 4",
+                summary: "Flagship reasoning model — highest quality, slower and pricier. Best for nuanced explanations."
+            ),
+        ],
+        signupURL: URL(string: "https://console.x.ai/"),
+        extraBodyJSON: nil
     )
 }

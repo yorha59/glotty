@@ -218,6 +218,7 @@ enum BackupPreferences {
         "glotty.gemini.endpoint",     "glotty.gemini.model",
         "glotty.openrouter.endpoint", "glotty.openrouter.model",
         "glotty.zai.endpoint",        "glotty.zai.model",
+        "glotty.grok.endpoint",       "glotty.grok.model",
         "glotty.deepseek.endpoint",   "glotty.deepseek.model",
         "glotty.kimi.endpoint",       "glotty.kimi.model",
         "glotty.customProviders",     // [CustomProviderConfig] as Data
