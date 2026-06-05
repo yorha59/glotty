@@ -66,6 +66,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// launch — there are no documents to save, so a hard takeover is
     /// safe.
     func applicationWillFinishLaunching(_ notification: Notification) {
+        // Restart-into-regular (see SettingsWindowController): if Settings
+        // asked us to come up in regular mode, flip the activation policy
+        // HERE — before any window exists — which is the only point an
+        // LSUIElement process earns a real home Space (so Settings slides
+        // a foreign full-screen app away instead of hovering). Done first
+        // so the single-instance early-return below can't skip it.
+        if UserDefaults.standard.bool(forKey: SettingsWindowController.launchRegularKey) {
+            NSApp.setActivationPolicy(.regular)
+            dbg("launched in regular mode (Settings home-Space)")
+        }
+
         guard let bundleID = Bundle.main.bundleIdentifier else { return }
         let me = ProcessInfo.processInfo.processIdentifier
         let others = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
@@ -171,6 +182,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             dbg("relaunch flag found — reopening chat popup")
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
                 self?.handleFire(mode: .chat)
+            }
+        }
+
+        // If this launch was the "restart into regular mode" triggered by
+        // opening Settings, reopen Settings now (we're regular, so it
+        // slides). Consume the flag so a normal relaunch doesn't reopen it.
+        if defaults.bool(forKey: SettingsWindowController.reopenSettingsKey) {
+            defaults.removeObject(forKey: SettingsWindowController.reopenSettingsKey)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                self?.settingsWindow.show()
+            }
+        }
+        if defaults.bool(forKey: WelcomeWindowController.reopenWelcomeKey) {
+            defaults.removeObject(forKey: WelcomeWindowController.reopenWelcomeKey)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                WelcomeWindowController.shared.show()
             }
         }
 
@@ -432,17 +459,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             TranslateGuideWindowController.shared.show()
             return
         }
-        // Raycast-style auto-close: when the popup is about to overlay
-        // another app's full-screen space, Settings/drill-in windows
-        // need to come down first so the app drops back to .accessory
-        // — otherwise the popup launches in .regular and the IME
-        // candidate window is suppressed (the original full-screen
-        // IME bug). On regular desktops there's no such conflict and
-        // we leave Settings alone, so the user can keep referencing
-        // it alongside a popup.
-        if Self.frontmostAppHasFullScreenWindow() {
-            AppActivation.dismissAllRegistered()
-        }
+        // (Removed the old "close Settings before a popup" auto-close.) It
+        // existed because a regular-mode app suppressed the IME candidate
+        // window for popups over full-screen — but on macOS 26 the popup's
+        // non-activating panel gets IME candidates fine even while the app
+        // is in regular mode (verified). So a popup can now coexist with an
+        // open Settings window; no need to force agent mode first.
         Task { @MainActor in
             // Chat mode doesn't need a selection — it pulls practice topics
             // from MemoryStore instead, so the popup opens with an empty

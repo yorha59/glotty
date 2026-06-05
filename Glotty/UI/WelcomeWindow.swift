@@ -141,6 +141,9 @@ final class WelcomeWindowController: ObservableObject {
     /// Reading is the cheapest possible "has this user seen onboarding"
     /// signal — preferred over schema-guessing against MemoryStore.
     static let userDefaultsKey = "glotty.welcomeShown"
+    /// Set when we relaunch into regular mode to show Welcome; the fresh
+    /// instance reopens it at launch. See SettingsWindowController.
+    static let reopenWelcomeKey = "glotty.welcome.reopenOnLaunch"
 
     private var window: NSWindow?
     /// Hosting controller (typed-erased to `NSViewController` so we
@@ -185,6 +188,14 @@ final class WelcomeWindowController: ObservableObject {
     /// Force-show the walkthrough — used by the menu-bar "Show welcome…"
     /// item so curious users can revisit it.
     func show() {
+        // Like Settings: an agent process can't slide a foreign full-screen
+        // app away (no home Space), so relaunch into regular mode and
+        // reopen Welcome there. Once regular, fall through and show normally.
+        if NSApp.activationPolicy() != .regular {
+            SettingsWindowController.relaunchIntoRegularMode(reopenKey: Self.reopenWelcomeKey)
+            return
+        }
+
         if let window {
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
@@ -235,7 +246,10 @@ final class WelcomeWindowController: ObservableObject {
         // preferredContentSize sync again without a verified fix.
         w.setContentSize(NSSize(width: 520, height: 700))
         w.center()
-        w.collectionBehavior = [.moveToActiveSpace]
+        // NO `.moveToActiveSpace`: in regular mode (restart) Welcome lives
+        // on its own home Space and macOS slides a foreign full-screen app
+        // away to it. `.moveToActiveSpace` would instead drag it onto the
+        // foreign Space (hover, with input going to the wrong app).
         window = w
 
         NotificationCenter.default.addObserver(
@@ -258,6 +272,12 @@ final class WelcomeWindowController: ObservableObject {
         window = nil
         host = nil
         revealedDemos = []
+        // Welcome was shown in regular mode (we relaunched into it). Drop
+        // back to agent — hide the Dock icon now and clear the launch flag
+        // so the next launch is agent. (The onboarding-chat hand-off also
+        // needs agent mode for the popup's IME over full-screen.)
+        UserDefaults.standard.set(false, forKey: SettingsWindowController.launchRegularKey)
+        NSApp.setActivationPolicy(.accessory)
     }
 }
 
