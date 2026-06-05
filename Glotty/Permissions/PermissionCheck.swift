@@ -86,11 +86,18 @@ enum PermissionCheck {
     nonisolated(unsafe) static var cachedNotificationsGranted: Bool = false
 
     /// Read the current notifications authorization status and update the
-    /// cache. Cheap (system call) and idempotent.
-    static func refreshNotificationsStatus() {
+    /// cache. Cheap (system call) and idempotent. The optional completion
+    /// runs (on the main queue) once the cache reflects the real status —
+    /// callers that need an accurate `anyMissing()` immediately (e.g. the
+    /// launch-time permissions auto-open) must wait for it, since the
+    /// underlying API is async and the cache defaults to "not granted".
+    static func refreshNotificationsStatus(completion: (@MainActor @Sendable () -> Void)? = nil) {
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             cachedNotificationsGranted = (settings.authorizationStatus == .authorized
                                           || settings.authorizationStatus == .provisional)
+            if let completion {
+                Task { @MainActor in completion() }
+            }
         }
     }
 

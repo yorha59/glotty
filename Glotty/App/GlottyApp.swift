@@ -125,24 +125,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupStatusItem()
         dbg("status item created")
 
-        // Prime the notifications-status cache so PermissionCheck.anyMissing()
-        // can see notification state on the very first check.
-        PermissionCheck.refreshNotificationsStatus()
-
-        let missing = PermissionCheck.anyMissing()
-        let welcomeDone = UserDefaults.standard.bool(forKey: WelcomeWindowController.userDefaultsKey)
-        dbg("anyMissing = \(missing) welcomeDone = \(welcomeDone)")
-        if missing && welcomeDone {
-            // Only auto-open Settings → Permissions AFTER the user has
-            // finished the Welcome flow. While Welcome is showing for
-            // the first time, no other window should pop up and
-            // distract — the Welcome flow owns the screen. The user
-            // can revisit Permissions later via the menu bar or
-            // Settings → Permissions tab.
-            DispatchQueue.main.async { [weak self] in
-                dbg("opening Settings → Permissions (post-welcome missing perms)")
-                self?.settingsWindow.show(selecting: .permissions)
-            }
+        // Auto-open Settings → Permissions if a permission is genuinely
+        // missing — but ONLY after the notifications status has actually
+        // loaded. `anyMissing()` reads the notifications cache, which is
+        // populated asynchronously and defaults to "not granted"; checking
+        // it eagerly falsely reports notifications missing and pops Settings
+        // up at launch even when everything is granted (which then sits
+        // behind Welcome). So we run the decision inside the refresh
+        // completion. Also skipped when this launch is a restart-into-
+        // regular for Settings/Welcome (we're only here to reopen THAT
+        // window) and while the first-run Welcome flow owns the screen.
+        PermissionCheck.refreshNotificationsStatus { [weak self] in
+            guard let self else { return }
+            let missing = PermissionCheck.anyMissing()
+            let welcomeDone = UserDefaults.standard.bool(forKey: WelcomeWindowController.userDefaultsKey)
+            let isRestartReopen = UserDefaults.standard.bool(forKey: SettingsWindowController.reopenSettingsKey)
+                || UserDefaults.standard.bool(forKey: WelcomeWindowController.reopenWelcomeKey)
+            dbg("anyMissing = \(missing) welcomeDone = \(welcomeDone) restartReopen = \(isRestartReopen)")
+            guard missing, welcomeDone, !isRestartReopen,
+                  !WelcomeWindowController.shared.isShowing else { return }
+            dbg("opening Settings → Permissions (post-welcome missing perms)")
+            self.settingsWindow.show(selecting: .permissions)
         }
 
         PermissionCheck.registerSilentlyIfMissing()
