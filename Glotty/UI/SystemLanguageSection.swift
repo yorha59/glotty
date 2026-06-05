@@ -5,16 +5,12 @@ import SwiftUI
 /// Foundation's localization machinery (and therefore the bundled
 /// `Localizable.xcstrings` catalog) uses it on the next launch.
 ///
-/// Mid-session re-localization isn't really feasible in SwiftUI on
-/// macOS — many strings are resolved once and cached — so the
-/// section shows a small "restart required" hint after a change.
+/// Switching relaunches Glotty so the new locale takes effect — most
+/// SwiftUI/AppKit strings resolve their bundle once and cache it, so
+/// mid-session re-localization isn't feasible.
 struct SystemLanguageSection: View {
     @AppStorage(SystemLanguageManager.defaultsKey)
     private var rawLanguage: String = SystemLanguage.system.rawValue
-    /// Progress state while the LLM batch-translates the catalog.
-    /// Drives the inline indicator below the picker.
-    @State private var fillProgress: (done: Int, total: Int)?
-    @State private var fillError: String?
 
     var body: some View {
         Section {
@@ -22,94 +18,40 @@ struct SystemLanguageSection: View {
                 // Reading via `.current` (not `rawLanguage` directly)
                 // surfaces the implicit native-language fallback in
                 // the picker UI — otherwise the user sees "Use system
-                // default" even when behavior actually follows their
-                // saved `native_language`. See SystemLanguageManager.
+                // default" even when behavior follows their saved
+                // `native_language`. See SystemLanguageManager.
                 get: { SystemLanguageManager.current },
-                set: { newValue in
-                    Task { await switchLanguage(to: newValue) }
-                }
+                set: { switchLanguage(to: $0) }
             )) {
                 ForEach(SystemLanguage.allCases) { lang in
                     Text(lang.displayName).tag(lang)
                 }
             }
-            .disabled(fillProgress != nil)
-
-            if let progress = fillProgress {
-                progressRow(progress)
-            }
-            if let err = fillError {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    Text(err)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
         } header: {
             Text("Glotty's UI language".t)
         } footer: {
-            Text("Glotty's UI language. Switching translates any missing strings and relaunches the app.".t)
+            Text("Glotty restarts to apply the new language.".t)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
     }
 
-    private func progressRow(_ p: (done: Int, total: Int)) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                ProgressView().controlSize(.small)
-                Text(String(format: "Translating UI… %d / %d".t, p.done, p.total))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            ProgressView(value: Double(p.done), total: Double(max(p.total, 1)))
-                .progressViewStyle(.linear)
-        }
-    }
-
     @MainActor
-    private func switchLanguage(to newValue: SystemLanguage) async {
-        fillError = nil
+    private func switchLanguage(to newValue: SystemLanguage) {
         rawLanguage = newValue.rawValue
         SystemLanguageManager.set(newValue)
-        // Source language? No translation work to do — relaunch.
-        guard let target = newValue.bundleLocaleID, target != "en", !target.hasPrefix("en-") else {
-            SystemLanguageManager.relaunch()
-            return
-        }
-        // Pre-fill cache. Union of:
-        //   - source strings declared in the bundled .xcstrings
-        //   - source strings the running app has actually requested
-        //     this session and in prior sessions (recorded by the
-        //     Bundle swizzle into LocalizationCache.encounteredSources)
-        // The encountered set is what makes "all displayed text"
-        // achievable — anything the user has ever rendered in
-        // English will be translated and ready after relaunch.
-        let bundled = LocalizationCatalog.bundledSourceStrings()
-        let encountered = Array(LocalizationCache.shared.encounteredSources)
-        var seen = Set<String>()
-        let sources = (bundled + encountered).filter { seen.insert($0).inserted }
-        guard !sources.isEmpty else {
-            // No catalog? Just relaunch and let the swizzle fall
-            // through to whatever Foundation knows.
-            SystemLanguageManager.relaunch()
-            return
-        }
-        fillProgress = (done: 0, total: sources.count)
-        let result = await LocalizationFiller.fill(
-            sources: sources,
-            targetLanguage: target,
-            progress: { done, total in
-                Task { @MainActor in fillProgress = (done: done, total: total) }
-            }
-        )
-        fillProgress = nil
-        if result.translated == 0 && result.requested > 0 {
-            fillError = "Couldn't translate any strings (LLM unavailable?). Relaunching anyway.".t
-        }
+        // Relaunch immediately. The bundled .xcstrings catalog ships
+        // translations for every supported UI language, so the new
+        // locale takes full effect on the next launch with ZERO LLM
+        // work.
+        //
+        // This used to `await LocalizationFiller.fill(...)` over every
+        // string the app had ever rendered (500+), almost all already
+        // covered by the catalog — a multi-minute, flaky LLM batch that
+        // blocked the relaunch and made the switch look stuck ("can't
+        // switch to Chinese"). Dynamic strings the catalog doesn't cover
+        // are filled on demand via Settings → System → Refresh
+        // translations, which is the right place for explicit LLM work.
         SystemLanguageManager.relaunch()
     }
 }

@@ -9497,6 +9497,52 @@
         }
       }
     },
+    "Glotty restarts to apply the new language.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty wird neu gestartet, um die neue Sprache anzuwenden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty se reinicia para aplicar el nuevo idioma."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty redémarre pour appliquer la nouvelle langue."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty を再起動して新しい言語を適用します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 언어를 적용하기 위해 Glotty가 다시 시작됩니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 将重启以应用新语言。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 將重新啟動以套用新語言。"
+          }
+        }
+      }
+    },
     "Glotty saves what you searched and which mistakes Polish flagged. Stored locally in Application Support; never sent off-device. The time range only filters the lists below — history itself is never pruned.": {
       "localizations": {
         "de": {
@@ -9723,59 +9769,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Glotty 的 UI 語言。變更將在下一次啟動時套用。"
-          }
-        }
-      }
-    },
-    "Glotty's UI language. Switching translates any missing strings and relaunches the app.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "UI-Sprache von Glotty. Beim Wechsel werden nicht vorhandene Strings übersetzt und die App neu gestartet."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Glotty's UI language. Switching translates any missing strings and relaunches the app."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Idioma de la interfaz de Glotty. Cambiarlo traduce cualquier cadena que falte y reinicia la aplicación."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Langue de l'interface utilisateur de Glotty. Le bascule traduit toutes les chaînes manquantes et redémarre l'application."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "GlottyのUI言語。切り替えは不足している文字列を翻訳し、アプリを再起動します。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Glotty의 UI 언어. 전환하면 누락된 문자열이 번역되고 앱이 다시 시작됩니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Glotty 的界面语言。切换后会翻译缺失的字符串并重启应用。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Glotty 的 UI 語言。切換會翻譯任何遺漏的字串並重新啟動應用程式。"
           }
         }
       }
