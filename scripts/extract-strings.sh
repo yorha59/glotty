@@ -157,6 +157,12 @@ sort -u "$TMP_LIST" \
         /^\// { next }
         /\\\(/ { next }                # interpolated template — skip
         /^[a-z][a-z0-9]*(\.[a-z0-9]+)+$/ { next }  # SF Symbol name — skip
+        # TCC service token returned by Permission.tccServiceName: swept
+        # in by the Permissions return-literal rule but used only as a
+        # tccutil argument, never displayed, so it must not be translated.
+        # (Accessibility is intentionally NOT skipped here: it doubles as
+        # the permission display name.)
+        $0 == "ListenEvent" { next }
         length > 400 { next }
         # Heuristic: real UI strings have balanced parentheses or
         # none. Fragments captured mid-interpolation often have
@@ -194,6 +200,8 @@ def is_junk(key: str) -> bool:
     if "\\\\(" in key:           # interpolated template fragment
         return True
     if re.match(r'^[a-z][a-z0-9]*(\\.[a-z0-9]+)+$', key):  # SF Symbol name
+        return True
+    if key == "ListenEvent":     # TCC service token, never displayed
         return True
     if len(key) > 400:
         return True

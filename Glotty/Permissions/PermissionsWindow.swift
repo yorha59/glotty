@@ -161,13 +161,10 @@ struct PermissionsView: View {
     /// entry and re-registers the running binary.
     private var staleEntryRecoveryCard: some View {
         let title: String = "Already shows as enabled but still not working?".t
-        let explainRaw = "If “Glotty” already appears switched on in System Settings but "
-            + "Fn → T still does nothing, that toggle belongs to an earlier "
-            + "Glotty with a different signature (e.g. a debug copy). macOS "
-            + "won't let this build reuse it. Remove that row with the “–” "
-            + "button and re-add Glotty — or hit “Reset & re-register” on the "
-            + "affected permission above to clear it and grant again."
-        let explain: String = explainRaw.t
+        // Single literal (not + concatenation) so extract-strings.sh's
+        // `"…".t` rule catches it for the catalog — a concatenated
+        // string has no whole-literal for the scanner to see.
+        let explain: String = "If “Glotty” already appears switched on in System Settings but Fn → T still does nothing, that toggle belongs to an earlier Glotty with a different signature (e.g. a debug copy). macOS won’t let this build reuse it. Remove that row with the “–” button and re-add Glotty — or hit “Reset” on the affected permission above to clear it and grant again.".t
 
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
@@ -219,7 +216,7 @@ private struct PermissionRow: View {
                 }
                 .disabled(granted)
                 if !granted {
-                    Button("Reset & re-register".t) {
+                    Button("Reset".t) {
                         PermissionCheck.resetAndReregister(for: permission)
                     }
                     .controlSize(.small)

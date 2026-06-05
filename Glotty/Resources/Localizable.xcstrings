@@ -1844,6 +1844,52 @@
         }
       }
     },
+    "Adds Glotty to the toggle list (use if the row is missing), and clears any leftover entry from an earlier, differently-signed build so this one can register fresh.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fügt Glotty zur Umschaltliste hinzu (verwenden, wenn die Zeile fehlt) und löscht verbleibende Einträge aus einer früheren, anders signierten Version, damit diese Version sich neu registrieren kann."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añade Glotty a la lista de activación (úsalo si la fila falta) y borra cualquier entrada residual de una compilación anterior, firmada de forma diferente, para que esta pueda registrarse desde cero."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajoute Glotty à la liste de bascule (à utiliser si la ligne est manquante), et efface toute entrée restante d'une version précédente signée différemment pour que celle-ci puisse s'enregistrer fraîchement."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glottyをトグルリストに追加します（行が表示されていない場合に使用）。以前の署名が異なるビルドからの残存エントリをクリアして、このビルドが新規登録できるようにします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "토글 목록에 Glotty를 추가합니다(행이 누락된 경우 사용). 이전의 서명이 다른 빌드에서 남은 항목을 지우고, 새로 등록할 수 있도록 합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将 Glotty 添加到切换列表中（如果该行缺失，请使用此功能），并清除先前不同签名版本留下的任何残留条目，以便此版本可以重新注册。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將 Glotty 加入切換清單（如果該列缺失），並清除來自簽名不同之舊版本的任何剩餘項目，以便此版本可以重新註冊。"
+          }
+        }
+      }
+    },
     "After you chat with Glotty under a polish or explain popup, new memories Glotty notices will land here for review.": {
       "localizations": {
         "de": {
@@ -2070,6 +2116,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "已經在其他 Mac 上設定過 Glotty 嗎？匯入其加密備份以還原您的設定、API 金鑰、記憶和歷史記錄 — 如此您就可以跳過其餘的設定步驟。"
+          }
+        }
+      }
+    },
+    "Already shows as enabled but still not working?": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird bereits als aktiviert angezeigt, funktioniert aber trotzdem nicht?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Ya muestra como habilitado pero aún no funciona?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S'affiche déjà comme activé mais ne fonctionne toujours pas ?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効に表示されているのに、まだ動作しないのですか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 활성화로 표시되는데 작동하지 않나요?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已显示为已启用但仍不起作用？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已顯示為已啟用但仍無作用？"
           }
         }
       }
@@ -10381,6 +10473,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "如何翻譯"
+          }
+        }
+      }
+    },
+    "If “Glotty” already appears switched on in System Settings but Fn → T still does nothing, that toggle belongs to an earlier Glotty with a different signature (e.g. a debug copy). macOS won’t let this build reuse it. Remove that row with the “–” button and re-add Glotty — or hit “Reset” on the affected permission above to clear it and grant again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn „Glotty“ in den Systemeinstellungen bereits als aktiviert erscheint, Fn → T aber trotzdem nichts bewirkt, gehört dieser Schalter zu einem früheren Glotty mit einer anderen Signatur (z. B. einer Debug-Kopie). macOS lässt diese Version ihn nicht wiederverwenden. Entfernen Sie diese Zeile mit der Schaltfläche „–“ und fügen Sie Glotty erneut hinzu – oder klicken Sie oben bei der betroffenen Berechtigung auf „Zurücksetzen“, um sie zu löschen und neu zu erteilen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si \"Glotty\" ya aparece activado en Configuración del sistema pero Fn → T aún no hace nada, ese conmutador pertenece a una versión anterior de Glotty con una firma diferente (por ejemplo, una copia de depuración). macOS no permitirá que esta compilación la reutilice. Elimina esa fila con el botón \"–\" y vuelve a añadir Glotty — o pulsa \"Restablecer\" en el permiso afectado de arriba para borrarlo y volver a concederlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si \"Glotty\" apparaît déjà activé dans les Paramètres Système mais que Fn → T ne fait toujours rien, cette bascule appartient à une version précédente de Glotty avec une signature différente (par exemple, une copie de débogage). macOS n'autorisera pas cette version à la réutiliser. Supprimez cette ligne avec le bouton \"–\" et réajoutez Glotty — ou cliquez sur \"Réinitialiser\" sur la permission concernée ci-dessus pour l'effacer et la accorder à nouveau."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「Glotty」がすでにシステム設定でオンに表示されているのに、Fn → Tがまだ何も反応しない場合、そのトグルは以前の署名が異なるGlotty（デバッグコピーなど）に属しています。macOSはこのビルドがそれを再利用することを許可しません。「–」ボタンでその行を削除してGlottyを再追加するか、上記の影響を受ける権限の「リセット」を押してクリアして再度許可してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시스템 설정에서 \"Glotty\"가 이미 켜져 있는데 Fn → T가 아무 반응이 없다면, 해당 토글은 이전의 다른 서명을 가진 Glotty(예: 디버그 복사본)에 속한 것입니다. macOS는 이 빌드가 해당 토글을 재사용하도록 허용하지 않습니다. \"–\" 버튼으로 해당 행을 제거하고 Glotty를 다시 추가하거나, 위에 있는 영향받은 권한에서 \"초기화\"를 눌러 지우고 다시 허용하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果系统设置中已将“Glotty”显示为开启，但 Fn → T 仍无反应，那么该开关属于一个签名不同的旧版 Glotty（例如调试版本）。macOS 不允许此版本复用它。请用“–”按钮删除该行并重新添加 Glotty——或点击上方对应权限的“重置”按钮以清除并重新授权。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果「Glotty」已在系統設定中顯示為開啟，但 Fn → T 仍然無作用，則該切換鍵屬於具有不同簽名的前一個 Glotty（例如偵錯副本）。macOS 不會讓此版本重複使用它。使用 \"-\" 按鈕移除該列並重新加入 Glotty — 或點擊上方受影響權限的「重設」來清除並再次授權。"
           }
         }
       }
