@@ -221,6 +221,66 @@ xcrun notarytool history --keychain-profile glotty-notary | head
 # errors confirms credentials work.
 ```
 
+### 3. Developer ID Installer certificate (for the .pkg)
+
+The release artifact is a signed + notarized + stapled **.pkg**
+(`make-pkg-signed.sh`, the "Build, sign, notarize, staple PKG" step).
+A `.pkg` is the zero-Terminal distribution format: Installer.app writes
+the app to `/Applications` as root, so the installed app carries **no
+quarantine flag** even when the `.pkg` is delivered through a sandboxed
+messenger (Feishu/WeChat) that otherwise stamps a sandbox-origin
+quarantine Gatekeeper refuses to launch. Proven end-to-end 2026-06-05.
+
+Signing a `.pkg` needs a **`Developer ID Installer`** certificate —
+a SEPARATE cert from the Application one in section 1. (The app payload
+is still signed with the Application cert; only the pkg wrapper uses the
+Installer cert.) Without it, signing fails with `No installer signing
+identity found`.
+
+**This was set up on the runner 2026-06-05** — recorded here for
+disaster recovery. Into the dedicated CI keychain
+`glotty-ci.keychain-db` (the one `make-pkg-signed.sh` uses when
+`KEYCHAIN_PASS_FILE` is set):
+
+```bash
+# On the dev Mac, export the identity (cert + private key). CLI -t
+# identities exports ALL identities into the p12; that's fine — only
+# the Installer one is needed on the runner.
+security export -k login.keychain-db -t identities \
+    -f pkcs12 -P "<temp password>" -o /tmp/glotty-installer.p12
+# (A keychain auth dialog pops; enter the login password to allow.)
+```
+
+```bash
+# On the runner, import with -A (any tool may use the key, no prompt),
+# then pin the partition list. -A matters: a -T-only import still
+# blocked on an auth prompt at sign time in the headless session.
+security unlock-keychain -p "$(cat ~/projects/miner/.keychain-pass)" \
+    ~/Library/Keychains/glotty-ci.keychain-db
+security import /tmp/glotty-installer.p12 -k glotty-ci.keychain-db \
+    -P "<temp password>" -A
+security set-key-partition-list -S apple-tool:,apple: \
+    -s -k "$(cat ~/projects/miner/.keychain-pass)" \
+    glotty-ci.keychain-db
+rm /tmp/glotty-installer.p12   # delete from both machines after import
+
+# Verify
+security find-identity -v glotty-ci.keychain-db | grep "Developer ID Installer"
+# Should show "Developer ID Installer: Simon Zu (47D8DFFZQ4)"
+```
+
+**Critical: sign the pkg with `productsign --keychain`, NOT
+`pkgbuild --sign`.** `pkgbuild` has no `--keychain` flag, so in CI it
+searches keychains ambiguously and blocks forever on a keychain auth
+prompt the headless act_runner session can't answer (the build hangs).
+`productsign` honors `--keychain`, pinning the signing keychain exactly
+like the `codesign --keychain` calls — and signs non-interactively.
+`make-pkg-signed.sh` already does this (pkgbuild builds an unsigned pkg,
+productsign signs it). Diagnosed 2026-06-05: `pkgbuild --sign` hung even
+with `-A` + partition list and even with `--timestamp=none`, while
+`codesign --timestamp` with the Application key succeeded in the same
+session — isolating the cause to `pkgbuild`'s keychain search.
+
 ### Allowing the runner's codesign to use the cert non-interactively
 
 Two things have to be true at signing time on the runner:

@@ -1,4 +1,4 @@
-name: Build Glotty DMG
+name: Build Glotty PKG
 
 on:
   push:
@@ -27,60 +27,38 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Build, sign, notarize, staple DMG
-        # The signed script handles build + sign + DMG + notarize +
-        # staple end-to-end. Prerequisites the runner must have set
-        # up once before this works:
-        #   1. Developer ID Application certificate installed in the
-        #      runner's login keychain (plus Apple intermediates).
-        #   2. notarytool credentials stored under profile name
-        #      `glotty-notary`:
-        #         xcrun notarytool store-credentials "glotty-notary" \
-        #             --apple-id hemoon@outlook.com \
-        #             --team-id 47D8DFFZQ4
-        #   3. ~/projects/miner/.keychain-pass containing the runner
-        #      user's login password (chmod 600). The script reads
-        #      this to unlock the keychain at job start — act_runner
-        #      job sessions don't inherit the user's keychain unlock.
-        # See doc/release-pipeline.md for the full runner setup steps.
+      - name: Build, sign, notarize, staple PKG
+        # The .pkg is the sole release artifact. A .pkg installs via
+        # Installer.app, which writes the app to /Applications as root,
+        # so the INSTALLED app carries no com.apple.quarantine flag —
+        # even when the .pkg is delivered through a sandboxed messenger
+        # (Feishu/WeChat) that otherwise stamps a sandbox-origin
+        # quarantine Gatekeeper refuses to launch ("File created by an
+        # AppSandbox, exec/open not allowed"). Zero-Terminal install;
+        # proven end-to-end 2026-06-05 (Feishu-delivered pkg -> clean,
+        # Gatekeeper-accepted install). See doc/release-pipeline.md.
+        #
+        # make-pkg-signed.sh handles build + sign (Developer ID
+        # Application) + notarize + staple the app, then pkgbuild + sign
+        # (Developer ID Installer) + notarize + staple the .pkg.
+        #
+        # Runner prerequisites (one-time, see doc/release-pipeline.md):
+        #   1. `Developer ID Application` cert in the CI keychain.
+        #   2. `Developer ID Installer` cert in the CI keychain (§3) —
+        #      signs the .pkg wrapper; without it pkgbuild fails with
+        #      "No installer signing identity found".
+        #   3. notarytool credentials under profile `glotty-notary`.
+        #   4. ~/projects/miner/.keychain-pass (chmod 600) — the CI
+        #      keychain password; the script unlocks with it because
+        #      act_runner job sessions don't inherit a keychain unlock.
         env:
           KEYCHAIN_PASS_FILE: /Users/sichengzu/projects/miner/.keychain-pass
-        run: bash scripts/make-dmg-signed.sh
-
-      - name: Create ZIP artifacts
-        # Two ZIP outputs:
-        #   1. Glotty-<ver>.zip — bare app (for advanced users / CI)
-        #   2. Glotty-Installer.zip — app ZIP + install script for
-        #      messaging-app distribution (Feishu, WeChat).  The script
-        #      clears macOS quarantine flags that sandboxed downloaders
-        #      trigger ("File created by an AppSandbox, exec/open not
-        #      allowed"), then installs to /Applications.  Works fully
-        #      offline — the app carries a stapled notarization ticket.
-        run: |
-          DMG_FILE=$(ls dist/*.dmg | head -1)
-          VERSION=$(echo "$DMG_FILE" | sed 's/.*Glotty-\(.*\)\.dmg/\1/')
-          MNT=$(hdiutil attach "$DMG_FILE" -nobrowse -noautoopen 2>/dev/null | grep -oE "/Volumes/.*" | head -1)
-
-          # 1. Bare app ZIP
-          ditto -c -k --keepParent "$MNT/Glotty.app" "dist/Glotty-$VERSION.zip"
-
-          # 2. Installer bundle (app ZIP + .command script)
-          INSTDIR=$(mktemp -d)
-          ditto -c -k --keepParent "$MNT/Glotty.app" "$INSTDIR/Glotty-$VERSION.zip"
-          cp scripts/install-glotty.command "$INSTDIR/安装Glotty.command"
-          chmod +x "$INSTDIR/安装Glotty.command"
-          ditto -c -k "$INSTDIR" "dist/Glotty-Installer.zip"
-
-          hdiutil detach "$MNT" -quiet 2>/dev/null || true
-          rm -rf "$INSTDIR"
-          echo "=== Artifacts ==="
-          ls -lh dist/Glotty-*.zip dist/Glotty-*.dmg
+        run: bash scripts/make-pkg-signed.sh
 
       - name: Copy artifact to persistent location
         run: |
           mkdir -p ~/ci-artifacts/glotty
-          cp dist/*.dmg ~/ci-artifacts/glotty/
-          cp dist/*.zip ~/ci-artifacts/glotty/
+          cp dist/*.pkg ~/ci-artifacts/glotty/
           echo "=== Artifacts ==="
           ls -lh ~/ci-artifacts/glotty/
 
@@ -93,12 +71,8 @@ jobs:
         # config (.runner uses the IPv4 IP directly).
         run: |
           GITEA_TOKEN=$(cat ~/projects/miner/.git-token)
-          DMG_FILE=$(ls dist/*.dmg | head -1)
-          ZIP_FILE=$(ls dist/Glotty-0*.zip | head -1)
-          INSTALLER_FILE=$(ls dist/Glotty-Installer.zip | head -1)
-          DMG_NAME=$(basename "$DMG_FILE")
-          ZIP_NAME=$(basename "$ZIP_FILE")
-          INSTALLER_NAME=$(basename "$INSTALLER_FILE")
+          PKG_FILE=$(ls dist/*.pkg | head -1)
+          PKG_NAME=$(basename "$PKG_FILE")
           RELEASE_TAG="latest-build"
           API="http://truenas.local:30008/api/v1/repos/hemoon/glotty"
 
@@ -111,36 +85,16 @@ jobs:
           RELEASE_ID=$(curl -sf --ipv4 -X POST \
             -H "Authorization: token $GITEA_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "{\"tag_name\":\"$RELEASE_TAG\",\"name\":\"Latest Build\",\"body\":\"Auto-built from main branch (DMG + ZIP)\",\"target_commitish\":\"main\"}" \
+            -d "{\"tag_name\":\"$RELEASE_TAG\",\"name\":\"Latest Build\",\"body\":\"Auto-built from main branch. Double-click the .pkg to install — works via Feishu/WeChat with no Terminal.\",\"target_commitish\":\"main\"}" \
             "$API/releases" | python3 -c "import json,sys; print(json.load(sys.stdin).get('id',''))")
 
           echo "Release ID: $RELEASE_ID"
 
-          # Upload DMG
+          # Upload PKG (sole release artifact)
           curl -sf --ipv4 -X POST \
             -H "Authorization: token $GITEA_TOKEN" \
-            -F "attachment=@$DMG_FILE" \
-            "$API/releases/$RELEASE_ID/assets?name=$DMG_NAME" | python3 -c "
-          import json,sys
-          r=json.load(sys.stdin)
-          print('Uploaded:', r.get('name','?'), f\"({r.get('size','?')} bytes)\")
-          print('Download:', r.get('browser_download_url','?'))"
-
-          # Upload ZIP
-          curl -sf --ipv4 -X POST \
-            -H "Authorization: token $GITEA_TOKEN" \
-            -F "attachment=@$ZIP_FILE" \
-            "$API/releases/$RELEASE_ID/assets?name=$ZIP_NAME" | python3 -c "
-          import json,sys
-          r=json.load(sys.stdin)
-          print('Uploaded:', r.get('name','?'), f\"({r.get('size','?')} bytes)\")
-          print('Download:', r.get('browser_download_url','?'))"
-
-          # Upload Installer
-          curl -sf --ipv4 -X POST \
-            -H "Authorization: token $GITEA_TOKEN" \
-            -F "attachment=@$INSTALLER_FILE" \
-            "$API/releases/$RELEASE_ID/assets?name=$INSTALLER_NAME" | python3 -c "
+            -F "attachment=@$PKG_FILE" \
+            "$API/releases/$RELEASE_ID/assets?name=$PKG_NAME" | python3 -c "
           import json,sys
           r=json.load(sys.stdin)
           print('Uploaded:', r.get('name','?'), f\"({r.get('size','?')} bytes)\")
