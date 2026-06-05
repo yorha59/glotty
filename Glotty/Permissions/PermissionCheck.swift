@@ -44,6 +44,23 @@ enum Permission: String, CaseIterable, Identifiable {
         }
     }
 
+    /// `tccutil` service token for permissions whose grant is bound to
+    /// the app's *code signature*. These are the ones that collide when
+    /// an earlier, differently-signed build with the SAME bundle id
+    /// already owns the System Settings toggle (e.g. a debug copy a
+    /// tester installed before the Developer ID release): the release
+    /// binary reads as not-granted, but the user can't add it because a
+    /// same-named row already exists. Resetting by bundle id clears the
+    /// stale row so the current signature can register fresh. Nil for
+    /// Notifications, which isn't signature-bound and doesn't collide.
+    var tccServiceName: String? {
+        switch self {
+        case .accessibility:   return "Accessibility"
+        case .inputMonitoring: return "ListenEvent"
+        case .notifications:   return nil
+        }
+    }
+
     func isGranted() -> Bool {
         switch self {
         case .accessibility:
@@ -115,6 +132,43 @@ enum PermissionCheck {
                 debugWrite("UNUserNotificationCenter.requestAuthorization -> granted=\(granted) err=\(error?.localizedDescription ?? "nil")")
             }
         }
+    }
+
+    /// Clear this app's TCC decision for `permission` via `tccutil`, then
+    /// re-trigger registration so the CURRENT binary re-appears in System
+    /// Settings under its own signature. Recovery path for the
+    /// "a same-named, differently-signed build already owns the toggle"
+    /// problem — the stale entry (keyed by bundle id) is removed and the
+    /// running binary registers fresh. Uses `Bundle.main.bundleIdentifier`
+    /// so it targets whichever build is running (Glotty or GlottyLab),
+    /// never a hard-coded id.
+    @discardableResult
+    static func resetGrant(for permission: Permission) -> Bool {
+        guard let service = permission.tccServiceName,
+              let bundleID = Bundle.main.bundleIdentifier else { return false }
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+        proc.arguments = ["reset", service, bundleID]
+        do {
+            try proc.run()
+            proc.waitUntilExit()
+            debugWrite("tccutil reset \(service) \(bundleID) -> status \(proc.terminationStatus)")
+        } catch {
+            debugWrite("tccutil reset \(service) \(bundleID) FAILED: \(error.localizedDescription)")
+            return false
+        }
+        // Re-register so the current signature lands back in the list /
+        // surfaces the system prompt.
+        requestRegistration(for: permission)
+        return true
+    }
+
+    /// Reset the two signature-bound permissions (Accessibility + Input
+    /// Monitoring) — the ones that collide when an earlier, differently-
+    /// signed Glotty already holds the toggle.
+    static func resetStaleGrants() {
+        resetGrant(for: .accessibility)
+        resetGrant(for: .inputMonitoring)
     }
 
     private static func debugWrite(_ msg: String, file: String = #fileID, line: Int = #line) {
