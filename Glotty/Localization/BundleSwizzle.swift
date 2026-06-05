@@ -32,6 +32,48 @@ enum BundleSwizzle {
         }
         method_exchangeImplementations(originalMethod, swizzledMethod)
     }
+
+    /// The localization `.t` lookups resolve against. Prefers the
+    /// app-specific `AppleLanguages` override (set by the System-
+    /// language picker, which relaunches). When that's absent — the
+    /// "follow the OS" default on a fresh install — Foundation's own
+    /// resolution falls back to the development region (en) even on a
+    /// zh-Hans Mac, which is why a fresh install showed English in
+    /// the Settings tabs while the Welcome page (which forces the OS
+    /// language) was Chinese. We match the OS's GLOBAL preferred
+    /// languages against the bundle's shipped localizations ourselves.
+    /// Computed once — a language change relaunches the app, so this
+    /// is constant for the process lifetime.
+    static let effectiveLanguage: String? = {
+        if let arr = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
+           let first = arr.first {
+            return first
+        }
+        let global = (CFPreferencesCopyAppValue("AppleLanguages" as CFString,
+                                                kCFPreferencesAnyApplication) as? [String])
+            ?? Locale.preferredLanguages
+        return Bundle.preferredLocalizations(from: Bundle.main.localizations,
+                                             forPreferences: global).first
+    }()
+
+    /// `.lproj` bundle to read catalog values from on a cache miss.
+    /// Resolving against this matched bundle (not `Bundle.main`) is
+    /// what makes a fresh install show the shipped translation:
+    /// `Bundle.main` may have booted in en, but the matched lproj has
+    /// the real value. nil when the effective language is the source
+    /// (en) or the app ships no matching lproj.
+    static let effectiveLprojBundle: Bundle? = {
+        guard let lang = effectiveLanguage,
+              lang != "en", !lang.hasPrefix("en-") else { return nil }
+        let avail = Bundle.main.localizations
+        let match = avail.contains(lang)
+            ? lang
+            : Bundle.preferredLocalizations(from: avail, forPreferences: [lang]).first
+        guard let m = match,
+              let p = Bundle.main.path(forResource: m, ofType: "lproj"),
+              let b = Bundle(path: p) else { return nil }
+        return b
+    }()
 }
 
 extension Bundle {
@@ -46,16 +88,10 @@ extension Bundle {
         // would otherwise pointlessly miss. The cache is also keyed
         // by source string, which IS the English text, so returning
         // the key directly is correct.
-        let lang: String? = {
-            // Read directly from UserDefaults rather than going
-            // through `@MainActor SystemLanguageManager`, since this
-            // hook can fire from background threads inside SwiftUI.
-            if let arr = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String],
-               let first = arr.first {
-                return first
-            }
-            return nil
-        }()
+        // App-override language, else the OS-matched shipped
+        // localization (see BundleSwizzle.effectiveLanguage). Process-
+        // constant, so safe to read from any thread this hook fires on.
+        let lang: String? = BundleSwizzle.effectiveLanguage
         // Always record the source string so the filler can cover
         // strings not in the bundled catalog (dynamic Text(...) sites
         // we missed). Cheap — Set.insert is O(1).
@@ -100,7 +136,12 @@ extension Bundle {
         // check, the LLM would re-translate strings the catalog
         // already covers — and its result (cached forever) would
         // then OVERRIDE the better catalog value.
-        let resolved = self.glotty_localizedString(forKey: key, value: value, table: table)
+        // Resolve against the OS-matched lproj bundle, not `self`
+        // (Bundle.main) — on a fresh install Bundle.main may have
+        // booted in en, so its lookup would return the source string
+        // even though the shipped catalog has the translation.
+        let resolved = (BundleSwizzle.effectiveLprojBundle ?? self)
+            .glotty_localizedString(forKey: key, value: value, table: table)
         if resolved != key {
             return resolved
         }

@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import UniformTypeIdentifiers
 
 /// Drives export and import of Glotty's settings/data bundle.
 /// Stateless; the singleton lives just so SwiftUI views have a
@@ -93,7 +94,12 @@ enum BackupService {
         panel.allowedContentTypes = []
         panel.allowsOtherFileTypes = true
 
-        let result = await MainActor.run { panel.runModal() }
+        // Same agent-app caveat as import — force the panel forward.
+        let result = await MainActor.run {
+            NSApp.activate(ignoringOtherApps: true)
+            panel.makeKeyAndOrderFront(nil)
+            return panel.runModal()
+        }
         guard result == .OK, let url = panel.url else { return nil }
         let plaintext = try encode(makeBundle())
         let encrypted = try BackupCrypto.encrypt(plaintext, password: password)
@@ -163,12 +169,28 @@ enum BackupService {
         panel.title = "Import Glotty backup".t
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        // Backups have no extension; allow any file so the user can
-        // pick one. Validity is checked by decoding, not extension.
-        panel.allowedContentTypes = []
+        // Backups have no extension; allow ANY file so the bare-named
+        // file is selectable. `.item` is the universal UTType root, so
+        // every file qualifies (an empty allowedContentTypes array is
+        // documented as "all" but greys out extensionless files on
+        // some macOS builds). Validity is checked by decoding, not
+        // extension.
+        panel.allowedContentTypes = [.item]
 
-        let pickResult = await MainActor.run { panel.runModal() }
-        guard pickResult == .OK, let url = panel.url else { return nil }
+        // Glotty is an LSUIElement agent; without an explicit activate
+        // the open panel can open behind the Settings window or on
+        // another display and look like "nothing happened". Bring the
+        // app and panel forward before the modal loop.
+        let pickResult = await MainActor.run {
+            NSApp.activate(ignoringOtherApps: true)
+            panel.makeKeyAndOrderFront(nil)
+            return panel.runModal()
+        }
+        guard pickResult == .OK, let url = panel.url else {
+            Log.info(.settings, "import cancelled at file picker", op: "import-backup")
+            return nil
+        }
+        Log.info(.settings, "import file picked: \(url.lastPathComponent)", op: "import-backup")
 
         let fileData = try Data(contentsOf: url)
 
@@ -176,15 +198,21 @@ enum BackupService {
         // decrypt; legacy v1 plaintext bundles import directly.
         let bundleData: Data
         if BackupCrypto.isEncryptedBackup(fileData) {
+            Log.info(.settings, "encrypted backup detected (\(fileData.count) bytes) — prompting for password", op: "import-backup")
             guard let password = await MainActor.run(body: {
                 promptForPassword(
                     title: "Decrypt backup".t,
                     message: "Enter the password this backup was encrypted with.".t,
                     confirm: false
                 )
-            }) else { return nil }
+            }) else {
+                Log.info(.settings, "import cancelled at password prompt", op: "import-backup")
+                return nil
+            }
             bundleData = try BackupCrypto.decrypt(fileData, password: password)
+            Log.info(.settings, "decrypt ok (\(bundleData.count) bytes plaintext)", op: "import-backup")
         } else {
+            Log.warn(.settings, "file is NOT an encrypted backup envelope — trying as plaintext v1", op: "import-backup")
             bundleData = fileData
         }
 
@@ -192,9 +220,13 @@ enum BackupService {
 
         // Replace is destructive — make sure the user really wants it.
         let confirm = await MainActor.run { confirmReplaceAlert(bundle: bundle) }
-        guard confirm else { return nil }
+        guard confirm else {
+            Log.info(.settings, "import cancelled at replace-confirm", op: "import-backup")
+            return nil
+        }
 
         applyReplacing(bundle)
+        Log.info(.settings, "import applied: \(bundle.preferences.count) prefs, \(bundle.apiKeys.count) keys, \(bundle.memories.count) memories, \(bundle.chatThreads.count) chat days, \(bundle.historyEvents.count) events", op: "import-backup")
         return bundle
     }
 

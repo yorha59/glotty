@@ -74,6 +74,18 @@ grep -rhE 'String\(localized:\s*"([^"\\]|\\.)+"' \
     Glotty --include="*.swift" 2>/dev/null \
     | grep -oE '"([^"\\]|\\.)+"' >> "$TMP_LIST" || true
 
+# "literal".t — the app's PRIMARY localization call (the `.t` String
+# extension routes through Bundle.localizedString). These often sit
+# off a recognized SwiftUI call site — assigned to a var, returned,
+# passed as an arg, used in String(format:) — so catch the literal
+# directly by its `.t` suffix. Without this, `.t` strings are only
+# covered by the runtime LLM cache, so a fresh install shows them in
+# English. The `\.t` is anchored with a following non-identifier
+# char so `.title` / `.trimmingCharacters` don't false-match.
+grep -rhoE '"([^"\\]|\\.)+"\.t([^A-Za-z]|$)' \
+    Glotty --include="*.swift" 2>/dev/null \
+    | grep -oE '"([^"\\]|\\.)+"' >> "$TMP_LIST" || true
+
 # Permission enum displayName / purpose — localizable strings the
 # enum returns, shown via `.t` (Settings) or OSLocalizer (Welcome)
 # at the call site with a VARIABLE, so the literal lives in the enum
@@ -133,7 +145,7 @@ sort -u "$TMP_LIST" \
         # at least one ASCII alphanumeric; a string with none is a
         # bare glyph that renders identically in every locale and must
         # not be sent for translation. (ASCII [[:punct:]] above misses
-        # these because they're non-ASCII symbols.)
+        # these because they are non-ASCII symbols.)
         !/[[:alnum:]]/ { next }
         /^\// { next }
         /\\\(/ { next }                # interpolated template — skip

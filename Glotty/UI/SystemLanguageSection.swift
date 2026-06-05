@@ -108,7 +108,7 @@ struct SystemLanguageSection: View {
         )
         fillProgress = nil
         if result.translated == 0 && result.requested > 0 {
-            fillError = "Couldn't translate any strings (LLM unavailable?). Relaunching anyway."
+            fillError = "Couldn't translate any strings (LLM unavailable?). Relaunching anyway.".t
         }
         SystemLanguageManager.relaunch()
     }

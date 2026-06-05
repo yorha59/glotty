@@ -139,8 +139,32 @@ enum SystemLanguageManager {
     private static func writeAppleLanguages(for language: SystemLanguage) {
         if let locale = language.bundleLocaleID {
             UserDefaults.standard.set([locale], forKey: appleLanguagesKey)
+        } else if let osMatch = osMatchedAppLocalization() {
+            // `.system` (follow the OS). Removing the key let Foundation
+            // fall back to the development region (en) on a fresh
+            // install even on a non-English Mac — so SwiftUI Text /
+            // navigationTitle (which read Bundle.main directly) showed
+            // English. Pin the concrete OS-matched localization so
+            // Bundle.main resolves it. Takes effect next launch (the
+            // app relaunches on an explicit pick; the implicit .system
+            // case is written here at applyAtLaunch for subsequent
+            // launches).
+            UserDefaults.standard.set([osMatch], forKey: appleLanguagesKey)
         } else {
             UserDefaults.standard.removeObject(forKey: appleLanguagesKey)
         }
+    }
+
+    /// Best match between the OS's GLOBAL preferred languages and the
+    /// localizations the app actually ships. e.g. a zh-Hans Mac with
+    /// a zh-Hans.lproj → "zh-Hans"; an en Mac → "en" (which the
+    /// caller treats as "no override needed"). nil only if matching
+    /// fails entirely.
+    private static func osMatchedAppLocalization() -> String? {
+        let global = (CFPreferencesCopyAppValue("AppleLanguages" as CFString,
+                                                kCFPreferencesAnyApplication) as? [String])
+            ?? Locale.preferredLanguages
+        return Bundle.preferredLocalizations(from: Bundle.main.localizations,
+                                             forPreferences: global).first
     }
 }
