@@ -86,6 +86,13 @@ grep -rhoE '"([^"\\]|\\.)+"\.t([^A-Za-z]|$)' \
     Glotty --include="*.swift" 2>/dev/null \
     | grep -oE '"([^"\\]|\\.)+"' >> "$TMP_LIST" || true
 
+# Ternary inside `.t` — `Text((cond ? "A" : "B").t)`. The `.t` sits
+# after the closing paren, so the plain `"…".t` rule above misses the
+# two branch literals. Capture both.
+grep -rhoE '\?[[:space:]]*"([^"\\]|\\.)+"[[:space:]]*:[[:space:]]*"([^"\\]|\\.)+"\)\.t' \
+    Glotty --include="*.swift" 2>/dev/null \
+    | grep -oE '"([^"\\]|\\.)+"' >> "$TMP_LIST" || true
+
 # Permission enum displayName / purpose — localizable strings the
 # enum returns, shown via `.t` (Settings) or OSLocalizer (Welcome)
 # at the call site with a VARIABLE, so the literal lives in the enum

@@ -2534,6 +2534,52 @@
         }
       }
     },
+    "Apple's built-in Dictionary app — Glotty reads its catalog to power offline dictionary lookups during Translate.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apples integriertes Wörterbuch — Glotty liest dessen Katalog, um Offline-Wörterbuchsuchen während der Übersetzung zu ermöglichen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La aplicación de Diccionario incorporada de Apple — Glotty lee su catálogo para realizar búsquedas de diccionario fuera de línea durante Traducir."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'application Dictionnaire intégrée d'Apple — Glotty lit son catalogue pour activer les recherches de dictionnaire hors connexion lors de la Traduction."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple純正の辞書アプリ — Glottyはそのカタログを読み込み、翻訳時のオフライン辞書検索を駆動します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple의 기본 사전 앱 — Glotty는 번역 중 오프라인 사전 조회를 위해 해당 카탈로그를 읽습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 内置的词典应用 — Glotty 读取其目录以支持翻译过程中的离线词典查询。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 內建的字典應用程式 — Glotty 讀取其目錄以在翻譯期間提供離線字典查詢功能。"
+          }
+        }
+      }
+    },
     "Archive": {
       "localizations": {
         "de": {
@@ -7307,6 +7353,98 @@
         }
       }
     },
+    "Every provider key, read from Keychain. The reason the file is encrypted.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeder Anbieter-Schlüssel, aus dem Keychain gelesen. Der Grund, warum die Datei verschlüsselt ist."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada clave de proveedor, leída desde Keychain. El motivo por el que el archivo está cifrado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque clé de fournisseur, lue depuis le trousseau. La raison pour laquelle le fichier est chiffré."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのプロバイダーキーはKeychainから読み込まれます。ファイルが暗号化される理由です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keychain에서 읽은 모든 제공자 키. 파일이 암호화된 이유입니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个提供者密钥，从钥匙串读取。文件被加密的原因。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每個提供者金鑰，均從金鑰串讀取。這就是檔案加密的原因。"
+          }
+        }
+      }
+    },
+    "Every translate / explain / polish event, with its discussion thread.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jedes Übersetzungs-/Erklärungs-/Verfeinerungsereignis mit seinem Diskussionsfaden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada evento de traducción / explicación / pulido, con su hilo de discusión."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque événement de traduction / explication / polissage, avec son fil de discussion."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべての翻訳 / 説明 / 推敲イベントとそのディスカススレッド。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 번역 / 설명 / 다듬기 이벤트와 해당 토론 스레드."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每次翻译 / 解释 / 润色事件，及其讨论线程。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每一次翻譯 / 解釋 / 潤色事件，及其對應的討論串列。"
+          }
+        }
+      }
+    },
     "Every translate / explain / polish event.": {
       "localizations": {
         "de": {
@@ -10753,6 +10891,52 @@
         }
       }
     },
+    "LLM settings": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LLM-Einstellungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configuración de LLM"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paramètres du LLM"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LLM設定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LLM 설정"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LLM 设置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "語言模型設定"
+          }
+        }
+      }
+    },
     "Language Glotty replies in for this chat.": {
       "localizations": {
         "de": {
@@ -11354,6 +11538,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "線條顯示在選定範圍內，潤飾功能標記各主要類別的頻率。點擊圖例項目可重新開啟最近標記過它的運行。"
+          }
+        }
+      }
+    },
+    "Live status below. Revoke or re-grant any of them from the matching System Settings pane — the row updates automatically.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live-Status unten. Widerrufen oder erneuern Sie einen davon im entsprechenden System Settings-Bereich — die Zeile wird automatisch aktualisiert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estado en vivo a continuación. Revoca o vuelve a conceder cualquiera de ellos desde el panel de Configuración del sistema correspondiente — la fila se actualiza automáticamente."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statut en direct ci-dessous. Révoquer ou redonner l'autorisation à l'un d'eux depuis le panneau des Paramètres Système correspondant — la ligne se met à jour automatiquement."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブステータスを以下に表示。対応するシステム設定パネルからいずれも取り消すまたは再付与できます — 行は自動的に更新されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아래에 실시간 상태가 표시됩니다. 일치하는 시스템 설정 패널에서 해당 권한을 취소하거나 다시 부여할 수 있습니다 — 행은 자동으로 업데이트됩니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下方显示实时状态。从对应的系统设置面板撤销或重新授予任何权限 — 该行会自动更新。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "即時狀態如下。您可以從對應的系統設定面板中撤銷或重新授予任何權限 — 該列會自動更新。"
           }
         }
       }
@@ -12755,6 +12985,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "下一步"
+          }
+        }
+      }
+    },
+    "No Language Model set up yet — add one in Settings → Language Model.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Sprachmodell eingerichtet — fügen Sie eines unter Einstellungen → Sprachmodell hinzu."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no se ha configurado ningún modelo de lenguaje — agrega uno en Configuración → Modelo de idioma."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun modèle de langage configuré pour le moment — ajoutez-en un dans Paramètres → Modèle de langage."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "言語モデルがまだ設定されていません — 設定 → 言語モデルで追加してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 설정된 언어 모델이 없습니다 — 설정 → 언어 모델에서 하나를 추가하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未设置语言模型 — 在「设置 → 语言模型」中添加一个。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未設定語言模型 — 請在「設定」→「語言模型」中新增一個。"
           }
         }
       }
@@ -14857,6 +15133,98 @@
         }
       }
     },
+    "Paste your DeepSeek API key": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fügen Sie Ihren DeepSeek API-Schlüssel ein"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pega tu clave de API de DeepSeek"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collez votre clé API DeepSeek"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepSeek APIキーを貼り付け"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepSeek API 키를 붙여넣으세요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴您的 DeepSeek API 密钥"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "貼上您的 DeepSeek API 金鑰"
+          }
+        }
+      }
+    },
+    "Paste your Kimi API key": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fügen Sie Ihren Kimi API-Schlüssel ein"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pega tu clave de API de Kimi"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collez votre clé API Kimi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kimi APIキーを貼り付け"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kimi API 키를 붙여넣으세요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴您的 Kimi API 密钥"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "貼上您的 Kimi API 金鑰"
+          }
+        }
+      }
+    },
     "Permissions": {
       "localizations": {
         "de": {
@@ -14899,6 +15267,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "權限"
+          }
+        }
+      }
+    },
+    "Permissions granted": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berechtigungen erteilt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permisos concedidos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permissions accordées"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "許可されました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "권한이 허용됨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "权限已授予"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "權限已授予"
           }
         }
       }
@@ -15313,6 +15727,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "潤飾輸出語言"
+          }
+        }
+      }
+    },
+    "Polish to idiomatic": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polnisch zu idiomatisch"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulir para hacerlo idiomático"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Polonais vers idiomatique"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自然な翻訳にする"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "말투 자연스럽게"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "润色为地道表达"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "潤飾為地道用法"
           }
         }
       }
@@ -16215,6 +16675,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "個人資料、角色、語言、熱鍵、記憶模式、潤飾與對話設定。"
+          }
+        }
+      }
+    },
+    "Profile, persona, languages, hotkeys, memory mode, polish, translation & dictionary settings.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profile, Personas, Sprachen, Tastenkombinationen, Gedächtnis-Modus, Verfeinerung, Übersetzungs- & Wörterbuch-Einstellungen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perfil, persona, idiomas, atajos de teclado, modo de memoria, pulir, configuración de traducción y diccionario."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profil, persona, langues, raccourcis clavier, mode mémoire, polissage, paramètres de traduction et de dictionnaire."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロファイル、パーソナ、言語、ホットキー、メモリーモード、調整、翻訳と辞書の設定。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "프로필, 페르소나, 언어, 단축키, 메모리 모드, 다듬기, 번역 및 사전 설정."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "个人资料、角色、语言、热键、记忆模式、润色、翻译与词典设置。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定檔、角色、語言、熱鍵、記憶模式、潤飾、翻譯與字典設定。"
           }
         }
       }
@@ -18115,6 +18621,98 @@
           "stringUnit": {
             "state": "translated",
             "value": "搜尋辭典"
+          }
+        }
+      }
+    },
+    "Select some text first, then press %@.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen Sie zuerst etwas Text aus, dann drücken Sie %@."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selecciona primero algo de texto, luego presiona %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sélectionnez d'abord du texte, puis appuyez sur %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まずテキストを選択してから%@を押してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "먼저 텍스트를 선택한 다음 %@를 누르세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先选择一些文本，然后按 %@。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請先選取一些文字，然後按下 %@。"
+          }
+        }
+      }
+    },
+    "Selected provider, endpoints, models, custom providers.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgewählter Anbieter, Endpunkte, Modelle, benutzerdefinierte Anbieter."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proveedor seleccionado, puntos de conexión, modelos, proveedores personalizados."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fournisseur sélectionné, points de terminaison, modèles, fournisseurs personnalisés."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択したプロバイダー、エンドポイント、モデル、カスタムプロバイダー。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택된 제공업체, 엔드포인트, 모델, 사용자 지정 제공업체."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已选择的提供者、端点、模型、自定义提供者。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已選取的提供者、端點、模型、自訂提供者。"
           }
         }
       }
