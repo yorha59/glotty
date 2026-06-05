@@ -436,8 +436,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
             let started = CFAbsoluteTimeGetCurrent()
-            guard let text = await grabber.grab() else {
+            guard let text = await grabber.grab(),
+                  !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                // Don't fail silently — a no-op here reads as "the app is
+                // broken" (the user pressed the hotkey and nothing
+                // happened). Surface a hint pointing them at the missing
+                // step: highlight some text first, then fire the leader.
                 print("Glotty: no selection available")
+                HUDController.shared.toast(
+                    String(format: String(localized: "Select some text first, then press %@."),
+                           Keycode.currentLeader().label)
+                )
                 return
             }
             let elapsed = (CFAbsoluteTimeGetCurrent() - started) * 1000

@@ -60,6 +60,90 @@ final class HUDController {
         panel?.orderOut(nil)
     }
 
+    // MARK: - Transient hint toast
+
+    /// Separate, lighter panel from the leader HUD so a hint can show
+    /// the moment after the leader key is released (which hides the
+    /// HUD) without the two fighting over one window.
+    private var toastPanel: NSPanel?
+    private var toastDismiss: DispatchWorkItem?
+
+    /// Brief, non-interactive glass toast near the top of the active
+    /// screen. Used to HINT the user when an action can't proceed —
+    /// e.g. Fn→Translate fired with nothing selected — instead of
+    /// failing silently, which reads as "the app is broken". Auto-
+    /// dismisses after `duration`; repeated calls replace the prior toast.
+    func toast(_ message: String,
+               systemImage: String = "character.cursor.ibeam",
+               duration: TimeInterval = 2.2) {
+        toastDismiss?.cancel()
+        let p = ensureToastPanel()
+        let host = NSHostingView(rootView: HUDToastView(message: message, systemImage: systemImage))
+        // Stop the hosting view from driving the panel's size off the
+        // SwiftUI content's intrinsic size — left on, a `.frame(maxHeight:
+        // .infinity)` content stretched the window to ~600pt tall and the
+        // text got vertically centered off-screen. We size the panel
+        // ourselves from the content's fitting size instead.
+        host.sizingOptions = []
+        host.layoutSubtreeIfNeeded()
+        let size = host.fittingSize
+        host.frame = NSRect(origin: .zero, size: size)
+        p.contentView = host
+        p.setContentSize(size)
+
+        // Place the toast on the screen the user is actually working on
+        // (under the mouse), not always the primary — matches where the
+        // popup appears and where they just tried to select text.
+        let mouse = NSEvent.mouseLocation
+        let screenFrame = (NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main)?.visibleFrame
+            ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        let originX = screenFrame.midX - size.width / 2
+        let originY = screenFrame.maxY - size.height - screenFrame.height * 0.18
+        p.setFrameOrigin(NSPoint(x: originX, y: originY))
+
+        p.alphaValue = 0
+        p.orderFrontRegardless()
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.18
+            p.animator().alphaValue = 1
+        }
+
+        let work = DispatchWorkItem { [weak self] in
+            guard let tp = self?.toastPanel else { return }
+            NSAnimationContext.runAnimationGroup({ ctx in
+                ctx.duration = 0.3
+                tp.animator().alphaValue = 0
+            }, completionHandler: { tp.orderOut(nil) })
+        }
+        toastDismiss = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: work)
+    }
+
+    private func ensureToastPanel() -> NSPanel {
+        if let toastPanel { return toastPanel }
+        // Initial size is a placeholder — `toast(_:)` resizes the panel
+        // to the content's fitting size before showing it.
+        let p = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 320, height: 96),
+            styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        p.isFloatingPanel = true
+        p.level = .statusBar
+        p.isOpaque = false
+        p.backgroundColor = .clear
+        p.hasShadow = false
+        p.hidesOnDeactivate = false
+        p.ignoresMouseEvents = true
+        // `.fullScreenAuxiliary` so the hint still shows when the user
+        // is in another app's full-screen space (a common moment to
+        // fire Fn→Translate on selected text and get nothing back).
+        p.collectionBehavior = [.canJoinAllSpaces, .transient, .ignoresCycle, .fullScreenAuxiliary]
+        toastPanel = p
+        return p
+    }
+
     private func ensurePanel() -> NSPanel {
         if let panel { return panel }
         let p = NSPanel(
@@ -265,5 +349,54 @@ private struct HUDView: View {
                 .foregroundStyle(labelColor)
             Spacer()
         }
+    }
+}
+
+/// Compact glass toast for transient hints (see `HUDController.toast`).
+/// Mirrors the leader HUD's glassmorphism so the two read as one design
+/// language, but holds just an icon + a short message.
+private struct HUDToastView: View {
+    let message: String
+    let systemImage: String
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var textColor: Color { colorScheme == .dark ? .white : .black }
+
+    var body: some View {
+        HStack(spacing: 11) {
+            Image(systemName: systemImage)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.tint)
+            Text(message)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(textColor)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        // Definite width so the panel can size itself from the content's
+        // fitting size; height stays intrinsic (1–2 wrapped lines).
+        .frame(width: 264, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
+        .background(glass)
+        // Match HUDController.shadowMargin so the .shadow() has room to
+        // draw without clipping at the panel's rectangular bounds.
+        .padding(32)
+        .localizationAware()
+    }
+
+    private var glass: some View {
+        let shape = RoundedRectangle(cornerRadius: 14, style: .continuous)
+        let wash: Color = colorScheme == .dark
+            ? Color.black.opacity(0.50) : Color.white.opacity(0.50)
+        let border: Color = colorScheme == .dark
+            ? Color.white.opacity(0.20) : Color.black.opacity(0.12)
+        let shadow: Color = colorScheme == .dark
+            ? Color.black.opacity(0.35) : Color.black.opacity(0.18)
+        return shape
+            .fill(.thickMaterial)
+            .overlay(shape.fill(wash))
+            .overlay(shape.strokeBorder(border, lineWidth: 0.8))
+            .shadow(color: shadow, radius: 18, y: 6)
     }
 }
