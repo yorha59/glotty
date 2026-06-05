@@ -396,6 +396,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             return
         }
+        // LLM setup gate. Explain / Polish / Chat are entirely LLM-driven,
+        // so firing them before a provider is configured would open a
+        // popup that can do nothing but show "No LLM provider configured"
+        // — which reads as "the popup is broken / doesn't display". Per
+        // the rule that LLM features must not trigger before LLM setup,
+        // hint the user which piece is missing and take them straight to
+        // the relevant setting instead of opening a dead popup. Translate
+        // is excluded: it still produces useful output (Apple Translation
+        // + dictionaries) without an LLM.
+        if mode != .translate, LLMRegistry.current() == nil {
+            HUDController.shared.toast(
+                String(localized: "No Language Model set up yet — add one in Settings → Language Model."),
+                systemImage: "sparkles")
+            settingsWindow.show(selecting: .languageModel)
+            return
+        }
         // Dictionary setup gate for Translate. Many users don't know
         // they have to enable dictionaries through macOS first — the
         // Dictionary.app menu (Window → Open Dictionaries) or
