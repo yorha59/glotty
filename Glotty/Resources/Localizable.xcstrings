@@ -1257,37 +1257,37 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Clave de API"
+            "value": "Clave API"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "API key"
+            "value": "Clé API"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "API key"
+            "value": "API キー"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "API key"
+            "value": "API 키"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "API key"
+            "value": "API 密钥"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "API key"
+            "value": "API 金鑰"
           }
         }
       }
