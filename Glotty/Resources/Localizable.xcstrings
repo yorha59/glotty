@@ -4020,6 +4020,52 @@
         }
       }
     },
+    "Chat language": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprache des Chats"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma del chat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langue du chat"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チャット言語"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화 언어"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聊天语言"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "對話語言"
+          }
+        }
+      }
+    },
     "Chat reminder frequency": {
       "localizations": {
         "de": {
@@ -18335,6 +18381,52 @@
         }
       }
     },
+    "Reply language": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprache der Antworten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma de respuesta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langue de réponse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返信言語"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "답장 언어"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回复语言"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回覆語言"
+          }
+        }
+      }
+    },
     "Requires macOS 26": {
       "localizations": {
         "de": {
@@ -20447,6 +20539,52 @@
         }
       }
     },
+    "System language (%@)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Systemsprache (%@)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma del sistema (%@)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langue système (%@)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システム言語 (%@)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시스템 언어 (%@)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系统语言 (%@)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系統語言 (%@)"
+          }
+        }
+      }
+    },
     "Tap to open": {
       "localizations": {
         "de": {
@@ -20719,6 +20857,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fn → R 將您的選取項目改寫成的語言。與翻譯目標語言不同。"
+          }
+        }
+      }
+    },
+    "The language Glotty replies in during Fn → C chats. Leave on \"System language\" to follow your Mac's language, or pick one to practice in. The in-chat picker changes this too.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Sprache, in der Glotty bei Fn → C-Chats antwortet. Lassen Sie es bei \"Systemsprache\", um Ihrer Mac-Sprache zu folgen, oder wählen Sie eine zum Üben aus. Die Auswahl im Chat ändert diese Einstellung ebenfalls."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El idioma en el que Glotty responde durante las conversaciones Fn → C. Deja seleccionado \"Idioma del sistema\" para que siga el idioma de tu Mac, o elige uno para practicar. El selector del chat también cambia esta opción."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La langue dans laquelle Glotty répond lors des discussions Fn → C. Laissez sur \"Langue système\" pour suivre la langue de votre Mac, ou choisissez-en une pour vous pratiquer. Le sélecteur dans le chat modifie également ce paramètre."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fn → Cチャット中にGlottyが使用する言語です。「システム言語」のままにするとMacの言語設定に従います。または、練習したい言語を選択してください。チャット内のピッカーでもこの設定を変更できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty가 Fn → C 채팅 중에 사용하는 답장 언어입니다. \"시스템 언어\"로 설정하면 Mac의 언어를 따르거나, 연습하고 싶은 언어를 선택할 수 있습니다. 채팅 내의 선택기에서도 이 값을 변경할 수 있습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 在 Fn → C 聊天中使用的回复语言。保留\"系统语言\"以跟随您的 Mac 语言，或选择一种语言进行练习。聊天中的选择器也会更改此设置。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 在 Fn → C 對話中使用的回覆語言。留於「系統語言」以跟隨您的 Mac 語言，或選擇一種進行練習。聊天內選擇器也會變更此設定。"
           }
         }
       }

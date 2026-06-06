@@ -3049,6 +3049,11 @@ private struct MemorySettingsSection: View {
 private struct PracticeSettingsSection: View {
     @AppStorage(PracticeScheduler.intervalKey)
     private var intervalMinutes: Int = PracticeScheduler.defaultIntervalMinutes
+    /// Language Glotty replies in during Fn → C chats. Empty = unset, which
+    /// falls back to the system language at runtime (see PopupView's
+    /// `tutorReplyLanguage`). Same key the in-chat "Reply in" picker writes.
+    @AppStorage("glotty.chat.tutorLanguage")
+    private var chatLanguage: String = ""
 
     private struct Frequency: Hashable, Identifiable {
         let label: String
@@ -3067,6 +3072,25 @@ private struct PracticeSettingsSection: View {
 
     var body: some View {
         Group {
+            Section {
+                Picker("Reply language", selection: $chatLanguage) {
+                    Text(String(format: "System language (%@)".t,
+                                LanguageOptions.localizedName(for: LanguageOptions.systemDefault())))
+                        .tag("")
+                    Divider()
+                    ForEach(LanguageOptions.all) { option in
+                        Text(LanguageOptions.localizedName(for: option.id)).tag(option.id)
+                    }
+                }
+                .pickerStyle(.menu)
+            } header: {
+                Text("Chat language")
+            } footer: {
+                Text("The language Glotty replies in during Fn → C chats. Leave on \"System language\" to follow your Mac's language, or pick one to practice in. The in-chat picker changes this too.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section {
                 Picker("Reminder frequency", selection: $intervalMinutes) {
                     ForEach(frequencies) { f in

@@ -62,6 +62,23 @@ enum LanguageOptions {
     /// locales (Chinese, Japanese, …) already use their own
     /// punctuation and don't contain `", "`, so the reshape is a
     /// no-op for them.
+    /// The system language, mapped to the closest id in `all` — the
+    /// guaranteed-supported fallback when a language setting is unset.
+    /// Chinese needs script/region disambiguation (the master list has
+    /// `zh-Hans` / `zh-Hant`, not a bare `zh`); anything we don't carry
+    /// falls back to English.
+    static func systemDefault() -> String {
+        let language = Locale.current.language
+        let base = language.languageCode?.identifier ?? "en"
+        if base == "zh" {
+            if language.script?.identifier == "Hant" { return "zh-Hant" }
+            if let region = language.region?.identifier,
+               ["TW", "HK", "MO"].contains(region) { return "zh-Hant" }
+            return "zh-Hans"
+        }
+        return all.contains(where: { $0.id == base }) ? base : "en"
+    }
+
     static func localizedName(for identifier: String) -> String {
         let raw: String
         if let name = Locale.current.localizedString(forIdentifier: identifier),

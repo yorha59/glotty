@@ -1319,14 +1319,15 @@ struct PopupView: View {
     /// Same shape as the polish-discussion reply picker so the
     /// chat header has a consistent affordance across modes.
     private var tutorLanguagePicker: some View {
-        // The picker only shows real languages — no "follow native"
+        // The picker only shows real languages — no "follow system"
         // sentinel. When the user hasn't explicitly picked one
-        // (`chatTutorLanguage` empty), the binding presents the user's
-        // native language as the highlighted option, so the picker
-        // always reflects the language Glotty will actually reply in.
-        // Picking writes the BCP-47 code directly.
+        // (`chatTutorLanguage` empty), the binding presents the system
+        // language as the highlighted option, so the picker always
+        // reflects the language Glotty will actually reply in (matching
+        // `tutorReplyLanguage()` + Settings → Chat). Picking writes the
+        // BCP-47 code directly.
         Picker("Reply in", selection: Binding<String>(
-            get: { chatTutorLanguage.isEmpty ? userNativeLanguage() : chatTutorLanguage },
+            get: { chatTutorLanguage.isEmpty ? LanguageOptions.systemDefault() : chatTutorLanguage },
             set: { chatTutorLanguage = $0 }
         )) {
             ForEach(LanguageOptions.all) { option in
@@ -3696,16 +3697,13 @@ struct PopupView: View {
         return (savedPolish?.isEmpty == false ? savedPolish! : "en")
     }
 
-    /// Language the tutor chat replies in. Honors the per-user
-    /// override (chat composer picker → `glotty.chat.tutorLanguage`);
-    /// empty / unset falls back to the user's native language —
-    /// chat is conversational reading, so the user's most-comfortable
-    /// language is the right default. (Earlier this fell back to the
-    /// polish output language, but that's "what I'm practicing
-    /// writing in" — typically a language the user is still learning,
-    /// not the language they want chat replies in.)
+    /// Language the tutor chat replies in. Honors the per-user override
+    /// set in Settings → Chat or the chat composer picker
+    /// (`glotty.chat.tutorLanguage`); empty / unset falls back to the
+    /// system language. Chat is conversational reading, so the user's
+    /// most-comfortable language is the right default.
     private func tutorReplyLanguage() -> String {
-        chatTutorLanguage.isEmpty ? userNativeLanguage() : chatTutorLanguage
+        chatTutorLanguage.isEmpty ? LanguageOptions.systemDefault() : chatTutorLanguage
     }
 
     /// Options shown in the polish-chat "Reply in" picker. Mirrors the
