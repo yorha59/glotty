@@ -58,7 +58,17 @@ enum LogCategory: String {
 ///   files are dropped. Keeps logs bounded without losing the
 ///   most-recent window.
 enum Log {
-    static let path = "/tmp/glotty-debug.log"
+    /// `/tmp/glotty-debug.log` for the normal (non-sandboxed) build.
+    /// Under the App Sandbox `/tmp` isn't writable, so fall back to the
+    /// process's container temp dir — otherwise every write fails
+    /// silently and the log never appears. Detected via the sandbox's
+    /// own container env var rather than a write probe.
+    static let path: String = {
+        if ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil {
+            return (NSTemporaryDirectory() as NSString).appendingPathComponent("glotty-debug.log")
+        }
+        return "/tmp/glotty-debug.log"
+    }()
 
     /// Soft cap. We rotate when the file grows past this; the
     /// previous segment is moved aside to `.1` and overwritten on
