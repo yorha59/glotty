@@ -462,12 +462,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             TranslateGuideWindowController.shared.show()
             return
         }
-        // (Removed the old "close Settings before a popup" auto-close.) It
-        // existed because a regular-mode app suppressed the IME candidate
-        // window for popups over full-screen — but on macOS 26 the popup's
-        // non-activating panel gets IME candidates fine even while the app
-        // is in regular mode (verified). So a popup can now coexist with an
-        // open Settings window; no need to force agent mode first.
+        // A popup's IME candidate window over another app's full-screen
+        // Space works ONLY in agent (.accessory) mode — a regular-mode
+        // app's panel has candidates suppressed there (still true on
+        // macOS 26; the earlier "regular works" claim was wrong). But
+        // Settings/Welcome run in REGULAR mode (restart-into-regular for
+        // the slide), and one process can't be both at once. So before
+        // showing a popup, tear down any open managed window and drop the
+        // process back to .accessory — otherwise Settings stays open, the
+        // app stays regular, and the popup's IME is dead.
+        AppActivation.dismissAllRegistered()
         Task { @MainActor in
             // Chat mode doesn't need a selection — it pulls practice topics
             // from MemoryStore instead, so the popup opens with an empty

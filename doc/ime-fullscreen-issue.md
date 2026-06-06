@@ -43,10 +43,12 @@ Supporting:
   flip (without it the first managed window drops keystrokes —
   `IMKCFRunLoopWakeUpReliable`).
 
-**macOS 26 update (verified this session):** popups now get IME
-candidates over full-screen **even in regular mode**. So the agent-app
-requirement is largely obsolete for IME — but it's kept because it's
-what gives the **no-Dock-icon-at-idle** behavior, and it's proven.
+**Still required on macOS 26:** popup IME over a full-screen app works
+**only in agent mode**. (A mid-session "regular mode works too" claim was
+WRONG — verified: with Settings open in regular mode, a popup over
+full-screen gets no IME candidates.) So the agent app is load-bearing for
+popup IME, and a popup must run in `.accessory` — see §2 for why that
+makes popups and Settings mutually exclusive.
 
 ## 2. Settings / Welcome sliding a full-screen app away
 
@@ -80,9 +82,12 @@ Only **Settings and Welcome** restart — they're the only windows opened
 directly from agent mode. Mistake-type / Chat-history open *from inside*
 Settings, so the process is already regular and they slide for free.
 
-Because popup IME works in regular mode now (fact above), a popup can
-coexist with an open Settings window — the old "close Settings before a
-popup" auto-close was removed.
+Because popup IME needs **agent** mode and Settings needs **regular**
+mode, the two are **mutually exclusive** — one process, one activation
+policy. So firing a popup first **closes any open Settings/Welcome and
+drops the process back to `.accessory`** (`AppActivation.dismissAllRegistered()`
+in `handleFire`). Skipping this leaves Settings open, the app regular,
+and the popup's IME dead.
 
 **Alternatives proven but not chosen:** a separate non-`LSUIElement`
 helper app for Settings (branch `wip/two-process-settings`); "regular
