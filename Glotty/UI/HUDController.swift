@@ -15,7 +15,8 @@ final class HUDController {
     /// HUD's content view via NSView bitmap. Read-only.
     var currentPanel: NSPanel? { panel }
     /// Visible glass-card size (header + 4 command rows + footer).
-    private static let contentSize = NSSize(width: 320, height: 210)
+    /// `fileprivate` so `HUDView` can size its own card to match.
+    fileprivate static let contentSize = NSSize(width: 320, height: 210)
     /// Margin around the visible card inside the panel — gives
     /// SwiftUI's `.shadow(radius: 22, y: 8)` room to spill past the
     /// rounded rectangle. Without this the shadow clips at the
@@ -24,7 +25,7 @@ final class HUDController {
     /// travels furthest. The HUDView's body wraps its content in
     /// `.padding(shadowMargin)` to keep the visible card at
     /// `contentSize` while the panel itself is larger.
-    private static let shadowMargin: CGFloat = 32
+    fileprivate static let shadowMargin: CGFloat = 32
     /// Outer panel size — content + shadow margin on every side.
     private static var panelSize: NSSize {
         NSSize(
@@ -34,23 +35,55 @@ final class HUDController {
     }
 
     func show() {
+        // A fresh Fn-hold cancels any pending hint auto-dismiss so the
+        // hint timer can't later hide the real (newly-shown) leader HUD.
+        hintDismiss?.cancel()
+        present(HUDView())
+    }
+
+    /// Re-show the leader HUD with a transient hint line at its bottom.
+    /// Used when a leader action can't proceed — e.g. Fn→Translate fired
+    /// with nothing selected. Folding the message into the HUD (instead of
+    /// a separate toast window) keeps it reading as one surface, and the
+    /// command list above doubles as a reminder of what each chord needs.
+    /// Auto-dismisses after `duration`.
+    func showHint(_ message: String,
+                  systemImage: String = "character.cursor.ibeam",
+                  duration: TimeInterval = 2.6) {
+        hintDismiss?.cancel()
+        present(HUDView(hint: message, hintImage: systemImage))
+        let work = DispatchWorkItem { [weak self] in self?.hide() }
+        hintDismiss = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: work)
+    }
+
+    private var hintDismiss: DispatchWorkItem?
+
+    /// Size the HUD to its content (so an optional hint row doesn't clip),
+    /// center the visible card horizontally ~25% down the active screen,
+    /// and show it.
+    private func present(_ rootView: HUDView) {
         let panel = ensurePanel()
 
-        let host = NSHostingView(rootView: HUDView())
-        host.frame = NSRect(origin: .zero, size: HUDController.panelSize)
+        let host = NSHostingView(rootView: rootView)
+        // Drive the panel size from the content's fitting size rather than
+        // a fixed frame — the card grows by a row when a hint is present.
+        host.sizingOptions = []
+        host.layoutSubtreeIfNeeded()
+        let size = host.fittingSize
+        host.frame = NSRect(origin: .zero, size: size)
         panel.contentView = host
-        panel.setContentSize(HUDController.panelSize)
+        panel.setContentSize(size)
 
-        // Center the visible glass card horizontally on the active
-        // screen, ~25% down from the top. The panel is panelSize
-        // (content + shadowMargin*2), but the user perceives it as
-        // contentSize — subtract the margin from origin so the visible
-        // card lands where they expect, with the invisible shadow
-        // buffer extending outward into the surrounding desktop.
+        // `size` includes the shadow margin on every side; the user
+        // perceives only the inner card (size − margin*2). Offset by the
+        // margin so that visible card lands centered, ~25% down from top,
+        // with the invisible shadow buffer spilling into the desktop.
         let screenFrame = NSScreen.main?.visibleFrame
             ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        let originX = screenFrame.midX - HUDController.contentSize.width / 2 - HUDController.shadowMargin
-        let originY = screenFrame.maxY - HUDController.contentSize.height - screenFrame.height * 0.25 - HUDController.shadowMargin
+        let originX = screenFrame.midX - size.width / 2
+        let originY = screenFrame.maxY - size.height
+            - screenFrame.height * 0.25 + HUDController.shadowMargin
         panel.setFrameOrigin(NSPoint(x: originX, y: originY))
 
         panel.orderFrontRegardless()
@@ -177,6 +210,10 @@ final class HUDController {
 /// as a bug. Now uses `@Environment(\.colorScheme)` plus semantic
 /// colors so light-mode users get a matching panel.
 private struct HUDView: View {
+    /// When set, the HUD shows this as a hint row at its bottom (in place
+    /// of the "Release … to cancel" footer) — see `HUDController.showHint`.
+    var hint: String? = nil
+    var hintImage: String = "character.cursor.ibeam"
     @Environment(\.colorScheme) private var colorScheme
 
     private var titleColor: Color { colorScheme == .dark ? .white : .black }
@@ -238,17 +275,33 @@ private struct HUDView: View {
             commandRow(key: Keycode.label(for: Keycode.currentChat()),
                        label: String(format: String(localized: "Chat with Glotty in %@"),
                                      HUDView.nativeLangName))
-            Text("\(String(localized: "Release")) \(Keycode.currentLeader().label) \(String(localized: "to cancel"))")
-                .font(.caption2)
-                .foregroundStyle(hintColor)
+            if let hint {
+                Divider().background(dividerColor)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Image(systemName: hintImage)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.tint)
+                    Text(hint)
+                        .font(.caption)
+                        .foregroundStyle(titleColor.opacity(0.9))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                }
+            } else {
+                Text("\(String(localized: "Release")) \(Keycode.currentLeader().label) \(String(localized: "to cancel"))")
+                    .font(.caption2)
+                    .foregroundStyle(hintColor)
+            }
         }
         .padding(14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        // Fixed width, intrinsic height — the card grows by a row when a
+        // hint is present (HUDController sizes the panel from this).
+        .frame(width: HUDController.contentSize.width, alignment: .topLeading)
         .background(glassmorphism)
         // Padding around the visible glass card so the .shadow() on
         // glassmorphism has room to draw without being clipped at the
         // NSPanel's rectangular bounds. Matches `HUDController.shadowMargin`.
-        .padding(32)
+        .padding(HUDController.shadowMargin)
         .localizationAware()
     }
 

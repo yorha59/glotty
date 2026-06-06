@@ -488,7 +488,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // happened). Surface a hint pointing them at the missing
                 // step: highlight some text first, then fire the leader.
                 print("Glotty: no selection available")
-                HUDController.shared.toast(
+                // Fold the hint into the leader HUD (bottom row) rather
+                // than popping a separate toast window — reads as one
+                // surface, and the command list above reminds the user
+                // what each chord does.
+                HUDController.shared.showHint(
                     String(format: String(localized: "Select some text first, then press %@."),
                            Keycode.currentLeader().label)
                 )
