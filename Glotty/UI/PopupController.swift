@@ -381,6 +381,20 @@ final class PopupController {
         // is correctly distinguished from our own re-fits.
         if mode != .chat {
             autoFitPanels.insert(ObjectIdentifier(panel))
+            // Re-fit a few times shortly after open. Translate/explain content
+            // arrives async (the translation result ~250ms in, the LLM
+            // explanation over a second or more), and SwiftUI's in-ScrollView
+            // geometry reporting doesn't reliably re-fire for those late
+            // changes. These ticks re-measure (via autoFitIfNeeded's
+            // preferredContentSize probe) and grow the window to the final
+            // content. Each is a no-op once the user has resized (the panel
+            // has left autoFitPanels) or once the size already matches.
+            for delay in [0.3, 0.7, 1.3, 2.2] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self, weak panel] in
+                    guard let self, let panel else { return }
+                    self.autoFitIfNeeded(panel, desiredContentHeight: 0)
+                }
+            }
         }
         lastAutoFitSize[ObjectIdentifier(panel)] = openSize
         panelScreenCap[ObjectIdentifier(panel)] = screenCap
@@ -430,8 +444,8 @@ final class PopupController {
             guard self.autoFitPanels.contains(id) else { return }
             let actual = panelRef.contentRect(forFrameRect: panelRef.frame).size
             let mine = self.lastAutoFitSize[id] ?? actual
-            if abs(actual.height - mine.height) > 2
-                || abs(actual.width - mine.width) > 2 {
+            if abs(actual.height - mine.height) > 4
+                || abs(actual.width - mine.width) > 4 {
                 self.autoFitPanels.remove(id)
                 Log.debug(.popup, "user resized — auto-fit ended "
                           + "(actual=\(actual) lastAutoFit=\(mine))", op: "resize")
@@ -516,15 +530,30 @@ final class PopupController {
     /// tracks the content, capped at the screen.
     func autoFitIfNeeded(_ panel: PopupPanel, desiredContentHeight: CGFloat) {
         let id = ObjectIdentifier(panel)
-        guard autoFitPanels.contains(id) else { return }
-        guard desiredContentHeight > 0 else { return }
-        // Use the cap captured at open from the popup's exact screen; fall back
-        // to the panel's current screen if somehow missing.
+        guard autoFitPanels.contains(id), let host = hosts[id] else { return }
+        // MEASURE accurately without permanently locking the window. SwiftUI's
+        // in-ScrollView geometry reporting misses late async content (the
+        // translation result / LLM explanation that arrive a few hundred ms
+        // after the dictionaries) — the window stayed sized to the pre-result
+        // content and the result clipped. NSHostingController's
+        // `.preferredContentSize` DOES capture the full ideal (including that
+        // late content + the ScrollView's intrinsic height), so we toggle it
+        // on just long enough to read the ideal, then turn it back off and
+        // apply the height ourselves — keeping the window freely resizable.
+        host.sizingOptions = [.preferredContentSize]
+        host.view.layoutSubtreeIfNeeded()
+        let ideal = host.preferredContentSize
+        host.sizingOptions = []
         let screenCap = panelScreenCap[id]
             ?? max((panel.screen?.visibleFrame.height ?? 900)
                    - Self.screenEdgeMargin, 320)
+        // Re-assert a resizable range — toggling `.preferredContentSize` may
+        // have pinned contentMin/Max; restore room to drag.
+        panel.contentMinSize = NSSize(width: 320, height: 200)
+        panel.contentMaxSize = NSSize(width: .greatestFiniteMagnitude, height: screenCap)
+        guard ideal.height > 0 else { return }
         let current = panel.contentRect(forFrameRect: panel.frame).size
-        let targetHeight = min(desiredContentHeight, screenCap)
+        let targetHeight = min(ideal.height, screenCap)
         // Nothing to do if we're already there (avoids a redundant resize +
         // a spurious didResize that could be misread as a user drag).
         guard abs(targetHeight - current.height) > 1 else {

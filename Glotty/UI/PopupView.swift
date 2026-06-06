@@ -5,24 +5,6 @@ import NaturalLanguage
 import AVFoundation
 import CoreServices
 
-/// Reports the popup content column's intrinsic height up to PopupView so the
-/// controller can auto-fit the window to it.
-private struct PopupContentHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
-}
-
-/// Reports the popup footer's height (the src→tgt / practice row) so the
-/// controller's auto-fit can account for it on top of the content column.
-private struct PopupFooterHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
-}
-
 /// Which Fn-leader command produced this popup. The view branches on this:
 /// `.translate` runs Apple's Translation framework (decode: foreign → native,
 /// one-line gloss, with phonetics + dict sections). `.explain` runs the LLM
@@ -676,14 +658,10 @@ struct PopupView: View {
         VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
             scrollableContent
             footerForMode
-                .background(
-                    GeometryReader { g in
-                        Color.clear.preference(key: PopupFooterHeightKey.self,
-                                               value: g.size.height)
-                    }
-                )
-                .onPreferenceChange(PopupFooterHeightKey.self) { h in
-                    measuredFooterHeight = h
+                .onGeometryChange(for: CGFloat.self) { proxy in
+                    proxy.size.height
+                } action: { newHeight in
+                    measuredFooterHeight = newHeight
                     reportAutoFit()
                 }
         }
@@ -851,18 +829,22 @@ struct PopupView: View {
             }
         }
         // Report the column's intrinsic height so the controller can auto-fit
-        // the window to it (on first paint + as a response streams in). The
-        // column has `.fixedSize(vertical: true)` in the scroll, so this is
-        // the natural unscrolled height — independent of the window size, so
+        // the window to it (on first paint + as content arrives). The column
+        // has `.fixedSize(vertical: true)` in the scroll, so this is the
+        // natural unscrolled height — independent of the window size, so
         // measuring it here is not circular.
-        .background(
-            GeometryReader { g in
-                Color.clear.preference(key: PopupContentHeightKey.self,
-                                       value: g.size.height)
-            }
-        )
-        .onPreferenceChange(PopupContentHeightKey.self) { h in
-            measuredContentHeight = h
+        //
+        // `.onGeometryChange` (not `.background(GeometryReader) +
+        // onPreferenceChange`) is deliberate: the translation result and the
+        // LLM explanation arrive ASYNC, often a couple hundred ms after the
+        // dictionaries have already settled the layout. The preference path
+        // missed those late growth events (the window stayed sized to the
+        // pre-result content and the result clipped just below the fold);
+        // `onGeometryChange` fires reliably on every geometry change.
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.height
+        } action: { newHeight in
+            measuredContentHeight = newHeight
             reportAutoFit()
         }
     }
