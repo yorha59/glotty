@@ -108,6 +108,18 @@ final class FnLeaderHotkey {
         }
 
         if type == .keyDown {
+            // Skip any keyDown carrying the Command modifier. Glotty's
+            // hotkeys are Fn+letter (no Command), so the only Cmd+key this
+            // tap ever sees is our OWN synthetic Cmd+C from the selection
+            // grabber — whose keycode 8 ('c') is the chat hotkey and would
+            // otherwise fire a chat popup after every translate/explain/
+            // polish grab. (The `.eventSourceUserData` marker we also stamp
+            // doesn't reliably survive posting to the HID tap, so this
+            // modifier check is the real guard.) Returning unretained
+            // leaves the real Cmd+C working in the target app.
+            if event.flags.contains(.maskCommand) {
+                return Unmanaged.passUnretained(event)
+            }
             let keycode = event.getIntegerValueField(.keyboardEventKeycode)
             let withinWindow = (CFAbsoluteTimeGetCurrent() - fnDownAt) < leaderWindow
             let active = (wasFnPressed || withinWindow) && !firedDuringCurrentHold
