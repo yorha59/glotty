@@ -784,14 +784,20 @@ struct PopupView: View {
         }
     }
 
-    /// Cap for the content frame's height — matches the controller's
-    /// `screenEdgeMargin` so the SwiftUI content can fill a popup that the
-    /// controller is allowed to grow nearly to the screen edges. `visibleFrame`
-    /// already excludes the menu bar and Dock, so only a small breathing gap
-    /// is subtracted. Falls back to 700pt if no screen is available.
+    /// Upper bound for the content frame's height, used only so a genuinely
+    /// huge selection lets the inner ScrollView take over. It must never clip
+    /// BELOW the height the controller grew the window to — and the controller
+    /// sizes the window from the popup's *actual* screen. A SwiftUI view can't
+    /// reliably know which screen its NSWindow is on (the popup may be on the
+    /// secondary display, while `NSScreen.main` is the primary), so we use the
+    /// TALLEST screen as a safe non-clipping upper bound and let the
+    /// controller's per-screen window cap do the real limiting. Using
+    /// `NSScreen.main` here was the bug: when the popup opened on a different,
+    /// shorter "main" screen than the one it actually showed on, the content
+    /// got capped too short — scrolling even though the window had room.
     private var maxPanelHeight: CGFloat {
-        let visible = NSScreen.main?.visibleFrame.height ?? 700
-        return max(visible - 16, 320)
+        let tallest = NSScreen.screens.map { $0.visibleFrame.height }.max() ?? 700
+        return max(tallest - 16, 320)
     }
 
     /// Chat doesn't have a source language to display — the question came from
