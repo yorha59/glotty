@@ -144,6 +144,10 @@ final class PopupController {
     /// didResize observer compares against this to tell our own re-fits apart
     /// from a user drag.
     private var lastAutoFitSize: [ObjectIdentifier: NSSize] = [:]
+    /// The usable content-height cap for each panel, captured at open from the
+    /// exact screen the popup launched on. Reused by `autoFitIfNeeded` so a
+    /// streaming re-fit clamps to the same screen the window was built for.
+    private var panelScreenCap: [ObjectIdentifier: CGFloat] = [:]
 
     /// Bubbles standing in for hidden popups. Keyed by the hidden
     /// popup's ObjectIdentifier; the value is the small floating panel
@@ -223,6 +227,11 @@ final class PopupController {
         let mouse = NSEvent.mouseLocation
         let screenFrame = (NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main)?.visibleFrame
             ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        // We already know the exact screen the popup will open on (the one
+        // under the cursor). Compute its usable content height up front and
+        // hand it to PopupView, so the content's height cap and the window's
+        // height cap come from the SAME screen — no `NSScreen.main` guesswork.
+        let screenCap = max(screenFrame.height - Self.screenEdgeMargin, 320)
 
         // Rescue any existing panels the user dragged off-screen. With
         // `constrainFrameRect` disabled on PopupPanel they can end up
@@ -283,7 +292,8 @@ final class PopupController {
             onContentResize: { [weak self, weak panelRef] desiredHeight in
                 guard let self, let panelRef else { return }
                 self.autoFitIfNeeded(panelRef, desiredContentHeight: desiredHeight)
-            }
+            },
+            maxContentHeight: screenCap
         )
         // ESC routes through `PopupPanel.cancelOperation`, which checks
         // for IME composition first — see PopupPanel for the rationale.
@@ -357,7 +367,7 @@ final class PopupController {
         // Cap the panel content height at the available screen height (minus
         // chrome); a very long selection's intrinsic height can exceed the
         // screen, and the inner ScrollView takes over past the cap.
-        let screenCap = max(screenFrame.height - Self.screenEdgeMargin, 320)
+        // `screenCap` was computed up top from the popup's exact screen.
         let openSize = NSSize(width: initialSize.width,
                               height: min(initialSize.height, screenCap))
         panel.setContentSize(openSize)
@@ -373,6 +383,7 @@ final class PopupController {
             autoFitPanels.insert(ObjectIdentifier(panel))
         }
         lastAutoFitSize[ObjectIdentifier(panel)] = openSize
+        panelScreenCap[ObjectIdentifier(panel)] = screenCap
 
         // Cascade subsequent windows so they don't perfectly stack on the
         // first. AppKit's window-cascading convention is 20pt × 20pt; we use
@@ -486,6 +497,7 @@ final class PopupController {
         hosts.removeValue(forKey: id)
         autoFitPanels.remove(id)
         lastAutoFitSize.removeValue(forKey: id)
+        panelScreenCap.removeValue(forKey: id)
         panels.removeAll { $0 === panel }
         // If this popup was hidden behind a bubble, tear the bubble
         // down too so a closed-while-hidden popup doesn't leave an
@@ -506,9 +518,11 @@ final class PopupController {
         let id = ObjectIdentifier(panel)
         guard autoFitPanels.contains(id) else { return }
         guard desiredContentHeight > 0 else { return }
-        let screenCap = max((panel.screen?.visibleFrame.height
-                             ?? NSScreen.main?.visibleFrame.height ?? 900)
-                            - Self.screenEdgeMargin, 320)
+        // Use the cap captured at open from the popup's exact screen; fall back
+        // to the panel's current screen if somehow missing.
+        let screenCap = panelScreenCap[id]
+            ?? max((panel.screen?.visibleFrame.height ?? 900)
+                   - Self.screenEdgeMargin, 320)
         let current = panel.contentRect(forFrameRect: panel.frame).size
         let targetHeight = min(desiredContentHeight, screenCap)
         // Nothing to do if we're already there (avoids a redundant resize +

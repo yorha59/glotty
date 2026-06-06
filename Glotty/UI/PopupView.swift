@@ -244,6 +244,12 @@ struct PopupView: View {
     /// PopupController re-fits the window to it to keep all content visible —
     /// until the user drags an edge.
     let onContentResize: ((CGFloat) -> Void)?
+    /// Usable content-height cap for the EXACT screen this popup opens on,
+    /// supplied by PopupController (which knows the screen before the window
+    /// appears). Used as `maxPanelHeight` so the content's height cap and the
+    /// window's height cap always come from the same screen — no `NSScreen.main`
+    /// guesswork on multi-display setups.
+    let maxContentHeight: CGFloat
 
     init(sourceText: String,
          mode: PopupMode,
@@ -254,7 +260,8 @@ struct PopupView: View {
          onChatExpand: (() -> Void)? = nil,
          onHide: (() -> Void)? = nil,
          registerExtractionTrigger: ((@escaping () -> Void) -> Void)? = nil,
-         onContentResize: ((CGFloat) -> Void)? = nil) {
+         onContentResize: ((CGFloat) -> Void)? = nil,
+         maxContentHeight: CGFloat = 760) {
         self.sourceText = sourceText
         self.mode = mode
         self.replay = replay
@@ -265,6 +272,7 @@ struct PopupView: View {
         self.onHide = onHide
         self.registerExtractionTrigger = registerExtractionTrigger
         self.onContentResize = onContentResize
+        self.maxContentHeight = maxContentHeight
 
         // Pre-load @State from the replay payload so the popup renders the
         // stored content on first paint. Using `State(initialValue:)` here is
@@ -784,21 +792,14 @@ struct PopupView: View {
         }
     }
 
-    /// Upper bound for the content frame's height, used only so a genuinely
-    /// huge selection lets the inner ScrollView take over. It must never clip
-    /// BELOW the height the controller grew the window to — and the controller
-    /// sizes the window from the popup's *actual* screen. A SwiftUI view can't
-    /// reliably know which screen its NSWindow is on (the popup may be on the
-    /// secondary display, while `NSScreen.main` is the primary), so we use the
-    /// TALLEST screen as a safe non-clipping upper bound and let the
-    /// controller's per-screen window cap do the real limiting. Using
-    /// `NSScreen.main` here was the bug: when the popup opened on a different,
-    /// shorter "main" screen than the one it actually showed on, the content
-    /// got capped too short — scrolling even though the window had room.
-    private var maxPanelHeight: CGFloat {
-        let tallest = NSScreen.screens.map { $0.visibleFrame.height }.max() ?? 700
-        return max(tallest - 16, 320)
-    }
+    /// Upper bound for the content frame's height — comes straight from the
+    /// controller, which computed it from the EXACT screen this popup opens on
+    /// (the one under the cursor) before the window appeared. So the content's
+    /// height cap and the window's height cap always agree, even when the popup
+    /// is on the secondary of two displays. (Using `NSScreen.main` here was the
+    /// old bug: on multi-display setups the content got capped to the primary
+    /// screen while the window was built for a different one.)
+    private var maxPanelHeight: CGFloat { maxContentHeight }
 
     /// Chat doesn't have a source language to display — the question came from
     /// the LLM, not a selection. Show just the practice target language and
