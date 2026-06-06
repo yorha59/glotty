@@ -784,11 +784,14 @@ struct PopupView: View {
         }
     }
 
-    /// Screen height minus a margin for menu bar + panel chrome.
-    /// Falls back to 700pt if no screen is available.
+    /// Cap for the content frame's height — matches the controller's
+    /// `screenEdgeMargin` so the SwiftUI content can fill a popup that the
+    /// controller is allowed to grow nearly to the screen edges. `visibleFrame`
+    /// already excludes the menu bar and Dock, so only a small breathing gap
+    /// is subtracted. Falls back to 700pt if no screen is available.
     private var maxPanelHeight: CGFloat {
         let visible = NSScreen.main?.visibleFrame.height ?? 700
-        return max(visible - 120, 320)
+        return max(visible - 16, 320)
     }
 
     /// Chat doesn't have a source language to display — the question came from

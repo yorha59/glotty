@@ -160,6 +160,12 @@ final class PopupController {
     /// the first layout pass; this is just a placeholder so the panel doesn't
     /// flash at zero-size.
     private static let initialSize = NSSize(width: 460, height: 240)
+    /// Margin kept between an auto-fitted popup and the screen edges.
+    /// `visibleFrame` already excludes the menu bar and Dock, so this only
+    /// needs to be a small breathing gap — not the old 120pt, which wasted
+    /// over a hundred points of usable height and forced tall content to
+    /// scroll even when the screen had room.
+    private static let screenEdgeMargin: CGFloat = 16
 
     /// Distributed-notification name the dev/agent posts to replay
     /// the most-recent stored history event of a given kind into a
@@ -351,7 +357,7 @@ final class PopupController {
         // Cap the panel content height at the available screen height (minus
         // chrome); a very long selection's intrinsic height can exceed the
         // screen, and the inner ScrollView takes over past the cap.
-        let screenCap = max(screenFrame.height - 120, 320)
+        let screenCap = max(screenFrame.height - Self.screenEdgeMargin, 320)
         let openSize = NSSize(width: initialSize.width,
                               height: min(initialSize.height, screenCap))
         panel.setContentSize(openSize)
@@ -501,7 +507,8 @@ final class PopupController {
         guard autoFitPanels.contains(id) else { return }
         guard desiredContentHeight > 0 else { return }
         let screenCap = max((panel.screen?.visibleFrame.height
-                             ?? NSScreen.main?.visibleFrame.height ?? 900) - 120, 320)
+                             ?? NSScreen.main?.visibleFrame.height ?? 900)
+                            - Self.screenEdgeMargin, 320)
         let current = panel.contentRect(forFrameRect: panel.frame).size
         let targetHeight = min(desiredContentHeight, screenCap)
         // Nothing to do if we're already there (avoids a redundant resize +
