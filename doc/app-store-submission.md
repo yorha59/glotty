@@ -1,5 +1,14 @@
 # App Store submission
 
+> **Status note (2026-06-06):** the four prerequisites below are all DONE,
+> and **build 2 is uploaded and VALID** on App Store Connect. For the
+> remaining steps to actually ship (metadata, App Privacy, screenshots,
+> review notes, Submit for Review) see **[release-checklist.md](release-checklist.md)**.
+> Also: the "What we don't know yet" section at the bottom is now
+> answered — the sandboxed event tap, AX grab, and Cmd+C fallback were
+> all verified working (see `memory/project_sandbox_mas_capability.md`).
+> This file is kept for the one-time portal setup history.
+
 How to take Glotty's current code and put it in front of Apple's
 App Review process. The goal of the first submission is empirical:
 learn what Apple actually flags (likely the Dictionary Services
