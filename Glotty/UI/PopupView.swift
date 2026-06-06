@@ -5,6 +5,27 @@ import NaturalLanguage
 import AVFoundation
 import CoreServices
 
+/// Transparent layer that drags its window on mouseDown. Used as a
+/// background behind the popup content so clicking any empty area moves
+/// the panel. We drive the drag explicitly via `window.performDrag(with:)`
+/// rather than relying on `mouseDownCanMoveWindow` /
+/// `isMovableByWindowBackground`, which are unreliable for the popup's
+/// `.nonactivatingPanel` (it doesn't take the click the normal way).
+/// `mouseDownCanMoveWindow` is forced false so our `mouseDown` actually
+/// fires instead of AppKit swallowing it for its own (broken-here) drag.
+private struct WindowDragLayer: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { DragNSView() }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    final class DragNSView: NSView {
+        // Mark this background view as a window-drag handle. AppKit then
+        // moves the panel when the user drags from any empty area that
+        // hit-tests to this view — works for the `.nonactivatingPanel`
+        // and (unlike `performDrag`) responds to the normal event stream.
+        override var mouseDownCanMoveWindow: Bool { true }
+    }
+}
+
 /// Which Fn-leader command produced this popup. The view branches on this:
 /// `.translate` runs Apple's Translation framework (decode: foreign → native,
 /// one-line gloss, with phonetics + dict sections). `.explain` runs the LLM
@@ -501,13 +522,17 @@ struct PopupView: View {
 
     var body: some View {
         outerLayout
-            // `.allowsHitTesting(false)` on the decorative background so a
-            // mouseDown on empty popup area falls through to the NSPanel
-            // (which has `isMovableByWindowBackground = true`) and drags the
-            // window. Without this the filled background view swallows the
-            // click and the popup can only be moved from the thin titlebar
-            // strip. The background is purely visual (fill + border), so it
-            // never needed hit testing.
+            // Drag layer (furthest back). A mouseDown on any empty popup
+            // area falls through the non-hit-tested visual background to
+            // this view, which calls `window.performDrag(with:)` to move
+            // the panel. `isMovableByWindowBackground` alone is unreliable
+            // for a `.nonactivatingPanel` (it doesn't take the click
+            // normally), so we drive the drag explicitly. Interactive
+            // content in front (buttons, text fields, cards) still gets
+            // its clicks first.
+            .background(WindowDragLayer().allowsHitTesting(true))
+            // Decorative background sits above the drag layer but is
+            // non-hit-tested, so clicks pass through it to the drag layer.
             .background(containerBackground.allowsHitTesting(false))
             .localizationAware()
             .onAppear { setupConfiguration() }
