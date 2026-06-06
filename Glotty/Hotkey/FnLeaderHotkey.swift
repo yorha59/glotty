@@ -81,6 +81,14 @@ final class FnLeaderHotkey {
             return Unmanaged.passUnretained(event)
         }
 
+        // Ignore events Glotty itself synthesized — the selection grabber
+        // posts a Cmd+C to copy the selection, and that synthetic 'c'
+        // (keycode 8) is exactly the chat hotkey, so without this it would
+        // fire a chat popup right after every translate/explain/polish.
+        if event.getIntegerValueField(.eventSourceUserData) == SelectionGrabber.syntheticEventUserData {
+            return Unmanaged.passUnretained(event)
+        }
+
         if type == .flagsChanged {
             let leader = Keycode.currentLeader()
             let leaderNow = leader.isActive(in: event.flags)

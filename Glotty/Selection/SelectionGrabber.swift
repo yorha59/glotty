@@ -68,6 +68,13 @@ final class SelectionGrabber {
         return grabbed
     }
 
+    /// Marker stamped on the CGEvents we synthesize for the clipboard
+    /// grab, so Glotty's own Fn-leader event tap can recognize and ignore
+    /// them. Without this, the synthetic Cmd+C's keycode 8 ('c') is seen
+    /// by the tap as the chat hotkey and spuriously opens a chat popup
+    /// right after a translate/explain/polish grab.
+    static let syntheticEventUserData: Int64 = 0x474C_4F54  // "GLOT"
+
     private func synthesizeCmdC() {
         let source = CGEventSource(stateID: .combinedSessionState)
         let kVK_C: CGKeyCode = 8
@@ -78,6 +85,9 @@ final class SelectionGrabber {
         }
         down.flags = .maskCommand
         up.flags = .maskCommand
+        // Tag both events so FnLeaderHotkey skips them (see above).
+        down.setIntegerValueField(.eventSourceUserData, value: Self.syntheticEventUserData)
+        up.setIntegerValueField(.eventSourceUserData, value: Self.syntheticEventUserData)
         down.post(tap: .cghidEventTap)
         up.post(tap: .cghidEventTap)
     }
