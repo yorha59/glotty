@@ -407,6 +407,9 @@ struct PopupView: View {
     /// Retry tick — bumping this re-fires the polish task, used by the
     /// "retry" icon shown on a failed initial polish call.
     @State private var polishRetryCounter: Int = 0
+    /// Same idea for explain: bumped by the retry button on a failed
+    /// explanation; included in the explain task id so it re-fires.
+    @State private var explainRetryCounter: Int = 0
     @State private var detectedSource: NLLanguage?
     @State private var targetLang: String = "en"
     /// All dict entries that returned content, in the user's configured priority
@@ -498,7 +501,14 @@ struct PopupView: View {
 
     var body: some View {
         outerLayout
-            .background(containerBackground)
+            // `.allowsHitTesting(false)` on the decorative background so a
+            // mouseDown on empty popup area falls through to the NSPanel
+            // (which has `isMovableByWindowBackground = true`) and drags the
+            // window. Without this the filled background view swallows the
+            // click and the popup can only be moved from the thin titlebar
+            // strip. The background is purely visual (fill + border), so it
+            // never needed hit testing.
+            .background(containerBackground.allowsHitTesting(false))
             .localizationAware()
             .onAppear { setupConfiguration() }
             .task(id: mode == .polish ? "polish-\(sourceText)-\(polishRetryCounter)" : "") {
@@ -509,7 +519,7 @@ struct PopupView: View {
             // Translate (output in user's native language) but verbose and
             // contextual. The id includes targetLang so changing the target via
             // the footer menu re-fires the LLM.
-            .task(id: mode == .explain ? "explain-\(sourceText)-\(targetLang)" : "") {
+            .task(id: mode == .explain ? "explain-\(sourceText)-\(targetLang)-\(explainRetryCounter)" : "") {
                 guard mode == .explain, replay == nil else { return }
                 await runExplain()
             }
@@ -997,9 +1007,10 @@ struct PopupView: View {
             case .ready:
                 translationCard
             case .failed(let message):
-                Text(message)
-                    .font(.system(size: PopupTokens.bodySize))
-                    .foregroundStyle(.red)
+                // Apple Translation is on-device but can still fail
+                // (language pack not downloaded, transient error) — give
+                // the user a retry instead of a dead end.
+                failureWithRetry(message) { rebuildConfiguration() }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1112,11 +1123,10 @@ struct PopupView: View {
                     }
                 }
             case .failed(let message):
-                Text(message)
-                    .font(.system(size: PopupTokens.bodySize))
-                    .foregroundStyle(.red)
-                    .textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
+                failureWithRetry(message) {
+                    explainStatus = .working
+                    explainRetryCounter &+= 1
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1199,9 +1209,12 @@ struct PopupView: View {
     private var chatBlock: some View {
         VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
             tutorHeader
-            tutorThreadView
-            tutorComposer
+            tutorThreadView    // flexible — expands to fill, scrolls internally
+            tutorComposer      // fixed — stays pinned at the bottom, always visible
         }
+        // Fill the panel height so the flexible thread above can take the
+        // middle and the composer pins to the bottom edge.
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 
     private var tutorHeader: some View {
@@ -1339,7 +1352,13 @@ struct PopupView: View {
                     }
                     .padding(.vertical, 4)
                 }
-                .frame(minHeight: 240, maxHeight: 480)
+                // Flexible height (fill whatever the panel offers) rather
+                // than a fixed 480 cap. With a fixed cap, header + thread +
+                // composer could exceed the panel and push the composer off
+                // the bottom (the user had to scroll to reach the input).
+                // Letting the thread expand/shrink keeps the composer pinned
+                // and always visible; only the thread scrolls.
+                .frame(minHeight: 120, maxHeight: .infinity)
             }
         }
     }
@@ -1710,6 +1729,29 @@ struct PopupView: View {
                 )
         )
         .padding(.horizontal, 4)
+    }
+
+    /// Failure row for translate / explain with a Retry button.
+    /// LLM/translation calls can fail transiently (network blip, rate
+    /// limit, provider hiccup); without a retry the user's only option
+    /// is to close the popup and re-trigger the whole Fn-chord. The
+    /// `retry` closure re-fires the relevant task.
+    private func failureWithRetry(_ message: String, retry: @escaping () -> Void) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(message)
+                .font(.system(size: PopupTokens.bodySize))
+                .foregroundStyle(.red)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                retry()
+            } label: {
+                Label("Retry", systemImage: "arrow.clockwise")
+            }
+            .controlSize(.small)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func tutorErrorBanner(_ message: String) -> some View {
