@@ -119,6 +119,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // the exact name.
         SettingsSnapshotter.installRemoteTriggerObserver()
         PopupController.installReplayObserver()
+        // DEBUG-only: warn if a glotty.* setting exists that the backup
+        // whitelist doesn't know about (neither backed up nor explicitly
+        // excluded). Catches "added a setting, forgot the export list".
+        BackupPreferences.auditUnknownKeys()
         popup = .shared
         hud = HUDController.shared
         dbg("popup + hud created")

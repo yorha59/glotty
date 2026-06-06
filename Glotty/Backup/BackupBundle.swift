@@ -255,5 +255,43 @@ enum BackupPreferences {
         "glotty.memory.enabled",            // history-recording toggle
         "glotty.memory.extractionMode",     // auto / manual / off
         "glotty.memory.activeContextID",
+        "glotty.memory.range",              // history/mistakes time window
+
+        // App / UI
+        "glotty.systemLanguage",            // in-app UI language override
     ]
+
+    /// Glotty UserDefaults keys that are deliberately NOT part of a backup:
+    /// transient launch/relaunch coordination flags and device-local
+    /// onboarding state. Listed explicitly so the debug audit
+    /// (`auditUnknownKeys`) can tell "intentionally skipped" apart from
+    /// "someone added a setting and forgot the whitelist".
+    static let excludedKeys: Set<String> = [
+        "glotty.settings.launchRegular",
+        "glotty.settings.reopenOnLaunch",
+        "glotty.welcome.reopenOnLaunch",
+        "glotty.relaunch.reopenChat",
+        "glotty.welcomeShown",              // device-local onboarding flag
+    ]
+
+    /// DEBUG-only guard against the whitelist silently falling behind the
+    /// app. Scans live UserDefaults for `glotty.*` keys that are neither
+    /// backed up (`knownKeys`) nor explicitly excluded (`excludedKeys`) and
+    /// logs a warning naming each one. A new setting then surfaces during
+    /// development instead of quietly not travelling with backups. No-op in
+    /// release builds.
+    static func auditUnknownKeys() {
+        #if DEBUG
+        let known = Set(knownKeys)
+        let unknown = UserDefaults.standard.dictionaryRepresentation().keys
+            .filter { $0.hasPrefix("glotty.") }
+            .filter { !known.contains($0) && !excludedKeys.contains($0) }
+            .sorted()
+        guard !unknown.isEmpty else { return }
+        Log.debug(.settings, "backup whitelist gap — these glotty.* keys are in "
+                  + "UserDefaults but neither in knownKeys nor excludedKeys; add "
+                  + "them to one or the other: \(unknown.joined(separator: ", "))",
+                  op: "audit")
+        #endif
+    }
 }
