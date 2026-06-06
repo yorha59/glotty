@@ -660,16 +660,15 @@ struct PopupView: View {
     /// The initial width is the same `contentWidth` either way.
     private var outerLayout: some View {
         VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
+            dragHandle
             scrollableContent
             footerForMode
         }
         .padding(PopupTokens.containerPadding)
-        // Extra top inset so the first content row (the source text)
-        // clears the native macOS traffic-light buttons, which sit at
-        // the top-left over our hidden-titlebar, full-size-content
-        // panel. Without this the close/minimize buttons overlap the
-        // selection text. ~22pt is the traffic-light strip height.
-        .padding(.top, PopupTokens.trafficLightInset)
+        // Small top inset; the drag handle above provides the strip that
+        // clears the native traffic-light buttons (top-left) and the hide
+        // button (top-right).
+        .padding(.top, 2)
         .frame(
             minWidth: contentWidth,
             idealWidth: contentWidth,
@@ -696,6 +695,25 @@ struct PopupView: View {
         // close button at the top-left. Sits in the trafficLightInset
         // strip so it doesn't overlap content.
         .overlay(alignment: .topTrailing) { hideButton }
+    }
+
+    /// Always-present drag handle at the top of every popup. Short
+    /// auto-fit popups (translate/explain) have almost no empty area to
+    /// grab, and the title bar is hidden — so without an explicit handle
+    /// the window effectively can't be moved. This full-width strip is a
+    /// real window-drag region (`WindowDragLayer` → `mouseDownCanMoveWindow`)
+    /// with a subtle centered grabber for discoverability. The native
+    /// close button (top-left) and the hide button (top-right) overlay its
+    /// corners and still take their own clicks.
+    private var dragHandle: some View {
+        WindowDragLayer()
+            .frame(maxWidth: .infinity, minHeight: 22, maxHeight: 22)
+            .overlay(
+                Capsule()
+                    .fill(PopupTokens.tertiaryText.opacity(0.35))
+                    .frame(width: 34, height: 4)
+                    .allowsHitTesting(false)
+            )
     }
 
     /// Privacy "hide" affordance. Tucks the popup away behind a small
@@ -1236,6 +1254,11 @@ struct PopupView: View {
             tutorHeader
             tutorThreadView    // flexible — expands to fill, scrolls internally
             tutorComposer      // fixed — stays pinned at the bottom, always visible
+                // Win the layout: the composer always gets its full height,
+                // the flexible thread above absorbs the remainder. Prevents
+                // the input row from being clipped off the bottom when the
+                // panel is short or the composer is tall.
+                .layoutPriority(1)
         }
         // Fill the panel height so the flexible thread above can take the
         // middle and the composer pins to the bottom edge.
@@ -1381,9 +1404,11 @@ struct PopupView: View {
                 // than a fixed 480 cap. With a fixed cap, header + thread +
                 // composer could exceed the panel and push the composer off
                 // the bottom (the user had to scroll to reach the input).
-                // Letting the thread expand/shrink keeps the composer pinned
-                // and always visible; only the thread scrolls.
-                .frame(minHeight: 120, maxHeight: .infinity)
+                // Low min so the thread yields space to the composer when
+                // the panel is short (or the composer grows with the tools
+                // row / multi-line input) — the composer keeps its size and
+                // stays visible; only the thread scrolls.
+                .frame(minHeight: 60, maxHeight: .infinity)
             }
         }
     }
