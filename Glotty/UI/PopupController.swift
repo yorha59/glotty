@@ -136,6 +136,14 @@ final class PopupController {
     /// reliable than SwiftUI's `.onDisappear`, which doesn't fire
     /// consistently when an NSPanel is dismissed via `orderOut`.
     private var extractionTriggers: [ObjectIdentifier: () -> Void] = [:]
+    /// Panels still auto-fitting their height to content. A panel leaves the
+    /// set the moment the user drags an edge (see the didResize observer in
+    /// `show`). Chat never joins (it manages its own height).
+    private var autoFitPanels: Set<ObjectIdentifier> = []
+    /// The content size we last set programmatically for each panel. The
+    /// didResize observer compares against this to tell our own re-fits apart
+    /// from a user drag.
+    private var lastAutoFitSize: [ObjectIdentifier: NSSize] = [:]
 
     /// Bubbles standing in for hidden popups. Keyed by the hidden
     /// popup's ObjectIdentifier; the value is the small floating panel
@@ -221,10 +229,13 @@ final class PopupController {
         // at `.floating` level with `.fullScreenAuxiliary` collection
         // behavior. This is the combination macOS needs for the popup to
         // appear alongside a full-screen source app (Chrome, Safari, etc.).
-        // Polish/chat only diverge from translate by being resizable; the
-        // chat-field IME first-open binding is handled separately when the
-        // user actually taps into the field, not at panel creation.
-        let panel = createPanel(resizable: mode == .polish || mode == .chat)
+        // All popups are resizable — the user can stretch any of them from
+        // any edge/corner. Translate/explain additionally auto-fit their
+        // height on open (and while streaming) via
+        // `sizingOptions = .preferredContentSize`; a `didResize` observer
+        // below releases that auto-fit the moment the user drags an edge,
+        // so a manual stretch sticks instead of snapping back.
+        let panel = createPanel(resizable: true)
 
         // Per-panel dismiss closure — each PopupView's onClose targets its own
         // panel, not the controller's notion of "the current one". This is
@@ -262,6 +273,10 @@ final class PopupController {
             registerExtractionTrigger: { [weak self, weak panelRef] hook in
                 guard let self, let panelRef else { return }
                 self.extractionTriggers[ObjectIdentifier(panelRef)] = hook
+            },
+            onContentResize: { [weak self, weak panelRef] desiredHeight in
+                guard let self, let panelRef else { return }
+                self.autoFitIfNeeded(panelRef, desiredContentHeight: desiredHeight)
             }
         )
         // ESC routes through `PopupPanel.cancelOperation`, which checks
@@ -285,25 +300,30 @@ final class PopupController {
         // styleMask, and the auto-sync just gives them a better
         // starting size.
         let host = NSHostingController(rootView: rootView)
-        // Auto-fit (preferredContentSize) for translate / explain /
-        // polish. Chat is EXCLUDED: it's user-resizable and its
-        // content grows as messages arrive, so auto-sync would fight
-        // the manual drag — snapping the window back to the content's
-        // ideal size on every new message. We still read
-        // `preferredContentSize` once below to pick chat's initial
-        // size; we just don't keep tracking it.
-        host.sizingOptions = mode == .chat ? [] : [.preferredContentSize]
+        // MANUAL sizing for every mode. We deliberately do NOT use
+        // `sizingOptions = .preferredContentSize`: that drives the window
+        // size from a contentViewController's preferredContentSize, which
+        // AppKit treats as a fixed size (contentMinSize == contentMaxSize) —
+        // the window then looks fixed AND can't be dragged to resize. Instead
+        // we read the SwiftUI content's intrinsic `fittingSize` ourselves to
+        // pick the opening size, keep the panel freely resizable (min < max),
+        // and re-fit on content changes via `autoFitIfNeeded(_:)` until the
+        // user drags an edge (see the didResize observer below).
+        host.sizingOptions = []
         panel.contentViewController = host
         hosts[ObjectIdentifier(panel)] = host
         host.view.layoutSubtreeIfNeeded()
-        let preferred = host.preferredContentSize
+        // Intrinsic content size (includes all chrome: paddings, footer,
+        // traffic-light inset). With the content column's
+        // `.fixedSize(vertical: true)`, `fittingSize.height` is the natural
+        // unscrolled height regardless of the current window size.
+        let preferred = host.view.fittingSize
         let initialSize: NSSize
         switch mode {
         case .polish:
             // Polish starts at a comfortable working size — wide enough for
             // variant cards, tall enough to show variants + issues without
-            // requiring an immediate drag. Bigger than the SwiftUI ideal so
-            // the user has visible drag handles right away.
+            // requiring an immediate drag.
             let base = (preferred.width > 0 && preferred.height > 0)
                 ? preferred
                 : NSSize(width: 560, height: 520)
@@ -312,9 +332,8 @@ final class PopupController {
             panel.contentMinSize = NSSize(width: 380, height: 240)
         case .chat:
             // Chat is user-resizable so the thread area can be dragged
-            // bigger. Start at the auto-fit ideal (or a sensible
-            // fallback) and set a floor so it can't be dragged uselessly
-            // small.
+            // bigger. Start at the fitted size (or a sensible fallback) and
+            // set a floor so it can't be dragged uselessly small.
             let base = (preferred.width > 0 && preferred.height > 0)
                 ? preferred
                 : NSSize(width: 560, height: 560)
@@ -322,27 +341,32 @@ final class PopupController {
                                  height: max(base.height, 400))
             panel.contentMinSize = NSSize(width: 380, height: 300)
         default:
+            // Translate / explain: open fitted to content with an explicit
+            // floor so there's always a real resize range (min < max).
             initialSize = (preferred.width > 0 && preferred.height > 0)
                 ? preferred
                 : Self.initialSize
+            panel.contentMinSize = NSSize(width: 320, height: 200)
         }
-        // Cap the panel content area at the available screen height
-        // (minus chrome). With `sizingOptions = .preferredContentSize`
-        // the panel auto-resizes to whatever SwiftUI reports as its
-        // ideal — and a very long source selection's ideal IS huge.
-        // `contentMaxSize` clamps the upward growth; SwiftUI gets
-        // less space than it asked for and the inner ScrollView
-        // takes over.
+        // Cap the panel content height at the available screen height (minus
+        // chrome); a very long selection's intrinsic height can exceed the
+        // screen, and the inner ScrollView takes over past the cap.
         let screenCap = max(screenFrame.height - 120, 320)
-        if initialSize.height > screenCap {
-            panel.setContentSize(NSSize(width: initialSize.width, height: screenCap))
-        } else {
-            panel.setContentSize(initialSize)
-        }
+        let openSize = NSSize(width: initialSize.width,
+                              height: min(initialSize.height, screenCap))
+        panel.setContentSize(openSize)
         panel.contentMaxSize = NSSize(
             width: .greatestFiniteMagnitude,
             height: screenCap
         )
+        // Chat manages its own height (messages accrue unboundedly, so we
+        // don't auto-grow it); every other mode auto-fits until the user
+        // resizes. Seed the "last programmatic size" so the first user drag
+        // is correctly distinguished from our own re-fits.
+        if mode != .chat {
+            autoFitPanels.insert(ObjectIdentifier(panel))
+        }
+        lastAutoFitSize[ObjectIdentifier(panel)] = openSize
 
         // Cascade subsequent windows so they don't perfectly stack on the
         // first. AppKit's window-cascading convention is 20pt × 20pt; we use
@@ -368,6 +392,32 @@ final class PopupController {
             Task { @MainActor in
                 Log.debug(.popup, "willClose fired (red-button / system close)", op: "close")
                 self?.removeFromTracking(panelRef)
+            }
+        }
+
+        // User-resize ends auto-fit. While a panel is in `autoFitPanels` we
+        // re-fit its height to the content (on open + as a response streams
+        // in) via `autoFitIfNeeded`. The moment the window's size diverges
+        // from the size WE last set programmatically, the user has dragged an
+        // edge — so we drop the panel from `autoFitPanels` and never touch its
+        // size again. Comparing against our own last set (rather than the
+        // content ideal) makes this timing-independent: our re-fits always
+        // match, a user drag never does.
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didResizeNotification,
+            object: panel,
+            queue: .main
+        ) { [weak self, weak panelRef] _ in
+            guard let self, let panelRef else { return }
+            let id = ObjectIdentifier(panelRef)
+            guard self.autoFitPanels.contains(id) else { return }
+            let actual = panelRef.contentRect(forFrameRect: panelRef.frame).size
+            let mine = self.lastAutoFitSize[id] ?? actual
+            if abs(actual.height - mine.height) > 2
+                || abs(actual.width - mine.width) > 2 {
+                self.autoFitPanels.remove(id)
+                Log.debug(.popup, "user resized — auto-fit ended "
+                          + "(actual=\(actual) lastAutoFit=\(mine))", op: "resize")
             }
         }
 
@@ -428,6 +478,8 @@ final class PopupController {
         // forgetting the closure.
         extractionTriggers.removeValue(forKey: id)?()
         hosts.removeValue(forKey: id)
+        autoFitPanels.remove(id)
+        lastAutoFitSize.removeValue(forKey: id)
         panels.removeAll { $0 === panel }
         // If this popup was hidden behind a bubble, tear the bubble
         // down too so a closed-while-hidden popup doesn't leave an
@@ -436,6 +488,42 @@ final class PopupController {
             bubble.orderOut(nil)
             layoutBubbles()
         }
+    }
+
+    /// Re-fit a still-auto-fitting panel's height to its content. Called from
+    /// `PopupView` whenever the content's measured height changes — on open
+    /// and as a response streams in — so the window grows to keep all content
+    /// visible "by default". No-op once the user has dragged an edge (the
+    /// panel has left `autoFitPanels`). Width is left alone; only the height
+    /// tracks the content, capped at the screen.
+    func autoFitIfNeeded(_ panel: PopupPanel, desiredContentHeight: CGFloat) {
+        let id = ObjectIdentifier(panel)
+        guard autoFitPanels.contains(id) else { return }
+        guard desiredContentHeight > 0 else { return }
+        let screenCap = max((panel.screen?.visibleFrame.height
+                             ?? NSScreen.main?.visibleFrame.height ?? 900) - 120, 320)
+        let current = panel.contentRect(forFrameRect: panel.frame).size
+        let targetHeight = min(desiredContentHeight, screenCap)
+        // Nothing to do if we're already there (avoids a redundant resize +
+        // a spurious didResize that could be misread as a user drag).
+        guard abs(targetHeight - current.height) > 1 else {
+            lastAutoFitSize[id] = current
+            return
+        }
+        // Grow upward from the current bottom edge so the panel doesn't creep
+        // down the screen as it fills; clamp so it stays on-screen.
+        var frame = panel.frame
+        let newSize = NSSize(width: current.width, height: targetHeight)
+        let delta = targetHeight - current.height
+        let contentFrame = panel.frameRect(forContentRect:
+            NSRect(origin: .zero, size: newSize))
+        frame.size = contentFrame.size
+        frame.origin.y -= delta
+        if let visible = panel.screen?.visibleFrame {
+            frame.origin.y = max(frame.origin.y, visible.minY)
+        }
+        lastAutoFitSize[id] = newSize
+        panel.setFrame(frame, display: true)
     }
 
     // MARK: - Hide to bubble ("minimize")
@@ -581,9 +669,9 @@ final class PopupController {
     }
 
     /// Build a fresh panel. We always create a new one — supporting multiple
-    /// windows means there's no "current" panel to reuse anymore. Translate
-    /// and explain auto-fit (non-resizable); polish includes `.resizable`
-    /// so the user can drag the corners as the chat thread grows.
+    /// windows means there's no "current" panel to reuse anymore. Every popup
+    /// is `.resizable` so the user can drag any edge/corner; the content
+    /// auto-fits the height until they do (see `autoFitIfNeeded`).
     private func createPanel(resizable: Bool = false) -> PopupPanel {
         // IME-SAFE popup design. This is the combination that makes the
         // CJK input-method candidate window render correctly:
@@ -611,7 +699,13 @@ final class PopupController {
         p.level = .floating
         p.titlebarAppearsTransparent = true
         p.titleVisibility = .hidden
-        p.isMovableByWindowBackground = true
+        // Deliberately NOT `isMovableByWindowBackground`: a body-grab would
+        // then MOVE the window and compete with the edge resize border (the
+        // thin strip where the ↔ resize cursor appears), making the popup
+        // hard to resize. The user resizes from any edge/corner; the window
+        // can still be moved by dragging the transparent title-bar strip at
+        // the top (the `.titled` region behind the traffic-light inset).
+        p.isMovableByWindowBackground = false
         p.hidesOnDeactivate = false
         // Don't release on close — we control the lifetime via `panels`.
         p.isReleasedWhenClosed = false

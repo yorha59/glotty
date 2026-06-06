@@ -5,24 +5,21 @@ import NaturalLanguage
 import AVFoundation
 import CoreServices
 
-/// Transparent layer that drags its window on mouseDown. Used as a
-/// background behind the popup content so clicking any empty area moves
-/// the panel. We drive the drag explicitly via `window.performDrag(with:)`
-/// rather than relying on `mouseDownCanMoveWindow` /
-/// `isMovableByWindowBackground`, which are unreliable for the popup's
-/// `.nonactivatingPanel` (it doesn't take the click the normal way).
-/// `mouseDownCanMoveWindow` is forced false so our `mouseDown` actually
-/// fires instead of AppKit swallowing it for its own (broken-here) drag.
-private struct WindowDragLayer: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView { DragNSView() }
-    func updateNSView(_ nsView: NSView, context: Context) {}
+/// Reports the popup content column's intrinsic height up to PopupView so the
+/// controller can auto-fit the window to it.
+private struct PopupContentHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
 
-    final class DragNSView: NSView {
-        // Mark this background view as a window-drag handle. AppKit then
-        // moves the panel when the user drags from any empty area that
-        // hit-tests to this view — works for the `.nonactivatingPanel`
-        // and (unlike `performDrag`) responds to the normal event stream.
-        override var mouseDownCanMoveWindow: Bool { true }
+/// Reports the popup footer's height (the src→tgt / practice row) so the
+/// controller's auto-fit can account for it on top of the content column.
+private struct PopupFooterHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 
@@ -242,6 +239,11 @@ struct PopupView: View {
     /// SwiftUI's `.onDisappear` (which doesn't reliably fire when an
     /// NSPanel is closed via `orderOut`).
     let registerExtractionTrigger: ((@escaping () -> Void) -> Void)?
+    /// Fired with the popup's desired window *content height* whenever the
+    /// intrinsic content changes (first paint + as a response streams in).
+    /// PopupController re-fits the window to it to keep all content visible —
+    /// until the user drags an edge.
+    let onContentResize: ((CGFloat) -> Void)?
 
     init(sourceText: String,
          mode: PopupMode,
@@ -251,7 +253,8 @@ struct PopupView: View {
          onClose: @escaping () -> Void,
          onChatExpand: (() -> Void)? = nil,
          onHide: (() -> Void)? = nil,
-         registerExtractionTrigger: ((@escaping () -> Void) -> Void)? = nil) {
+         registerExtractionTrigger: ((@escaping () -> Void) -> Void)? = nil,
+         onContentResize: ((CGFloat) -> Void)? = nil) {
         self.sourceText = sourceText
         self.mode = mode
         self.replay = replay
@@ -261,6 +264,7 @@ struct PopupView: View {
         self.onChatExpand = onChatExpand
         self.onHide = onHide
         self.registerExtractionTrigger = registerExtractionTrigger
+        self.onContentResize = onContentResize
 
         // Pre-load @State from the replay payload so the popup renders the
         // stored content on first paint. Using `State(initialValue:)` here is
@@ -431,6 +435,11 @@ struct PopupView: View {
     /// Same idea for explain: bumped by the retry button on a failed
     /// explanation; included in the explain task id so it re-fires.
     @State private var explainRetryCounter: Int = 0
+    // Auto-fit measurement: the content column's and footer's intrinsic
+    // heights, summed (+ chrome) into the window content height we ask the
+    // controller to grow to. See `reportAutoFit()`.
+    @State private var measuredContentHeight: CGFloat = 0
+    @State private var measuredFooterHeight: CGFloat = 0
     @State private var detectedSource: NLLanguage?
     @State private var targetLang: String = "en"
     /// All dict entries that returned content, in the user's configured priority
@@ -522,17 +531,13 @@ struct PopupView: View {
 
     var body: some View {
         outerLayout
-            // Drag layer (furthest back). A mouseDown on any empty popup
-            // area falls through the non-hit-tested visual background to
-            // this view, which calls `window.performDrag(with:)` to move
-            // the panel. `isMovableByWindowBackground` alone is unreliable
-            // for a `.nonactivatingPanel` (it doesn't take the click
-            // normally), so we drive the drag explicitly. Interactive
-            // content in front (buttons, text fields, cards) still gets
-            // its clicks first.
-            .background(WindowDragLayer().allowsHitTesting(true))
-            // Decorative background sits above the drag layer but is
-            // non-hit-tested, so clicks pass through it to the drag layer.
+            // Decorative background. Non-hit-tested so clicks fall through
+            // to the interactive content. The panel is `.resizable`, so the
+            // window's own edges/corners handle drag-to-resize; we must NOT
+            // lay a `mouseDownCanMoveWindow` view over the whole popup or it
+            // swallows the edge-resize gesture (turning every edge drag into
+            // a window move). Background-move is still available via the
+            // panel's `isMovableByWindowBackground`.
             .background(containerBackground.allowsHitTesting(false))
             .localizationAware()
             .onAppear { setupConfiguration() }
@@ -652,32 +657,42 @@ struct PopupView: View {
         return id == polishEventID
     }
 
-    /// Translate / explain auto-fit to content. Polish is user-resizable —
-    /// once chat turns start accumulating the user wants to control the
-    /// height themselves, so the polish panel has `.resizable` in its
-    /// styleMask and this view lets its frame stretch to the panel size
-    /// (no `.fixedSize`, with `maxWidth` / `maxHeight` set to `.infinity`).
-    /// The initial width is the same `contentWidth` either way.
+    /// All modes open auto-fitted to their content (the controller drives
+    /// the opening size from `idealWidth` × the content's natural height via
+    /// `sizingOptions = .preferredContentSize`) and are user-resizable from
+    /// any edge — the panel carries `.resizable` in its styleMask and this
+    /// view lets its frame stretch to the panel size (`maxWidth` / `maxHeight`
+    /// = `.infinity`). Once the user drags an edge the controller releases
+    /// auto-fit so the manual size sticks.
     private var outerLayout: some View {
         VStack(alignment: .leading, spacing: PopupTokens.sectionGap) {
-            dragHandle
             scrollableContent
             footerForMode
+                .background(
+                    GeometryReader { g in
+                        Color.clear.preference(key: PopupFooterHeightKey.self,
+                                               value: g.size.height)
+                    }
+                )
+                .onPreferenceChange(PopupFooterHeightKey.self) { h in
+                    measuredFooterHeight = h
+                    reportAutoFit()
+                }
         }
         .padding(PopupTokens.containerPadding)
-        // Small top inset; the drag handle above provides the strip that
-        // clears the native traffic-light buttons (top-left) and the hide
-        // button (top-right).
-        .padding(.top, 2)
+        // Top inset clears the native traffic-light buttons (top-left) and
+        // the hide button (top-right) so content doesn't sit under them.
+        .padding(.top, PopupTokens.trafficLightInset)
         .frame(
             minWidth: contentWidth,
             idealWidth: contentWidth,
-            // Polish and chat are user-resizable panels — let the
-            // content stretch to fill whatever size the user drags to.
-            // Translate / explain stay pinned to `contentWidth` and
-            // auto-fit their height.
-            maxWidth: (mode == .polish || mode == .chat) ? .infinity : contentWidth,
-            maxHeight: (mode == .polish || mode == .chat) ? .infinity : nil,
+            // All modes are user-resizable: let the content stretch to fill
+            // whatever size the user drags the window to. `idealWidth`
+            // (contentWidth) still drives the auto-fit opening size; once the
+            // user drags an edge the controller releases auto-fit so the
+            // manual size sticks (see PopupController's didResize observer).
+            maxWidth: .infinity,
+            maxHeight: .infinity,
             alignment: .topLeading
         )
         // Cap the outer height at the screen so the panel can't grow
@@ -695,25 +710,6 @@ struct PopupView: View {
         // close button at the top-left. Sits in the trafficLightInset
         // strip so it doesn't overlap content.
         .overlay(alignment: .topTrailing) { hideButton }
-    }
-
-    /// Always-present drag handle at the top of every popup. Short
-    /// auto-fit popups (translate/explain) have almost no empty area to
-    /// grab, and the title bar is hidden — so without an explicit handle
-    /// the window effectively can't be moved. This full-width strip is a
-    /// real window-drag region (`WindowDragLayer` → `mouseDownCanMoveWindow`)
-    /// with a subtle centered grabber for discoverability. The native
-    /// close button (top-left) and the hide button (top-right) overlay its
-    /// corners and still take their own clicks.
-    private var dragHandle: some View {
-        WindowDragLayer()
-            .frame(maxWidth: .infinity, minHeight: 22, maxHeight: 22)
-            .overlay(
-                Capsule()
-                    .fill(PopupTokens.tertiaryText.opacity(0.35))
-                    .frame(width: 34, height: 4)
-                    .allowsHitTesting(false)
-            )
     }
 
     /// Privacy "hide" affordance. Tucks the popup away behind a small
@@ -836,12 +832,43 @@ struct PopupView: View {
     /// block instead of the source-row + dict/translate flow.
     @ViewBuilder
     private var contentColumn: some View {
-        if mode == .chat {
-            chatBlock
-                .frame(maxWidth: .infinity, alignment: .leading)
-        } else {
-            translateExplainPolishColumn
+        Group {
+            if mode == .chat {
+                chatBlock
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                translateExplainPolishColumn
+            }
         }
+        // Report the column's intrinsic height so the controller can auto-fit
+        // the window to it (on first paint + as a response streams in). The
+        // column has `.fixedSize(vertical: true)` in the scroll, so this is
+        // the natural unscrolled height — independent of the window size, so
+        // measuring it here is not circular.
+        .background(
+            GeometryReader { g in
+                Color.clear.preference(key: PopupContentHeightKey.self,
+                                       value: g.size.height)
+            }
+        )
+        .onPreferenceChange(PopupContentHeightKey.self) { h in
+            measuredContentHeight = h
+            reportAutoFit()
+        }
+    }
+
+    /// Sum the measured content + footer heights with the fixed chrome
+    /// (traffic-light inset + top/bottom container padding + the gap between
+    /// the scroll area and the footer) and hand the controller the window
+    /// content height that would show everything. Deferred off the SwiftUI
+    /// update pass before it touches the window.
+    private func reportAutoFit() {
+        guard measuredContentHeight > 0 else { return }
+        let chrome = PopupTokens.trafficLightInset
+            + PopupTokens.containerPadding * 2
+            + PopupTokens.sectionGap
+        let total = measuredContentHeight + measuredFooterHeight + chrome
+        DispatchQueue.main.async { onContentResize?(total) }
     }
 
     private var translateExplainPolishColumn: some View {
