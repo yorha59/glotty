@@ -20,7 +20,7 @@ No build step, no dependencies — plain HTML.
 
 ## Before you publish
 
-- Confirm the contact email (`cyzkul@gmail.com`) is the one you want shown.
+- Confirm the contact email (`hemoon@outlook.com`) is the one you want shown.
 - If you later ship to **mainland China**, re-host these on a
   China-reachable host (Gitee Pages / a China VPS / your own public
   domain) — `github.io` is unreliable there — and obtain an ICP filing
