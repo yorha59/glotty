@@ -224,6 +224,14 @@ The two required URLs are static pages in `website/`:
 `privacy.html` (Privacy Policy URL) and `support.html` (Support URL),
 plus `index.html`. No build step.
 
+**Already published** to GitHub Pages (repo `github.com/yorha59/glotty-site`,
+public, serves `main`/root) — paste these into App Store Connect:
+- Privacy Policy URL → <https://yorha59.github.io/glotty-site/privacy.html>
+- Support URL → <https://yorha59.github.io/glotty-site/support.html>
+
+The `website/` files here are the source of truth; to update the live
+pages, copy them into the `glotty-site` repo and push.
+
 GitHub Pages (free, reachable by App Review — reviewers load from outside
 China, so `github.io` is fine for everywhere except mainland-China users):
 

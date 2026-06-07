@@ -3,6 +3,13 @@
 Two static pages App Store Connect requires, plus a tiny landing page.
 No build step, no dependencies — plain HTML.
 
+**Published (GitHub Pages, repo `github.com/yorha59/glotty-site`):**
+- Privacy Policy URL → <https://yorha59.github.io/glotty-site/privacy.html>
+- Support URL → <https://yorha59.github.io/glotty-site/support.html>
+
+To update the live pages: edit here, then copy into the `glotty-site`
+repo and push (it serves `main`/root). These files are the source of truth.
+
 - `privacy.html` → **Privacy Policy URL** (App Store Connect → App Information)
 - `support.html` → **Support URL** (App Store Connect → version page)
 - `index.html` → optional landing page linking both
