@@ -869,7 +869,7 @@ struct PopupView: View {
 
             if mode == .translate, !sourcePronunciation.isEmpty {
                 regionDivider
-                sectionLabel("Phonetics")
+                sectionLabel("Phonetics".t)
                 phoneticView(text: sourceText,
                              fallbackLanguage: detectedSource?.rawValue,
                              entries: sourcePronunciation)
@@ -881,7 +881,7 @@ struct PopupView: View {
             // each kind, the order matches Settings → Dictionaries.
             if mode == .translate, !monolingualDictResults.isEmpty {
                 regionDivider
-                sectionLabel("Source language explanation")
+                sectionLabel("Source language explanation".t)
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(Array(monolingualDictResults.enumerated()), id: \.offset) { _, entry in
                         dictionaryView(result: entry)
@@ -890,7 +890,7 @@ struct PopupView: View {
             }
             if mode == .translate, !bilingualDictResults.isEmpty {
                 regionDivider
-                sectionLabel("Bilingual dictionary")
+                sectionLabel("Bilingual dictionary".t)
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(Array(bilingualDictResults.enumerated()), id: \.offset) { _, entry in
                         dictionaryView(result: entry)
@@ -908,7 +908,7 @@ struct PopupView: View {
                 regionDivider
                 switch mode {
                 case .translate:
-                    sectionLabel("Translation")
+                    sectionLabel("Translation".t)
                     translationBlock
                 case .explain:
                     sectionLabel(explainSectionLabel)
@@ -922,7 +922,7 @@ struct PopupView: View {
                         polishDiscussionSection
                     }
                 case .polish:
-                    sectionLabel("Polished" + (polishProviderName.isEmpty ? "" : " · \(polishProviderName)"))
+                    sectionLabel("Polished".t + (polishProviderName.isEmpty ? "" : " · \(polishProviderName)"))
                     polishBlock
                 case .chat:
                     EmptyView()   // chat short-circuits at contentColumn — unreachable here
@@ -1136,7 +1136,7 @@ struct PopupView: View {
     /// above the streaming explanation block. Mirrors the polish label format
     /// so the provider attribution stays consistent across modes.
     private var explainSectionLabel: String {
-        let base = "Explanation in \(footerTargetLabel)"
+        let base = String(format: "Explanation in %@".t, footerTargetLabel)
         return explainProviderName.isEmpty ? base : "\(base) · \(explainProviderName)"
     }
 
@@ -2533,7 +2533,7 @@ struct PopupView: View {
                     }
                     if !polishResult.issues.isEmpty {
                         regionDivider
-                        sectionLabel("Issues")
+                        sectionLabel("Issues".t)
                         polishIssuesSection
                     }
                     regionDivider
