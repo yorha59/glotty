@@ -247,19 +247,82 @@ If you later target **mainland China**, re-host on a China-reachable host
 
 ## Appendix: listing copy
 
-**Description (starter — edit freely):**
+Ready-to-paste App Store Connect fields. Edit freely.
+
+**Name:** Glotty
+
+**Subtitle** (≤30 chars): `Translate & learn anywhere`
+
+**Promotional text** (≤170): Select text in any app, hold Fn, and
+translate, explain, polish, or chat — on-device translation plus the AI
+provider you choose, with your own key.
+
+**Keywords** (≤100): `translate,translation,language,learning,polish,grammar,explain,dictionary,vocabulary,tutor,AI,proofread`
+
+**What's New** (first version): `First release of Glotty.`
+
+**Description:**
 
 > Glotty is a translation and language-learning companion that lives in
-> your menu bar. Select text in any app, hold the Fn key, and press one
-> key:
+> your menu bar. Select text in any app — browser, PDF, docs, chat — hold
+> the Fn key, and press one key:
 >
-> • **T — Translate** into your language, with dictionary senses
-> • **E — Explain** the meaning, grammar, and nuance
-> • **P — Polish** your own writing into natural, idiomatic phrasing
-> • **C — Chat** with a patient language tutor
+> • T — Translate it into your language
+> • E — Explain the meaning, grammar, and nuance
+> • P — Polish your own writing into natural, idiomatic phrasing
+> • C — Chat with a patient AI language tutor
 >
-> Translation runs on-device with Apple's translation engine. Explain,
-> Polish, and Chat use the AI provider you connect (OpenAI, DeepSeek,
-> Grok, and more) with your own API key — your text goes straight to the
-> provider you choose, never through our servers. Glotty remembers the
-> words you look up so you can review them later.
+> A small panel appears right where you're working, even over a full-screen
+> app, and never steals your place.
+>
+> TRANSLATE, INSTANTLY
+> Translation runs on-device with Apple's translation engine — fast, and
+> it works with no account and no setup. You also get dictionary senses
+> and a back-translation so you can trust the result.
+>
+> EXPLAIN, DON'T JUST TRANSLATE
+> Glotty breaks down what a word or sentence really means — literal sense,
+> implied meaning, real usage examples, and the grammar behind it — so you
+> actually learn, not just look up.
+>
+> POLISH YOUR WRITING
+> Drafting in a language you're learning? Polish rewrites your text into a
+> few natural, idiomatic versions and shows you exactly which mistakes it
+> fixed and why.
+>
+> PRACTICE BY CHATTING
+> Chat opens a friendly tutor that keeps the conversation going in the
+> language you're learning, at your level.
+>
+> REMEMBERS WHAT YOU LEARN
+> Glotty keeps the words and phrases you look up so you can review them
+> later and build real vocabulary over time.
+>
+> BRING YOUR OWN AI
+> Explain, Polish, and Chat use the AI provider you connect with your own
+> API key — OpenAI, DeepSeek, Grok, Z.AI/GLM, Gemini, and more. Your text
+> goes straight from your Mac to the provider you choose; it never passes
+> through our servers, because we don't run any.
+>
+> PRIVATE BY DESIGN
+> No account. No ads. No analytics. Your API keys and learned words stay
+> on your Mac.
+>
+> Available in English, 简体中文, 繁體中文, 日本語, 한국어, Español,
+> Français, and Deutsch.
+
+**Screenshots** (in `appstore-screenshots/`, 2880×1800 — drag into the
+macOS screenshot slot in App Store Connect):
+
+| File | Suggested caption |
+|---|---|
+| `01-translate.png` | Translate anything you select — instantly |
+| `02-explain.png` | Meaning, grammar, and nuance — explained |
+| `03-polish.png` | Polish your writing into natural phrasing |
+| `04-chat.png` | Practice with a patient AI tutor |
+| `05-hud.png` | One shortcut. Four ways to learn. |
+
+These are real product captures (the headline is baked into each image).
+To regenerate after UI changes, re-run the capture + composite steps; the
+raw window captures use `screencapture -o -l <windowID>` and are composited
+onto a 2880×1800 gradient with PIL.
