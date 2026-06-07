@@ -49,7 +49,7 @@
 <footer id="footer"></footer>
 
 <script>
-const IMG = ["shots/translate.png","shots/explain.png","shots/polish.png","shots/chat.png"];
+const FEAT = ["translate","explain","polish","chat"];
 const I18N = {
   "en": { name:"English",
     tagline:"Translate and learn in any app — with one keystroke.",
@@ -143,7 +143,7 @@ const I18N = {
 function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
 function row(img,t,d,rev){
   return `<section class="feat${rev?' reverse':''}">
-    <div class="shot"><img src="${img}" alt=""></div>
+    <div class="shot"><img src="${img}" alt="" loading="lazy" onerror="this.onerror=null;this.src=this.src.replace(/\.[A-Za-z-]+\.png$/,'.en.png')"></div>
     <div class="copy"><h2>${esc(t)}</h2><p>${esc(d)}</p></div></section>`;
 }
 function render(lang){
@@ -152,8 +152,8 @@ function render(lang){
   document.getElementById("tagline").textContent = x.tagline;
   document.getElementById("sub").textContent = x.sub;
   let html = "";
-  x.feat.forEach((f,i)=>{ html += row(IMG[i], f[0], f[1], i%2===1); });
-  html += row("shots/hud.png", x.hud[0], x.hud[1], false);
+  x.feat.forEach((f,i)=>{ html += row("shots/"+FEAT[i]+"."+lang+".png", f[0], f[1], i%2===1); });
+  html += row("shots/hud."+lang+".png", x.hud[0], x.hud[1], false);
   html += `<section class="note"><h2>${esc(x.priv[0])}</h2><p>${esc(x.priv[1])}</p></section>`;
   document.getElementById("features").innerHTML = html;
   document.getElementById("footer").innerHTML =
