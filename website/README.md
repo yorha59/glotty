@@ -24,6 +24,6 @@ No build step, no dependencies — plain HTML.
 - If you later ship to **mainland China**, re-host these on a
   China-reachable host (Gitee Pages / a China VPS / your own public
   domain) — `github.io` is unreliable there — and obtain an ICP filing
-  (see `doc/release-checklist.md`).
+  (see `doc/app-store-submission.md`).
 - A Simplified/Traditional Chinese version can be added as
   `privacy.zh.html` / `support.zh.html` if you want localized listings.
