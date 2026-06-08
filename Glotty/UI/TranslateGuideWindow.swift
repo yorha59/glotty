@@ -68,7 +68,7 @@ final class TranslateGuideWindowController: ObservableObject {
         w.isReleasedWhenClosed = false
         w.standardWindowButton(.miniaturizeButton)?.isHidden = true
         w.standardWindowButton(.zoomButton)?.isHidden = true
-        w.setContentSize(NSSize(width: 460, height: 340))
+        w.setContentSizeClampedToScreen(NSSize(width: 460, height: 340))
         w.center()
         w.collectionBehavior = [.moveToActiveSpace]
         window = w

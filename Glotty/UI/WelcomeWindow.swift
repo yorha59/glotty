@@ -244,7 +244,16 @@ final class WelcomeWindowController: ObservableObject {
         // feature demos with revealed result cards). If a future step
         // needs more vertical room, bump this — don't reach for
         // preferredContentSize sync again without a verified fix.
-        w.setContentSize(NSSize(width: 520, height: 700))
+        //
+        // CLAMP TO SCREEN: 700pt + title bar is taller than the usable
+        // height of small displays (older 13"/11" Intel laptops, big
+        // Dock, no "More Space" scaling). When that happened the footer
+        // — Back/Next — fell below the screen edge with no way to reach
+        // it. The footer is pinned outside the ScrollView in
+        // `WelcomeView`, so capping the window to the screen keeps
+        // Back/Next on-screen and the ScrollView absorbs the overflow
+        // on short displays.
+        w.setContentSizeClampedToScreen(NSSize(width: 520, height: 700))
         w.center()
         // NO `.moveToActiveSpace`: in regular mode (restart) Welcome lives
         // on its own home Space and macOS slides a foreign full-screen app
@@ -326,27 +335,41 @@ private struct WelcomeView: View {
     }
 
     var body: some View {
-        VStack(spacing: 18) {
-            mascotHeader
+        // Footer pinned OUTSIDE the ScrollView so Back/Next stay
+        // reachable even when the step content is taller than the
+        // window — which happens on small displays where the controller
+        // had to clamp the window height below 700pt. Previously the
+        // footer was the last child of a single non-scrolling VStack, so
+        // a window shorter than the content (or a window taller than the
+        // screen) pushed Back/Next off the bottom edge with no recovery.
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 18) {
+                    mascotHeader
 
-            VStack(alignment: .leading, spacing: titleBodySpacing) {
-                Text(currentTitle)
-                    .font(.title2.weight(.semibold))
-                Text(currentBody)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: titleBodySpacing) {
+                        Text(currentTitle)
+                            .font(.title2.weight(.semibold))
+                        Text(currentBody)
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
 
-                currentExtra
-                    .padding(.top, extraTopPadding)
+                        currentExtra
+                            .padding(.top, extraTopPadding)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(24)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            Spacer(minLength: 4)
+            Divider()
 
             footerBar
+                .padding(.horizontal, 24)
+                .padding(.vertical, 14)
         }
-        .padding(24)
         // Fill whatever size the window gave us — the controller has
         // already chosen a fixed size that accommodates every step.
         // Letting SwiftUI drive height via `.fixedSize` here caused

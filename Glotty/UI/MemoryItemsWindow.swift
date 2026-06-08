@@ -43,7 +43,7 @@ final class MemoryItemsWindowController {
         w.isReleasedWhenClosed = false
         host.view.layoutSubtreeIfNeeded()
         let preferred = host.preferredContentSize
-        w.setContentSize(
+        w.setContentSizeClampedToScreen(
             preferred.width > 0 && preferred.height > 0
                 ? preferred
                 : NSSize(width: contentWidth, height: 420)

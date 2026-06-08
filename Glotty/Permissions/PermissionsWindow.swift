@@ -25,7 +25,7 @@ final class PermissionsWindowController {
         w.title = "Glotty — \("Permissions".t)"
         w.styleMask = [.titled, .closable, .miniaturizable]
         w.isReleasedWhenClosed = false
-        w.setContentSize(NSSize(width: 480, height: 460))
+        w.setContentSizeClampedToScreen(NSSize(width: 480, height: 460))
         w.center()
         w.level = .floating
         // .canJoinAllSpaces and .moveToActiveSpace are mutually exclusive — picking one.
