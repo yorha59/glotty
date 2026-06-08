@@ -1,5 +1,5 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 import UserNotifications
 
 /// Thin wrapper around `Log.debug(.app, ...)` so existing call
@@ -65,6 +65,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// For end users, the cost is a brief mascot flicker on a duplicate
     /// launch — there are no documents to save, so a hard takeover is
     /// safe.
+    ///
+    ///
     func applicationWillFinishLaunching(_ notification: Notification) {
         // Restart-into-regular (see SettingsWindowController): if Settings
         // asked us to come up in regular mode, flip the activation policy
@@ -82,7 +84,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let others = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
             .filter { $0.processIdentifier != me }
         guard !others.isEmpty else { return }
-        dbg("Found \(others.count) other Glotty instance(s) — terminating so this build can take over.")
+        dbg(
+            "Found \(others.count) other Glotty instance(s) — terminating so this build can take over."
+        )
         for existing in others {
             // `terminate()` is the graceful signal; an LSUIElement agent
             // with no open documents will exit immediately on receipt.
@@ -142,12 +146,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         PermissionCheck.refreshNotificationsStatus { [weak self] in
             guard let self else { return }
             let missing = PermissionCheck.anyMissing()
-            let welcomeDone = UserDefaults.standard.bool(forKey: WelcomeWindowController.userDefaultsKey)
-            let isRestartReopen = UserDefaults.standard.bool(forKey: SettingsWindowController.reopenSettingsKey)
+            let welcomeDone = UserDefaults.standard.bool(
+                forKey: WelcomeWindowController.userDefaultsKey)
+            let isRestartReopen =
+                UserDefaults.standard.bool(forKey: SettingsWindowController.reopenSettingsKey)
                 || UserDefaults.standard.bool(forKey: WelcomeWindowController.reopenWelcomeKey)
-            dbg("anyMissing = \(missing) welcomeDone = \(welcomeDone) restartReopen = \(isRestartReopen)")
+            dbg(
+                "anyMissing = \(missing) welcomeDone = \(welcomeDone) restartReopen = \(isRestartReopen)"
+            )
             guard missing, welcomeDone, !isRestartReopen,
-                  !WelcomeWindowController.shared.isShowing else { return }
+                !WelcomeWindowController.shared.isShowing
+            else { return }
             dbg("opening Settings → Permissions (post-welcome missing perms)")
             self.settingsWindow.show(selecting: .permissions)
         }
@@ -164,7 +173,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         WelcomeWindowController.shared.showIfFirstRun()
 
         let aiStatus = AppleIntelligenceStatus.current()
-        dbg("AppleIntelligence: \(aiStatus.displayName)" + (aiStatus.fixInstructions.map { " — \($0)" } ?? ""))
+        dbg(
+            "AppleIntelligence: \(aiStatus.displayName)"
+                + (aiStatus.fixInstructions.map { " — \($0)" } ?? ""))
 
         // Warm the dictionary metadata cache so the very first Fn → T popup gets
         // proper kind classification (not the fallback keyword heuristic).
@@ -234,14 +245,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     activeImage: activeImage
                 )
             } else {
-                button.image = NSImage(systemSymbolName: "globe", accessibilityDescription: "Glotty")
+                button.image = NSImage(
+                    systemSymbolName: "globe", accessibilityDescription: "Glotty")
                 button.image?.isTemplate = true
             }
             button.toolTip = "Glotty"
         } else {
-            print("[Glotty] WARNING: status item has no button — menu bar may be full")
+            dbg("WARNING: status item has no button — menu bar may be full")
         }
-        dbg("status item — visible=\(statusItem.isVisible) length=\(statusItem.length) hasButton=\(statusItem.button != nil)")
+        dbg(
+            "status item — visible=\(statusItem.isVisible) length=\(statusItem.length) hasButton=\(statusItem.button != nil)"
+        )
 
         let menu = NSMenu()
         // Rebuild the menu lazily on each open so the Context
@@ -251,7 +265,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.menu = menu
 
         rebuildStatusMenu(menu)
-        print("[Glotty] status item created")
+        dbg("status item created")
     }
 
     @objc private func openSettings() {
@@ -288,9 +302,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // a user explicitly called it out as noise: "设置的三个。。。
         // 也不需要".
 
-        let settings = NSMenuItem(title: "Settings".t,
-                                  action: #selector(openSettings),
-                                  keyEquivalent: ",")
+        let settings = NSMenuItem(
+            title: "Settings".t,
+            action: #selector(openSettings),
+            keyEquivalent: ",")
         settings.target = self
         settings.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
         menu.addItem(settings)
@@ -316,18 +331,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let memoryItem = NSMenuItem(title: memoryTitle, action: nil, keyEquivalent: "")
         memoryItem.image = NSImage(systemSymbolName: "brain", accessibilityDescription: nil)
         let memorySubmenu = NSMenu()
-        let noneItem = NSMenuItem(title: "Global only (no context)".t,
-                                  action: #selector(setActiveContext(_:)),
-                                  keyEquivalent: "")
+        let noneItem = NSMenuItem(
+            title: "Global only (no context)".t,
+            action: #selector(setActiveContext(_:)),
+            keyEquivalent: "")
         noneItem.target = self
         noneItem.state = activeID == nil ? .on : .off
         memorySubmenu.addItem(noneItem)
         if !contexts.isEmpty {
             memorySubmenu.addItem(.separator())
             for ctx in contexts {
-                let item = NSMenuItem(title: ctx.name,
-                                      action: #selector(setActiveContext(_:)),
-                                      keyEquivalent: "")
+                let item = NSMenuItem(
+                    title: ctx.name,
+                    action: #selector(setActiveContext(_:)),
+                    keyEquivalent: "")
                 item.target = self
                 item.representedObject = ctx.id
                 item.state = ctx.id == activeID ? .on : .off
@@ -335,9 +352,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         memorySubmenu.addItem(.separator())
-        let manage = NSMenuItem(title: "Manage memory".t,
-                                action: #selector(openMemorySettings),
-                                keyEquivalent: "")
+        let manage = NSMenuItem(
+            title: "Manage memory".t,
+            action: #selector(openMemorySettings),
+            keyEquivalent: "")
         manage.target = self
         memorySubmenu.addItem(manage)
         memoryItem.submenu = memorySubmenu
@@ -345,16 +363,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
-        let welcome = NSMenuItem(title: "Show welcome".t,
-                                 action: #selector(showWelcome),
-                                 keyEquivalent: "")
+        let welcome = NSMenuItem(
+            title: "Show welcome".t,
+            action: #selector(showWelcome),
+            keyEquivalent: "")
         welcome.target = self
         welcome.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
         menu.addItem(welcome)
 
-        let quit = NSMenuItem(title: "Quit Glotty".t,
-                              action: #selector(NSApplication.terminate(_:)),
-                              keyEquivalent: "q")
+        let quit = NSMenuItem(
+            title: "Quit Glotty".t,
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q")
         quit.image = NSImage(systemSymbolName: "power", accessibilityDescription: nil)
         menu.addItem(quit)
     }
@@ -363,40 +383,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// who skipped it on first launch and want a refresher.
     @objc private func showWelcome() {
         WelcomeWindowController.shared.show()
-    }
-
-    /// True if the currently-frontmost app has at least one window
-    /// in full-screen mode (kAXFullScreenAttribute). Detection is
-    /// best-effort: apps that don't expose AX or hide the attribute
-    /// return false, which biases us toward NOT closing Settings —
-    /// matching the user preference "only close when other apps
-    /// hold the space". Worst case of a false negative: the IME bug
-    /// returns for that one popup; the user can dismiss Settings
-    /// manually if they need to.
-    private static func frontmostAppHasFullScreenWindow() -> Bool {
-        guard let frontmost = NSWorkspace.shared.frontmostApplication else { return false }
-        // Glotty itself can't be in true full-screen (it's an agent
-        // app). If we're frontmost, the user is interacting with
-        // Settings or a popup and there's no other-space conflict.
-        if frontmost.bundleIdentifier == Bundle.main.bundleIdentifier { return false }
-
-        let axApp = AXUIElementCreateApplication(frontmost.processIdentifier)
-        var windowsRef: CFTypeRef?
-        let result = AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &windowsRef)
-        guard result == .success, let windows = windowsRef as? [AXUIElement] else { return false }
-
-        for window in windows {
-            var fullscreenRef: CFTypeRef?
-            // `AXFullScreen` isn't in the public AX constants header
-            // but is widely supported by AppKit windows. Apps that
-            // don't expose it just produce a not-supported error and
-            // we move on.
-            let attr = AXUIElementCopyAttributeValue(window, "AXFullScreen" as CFString, &fullscreenRef)
-            if attr == .success, let isFull = fullscreenRef as? Bool, isFull {
-                return true
-            }
-        }
-        return false
     }
 
     private func installHotkey() {
@@ -410,9 +396,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             try hk.install()
             hotkey = hk
-            print("Glotty: Fn → T / Fn → E / Fn → P hotkey installed")
+            dbg("Fn → T / Fn → E / Fn → P hotkey installed")
         } catch {
-            print("Glotty: hotkey install failed: \(error). Input Monitoring permission likely denied.")
+            dbg("hotkey install failed: \(error). Input Monitoring permission likely denied.")
         }
     }
 
@@ -441,7 +427,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // + dictionaries) without an LLM.
         if mode != .translate, LLMRegistry.current() == nil {
             HUDController.shared.toast(
-                String(localized: "No Language Model set up yet — add one in Settings → Language Model."),
+                String(
+                    localized:
+                        "No Language Model set up yet — add one in Settings → Language Model."),
                 systemImage: "sparkles")
             settingsWindow.show(selecting: .languageModel)
             return
@@ -461,8 +449,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // card's controller owns the "guidance shown" flag and only
         // flips it on dismiss, so the gate fires at most once.
         if mode == .translate,
-           !UserDefaults.standard.bool(forKey: TranslateGuideWindowController.userDefaultsKey),
-           DictionaryLookup.availableDictionaries().isEmpty {
+            !UserDefaults.standard.bool(forKey: TranslateGuideWindowController.userDefaultsKey),
+            DictionaryLookup.availableDictionaries().isEmpty
+        {
             TranslateGuideWindowController.shared.show()
             return
         }
@@ -485,25 +474,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
             let started = CFAbsoluteTimeGetCurrent()
-            guard let text = await grabber.grab(),
-                  !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            guard let text = grabber.grab(),
+                !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            else {
                 // Don't fail silently — a no-op here reads as "the app is
                 // broken" (the user pressed the hotkey and nothing
                 // happened). Surface a hint pointing them at the missing
                 // step: highlight some text first, then fire the leader.
-                print("Glotty: no selection available")
+                dbg("no selection available")
                 // Fold the hint into the leader HUD (bottom row) rather
                 // than popping a separate toast window — reads as one
                 // surface, and the command list above reminds the user
                 // what each chord does.
                 HUDController.shared.showHint(
-                    String(format: String(localized: "Select some text first, then press %@."),
-                           Keycode.currentLeader().label)
+                    String(
+                        format: String(localized: "Select some text first, then press %@."),
+                        Keycode.currentLeader().label)
                 )
                 return
             }
             let elapsed = (CFAbsoluteTimeGetCurrent() - started) * 1000
-            print("Glotty: grabbed \(text.count) chars in \(String(format: "%.0f", elapsed))ms (mode=\(mode))")
+            dbg(
+                "grabbed \(text.count) chars in \(String(format: "%.0f", elapsed))ms (mode=\(mode))"
+            )
             popup.show(sourceText: text, mode: mode)
         }
     }
@@ -528,10 +521,15 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     /// Show the notification banner even when Glotty is frontmost — the user
     /// might be deep in a polish session and we still want them to see the
     /// nudge. Without this, banners are suppressed for the active app.
-    func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                willPresent notification: UNNotification,
-                                withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        dbg("notification willPresent — id=\(notification.request.identifier) userInfo=\(notification.request.content.userInfo)")
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler:
+            @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        dbg(
+            "notification willPresent — id=\(notification.request.identifier) userInfo=\(notification.request.content.userInfo)"
+        )
         completionHandler([.banner, .sound])
     }
 
@@ -541,14 +539,19 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     /// the fallback "library is filling" notification — so the click is
     /// never a dead-end. Posting to the main queue ensures the popup opens
     /// even when the system has just woken the app from a background state.
-    func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                didReceive response: UNNotificationResponse,
-                                withCompletionHandler completionHandler: @escaping () -> Void) {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
         let userInfo = response.notification.request.content.userInfo
         let kind = userInfo["kind"] as? String
         let actionId = response.actionIdentifier
-        dbg("notification didReceive — kind=\(kind ?? "nil") action=\(actionId) id=\(response.notification.request.identifier)")
-        let isPractice = (kind == "practice-session")
+        dbg(
+            "notification didReceive — kind=\(kind ?? "nil") action=\(actionId) id=\(response.notification.request.identifier)"
+        )
+        let isPractice =
+            (kind == "practice-session")
             || (kind == "practice-empty")
             || actionId == PracticeScheduler.notificationActionStart
         if isPractice {
