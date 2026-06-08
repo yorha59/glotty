@@ -18,8 +18,18 @@ settings:
     SWIFT_VERSION: "5"
     SWIFT_STRICT_CONCURRENCY: minimal
     MACOSX_DEPLOYMENT_TARGET: "15.0"
-    ARCHS: arm64
-    ONLY_ACTIVE_ARCH: YES
+    # Universal binary so the notarized .pkg runs on both Apple Silicon
+    # and Intel Macs (macOS 26 / Tahoe is the last Intel-supporting
+    # release; Xcode 26 still builds x86_64). Rosetta only translates
+    # x86→arm, so an arm64-only build would NOT launch on Intel at all.
+    ARCHS: "arm64 x86_64"
+  configs:
+    # Local dev: only build the active arch (arm64 here) for speed.
+    Debug:
+      ONLY_ACTIVE_ARCH: YES
+    # Release (the CD / notarized .pkg path): build the full fat binary.
+    Release:
+      ONLY_ACTIVE_ARCH: NO
 
 targets:
   Glotty:
