@@ -304,6 +304,10 @@ struct LanguageModelSettingsSection: View {
         }
         providerMenuButton(id: "deepseek", label: "DeepSeek")
         providerMenuButton(id: "kimi-coding", label: "Kimi For Coding")
+        // On-device Apple model — only offered when the OS reports it usable.
+        if AppleFoundationProvider().isAvailable() {
+            providerMenuButton(id: "apple-foundation", label: "Apple Intelligence (On-Device)")
+        }
         ForEach(CustomProviderStore.all()) { config in
             providerMenuButton(id: config.providerID, label: config.displayName)
         }
@@ -342,6 +346,7 @@ struct LanguageModelSettingsSection: View {
         }
         if providerID == "deepseek" { return "DeepSeek" }
         if providerID == "kimi-coding" { return "Kimi For Coding" }
+        if providerID == "apple-foundation" { return "Apple Intelligence (On-Device)" }
         return providerID
     }
 
@@ -357,6 +362,8 @@ struct LanguageModelSettingsSection: View {
             deepseekFields
         } else if providerID == "kimi-coding" {
             kimiFields
+        } else if providerID == "apple-foundation" {
+            appleFoundationFields
         } else {
             // Selected id doesn't match any known provider — likely a custom
             // entry was deleted while selected. Surface a hint and let the
@@ -365,6 +372,19 @@ struct LanguageModelSettingsSection: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    // MARK: - Apple Intelligence (on-device) fields
+
+    /// No API key, endpoint, or model to configure — it's the OS model. Just
+    /// explain what it is. The row only appears when the provider is available,
+    /// so we don't need an unavailable state here.
+    @ViewBuilder
+    private var appleFoundationFields: some View {
+        Text("Runs Apple's on-device foundation model. No API key, no network — your text never leaves the Mac, and it works offline. Requires an Apple Silicon Mac with Apple Intelligence enabled (macOS 26+). Output quality is lighter than the larger cloud models; switch providers above for the most demanding polish.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Stock preset fields
