@@ -183,12 +183,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             dbg("DictionaryCatalog: metadata cache loaded")
         }
 
-        // Proactive practice scheduler — opt-in via Settings. Permission and
-        // category registration are idempotent so we always run them; the
+        // Proactive chat-reminder scheduler — opt-in via Settings. Permission
+        // and category registration are idempotent so we always run them; the
         // scheduler itself is a no-op until the user picks a non-zero interval.
         UNUserNotificationCenter.current().delegate = self
-        PracticeScheduler.shared.requestNotificationPermissionIfNeeded()
-        PracticeScheduler.shared.start()
+        ReminderScheduler.shared.requestNotificationPermissionIfNeeded()
+        ReminderScheduler.shared.start()
 
         // Honor the "reopen chat after relaunch" flag set by the
         // settings-via-chat relaunch button (see SystemLanguageManager).
@@ -474,7 +474,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
             let started = CFAbsoluteTimeGetCurrent()
-            guard let text = grabber.grab(),
+            guard let text = await grabber.grab(),
                 !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             else {
                 // Don't fail silently — a no-op here reads as "the app is
@@ -515,7 +515,7 @@ extension AppDelegate: NSMenuDelegate {
     }
 }
 
-// MARK: - Practice notification handling
+// MARK: - Reminder notification handling
 
 extension AppDelegate: UNUserNotificationCenterDelegate {
     /// Show the notification banner even when Glotty is frontmost — the user
@@ -533,11 +533,10 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         completionHandler([.banner, .sound])
     }
 
-    /// User clicked the notification (or the "Start Practice" action button).
-    /// Open the chat popup; it'll pick up the scheduler's pending batch.
-    /// We always open the popup on any practice notification — including
-    /// the fallback "library is filling" notification — so the click is
-    /// never a dead-end. Posting to the main queue ensures the popup opens
+    /// User clicked the notification (or the "Chat" action button).
+    /// Open the chat popup. We always open it on any reminder
+    /// notification so the click is never a dead-end. Posting to the
+    /// main queue ensures the popup opens
     /// even when the system has just woken the app from a background state.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
@@ -550,11 +549,10 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         dbg(
             "notification didReceive — kind=\(kind ?? "nil") action=\(actionId) id=\(response.notification.request.identifier)"
         )
-        let isPractice =
-            (kind == "practice-session")
-            || (kind == "practice-empty")
-            || actionId == PracticeScheduler.notificationActionStart
-        if isPractice {
+        let isReminder =
+            (kind == "reminder-session")
+            || actionId == ReminderScheduler.notificationActionStart
+        if isReminder {
             // Hop to the main queue explicitly — UN delegate callbacks come
             // from a worker thread, and `popup` is main-actor-isolated.
             DispatchQueue.main.async { [weak self] in

@@ -10,12 +10,24 @@ struct MemoryContext: Codable, Identifiable, Sendable, Hashable {
     let id: UUID
     var name: String
     let createdAt: Date
+    /// Injection rule for the whole set — `.everywhere` (default) or
+    /// `.chatOnly`. Optional so contexts saved before this field existed
+    /// decode cleanly; read via `effectiveInjection`.
+    var injection: MemoryInjectionScope?
 
-    init(id: UUID = UUID(), name: String, createdAt: Date = Date()) {
+    init(id: UUID = UUID(),
+         name: String,
+         createdAt: Date = Date(),
+         injection: MemoryInjectionScope? = nil) {
         self.id = id
         self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         self.createdAt = createdAt
+        self.injection = injection
     }
+
+    /// Resolved injection rule — legacy contexts (no `injection` field)
+    /// decode as nil and behave as `.everywhere`.
+    var effectiveInjection: MemoryInjectionScope { injection ?? .everywhere }
 }
 
 /// Which memory scope a `LearnedMemory` belongs to. `.global`
@@ -76,6 +88,19 @@ final class MemoryContextStore {
     /// context active (global memories only). The mascot menu and
     /// the Memory settings tab both read/write this.
     static let activeContextKey = "glotty.memory.activeContextID"
+
+    /// UserDefaults key for the **Global** set's injection rule (Global isn't a
+    /// `MemoryContext`, so its rule lives here rather than on a struct).
+    static let globalInjectionKey = "glotty.memory.global.injection"
+
+    /// Injection rule for the Global memory set. Defaults to `.everywhere`.
+    var globalInjection: MemoryInjectionScope {
+        get {
+            let raw = UserDefaults.standard.string(forKey: Self.globalInjectionKey) ?? ""
+            return MemoryInjectionScope(rawValue: raw) ?? .everywhere
+        }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: Self.globalInjectionKey) }
+    }
 
     private let fileURL: URL
     private var cache: [MemoryContext] = []
@@ -146,6 +171,13 @@ final class MemoryContextStore {
         guard !trimmed.isEmpty else { return }
         guard let idx = cache.firstIndex(where: { $0.id == id }) else { return }
         cache[idx].name = trimmed
+        rewriteAll()
+    }
+
+    /// Set a context's injection rule (Every scenario vs Chat-only).
+    func setInjection(id: UUID, _ injection: MemoryInjectionScope) {
+        guard let idx = cache.firstIndex(where: { $0.id == id }) else { return }
+        cache[idx].injection = injection
         rewriteAll()
     }
 

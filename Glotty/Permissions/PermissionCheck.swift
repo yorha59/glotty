@@ -26,7 +26,7 @@ enum Permission: String, CaseIterable, Identifiable {
         case .inputMonitoring:
             return "Detect the Fn → T hotkey via a low-level event tap."
         case .notifications:
-            return "Deliver proactive practice reminders when it's time for a quick quiz on your recent mistakes."
+            return "Deliver proactive chat reminders so Glotty can check in with you in your target language."
         }
     }
 

@@ -16,6 +16,8 @@ Package.resolved
 # Editor
 .vscode/
 .idea/
+# sourcekit-lsp build server config (machine-specific DerivedData path)
+buildServer.json
 
 # Claude Code working dir + per-session resume scripts
 .claude/

@@ -239,40 +239,6 @@ struct MemoryItemsView: View {
                 .frame(width: 20)
                 .help("Move to a different scope")
 
-                // Injection rule — when this memory may enter prompts.
-                // `.everywhere` (default) or `.chatOnly` (Fn+C tutor only).
-                Menu {
-                    Button {
-                        LearnedMemoryStore.shared.setInjection(id: memory.id, .everywhere)
-                        refreshToken &+= 1
-                    } label: {
-                        if memory.effectiveInjection == .everywhere {
-                            Label("Inject everywhere".t, systemImage: "checkmark")
-                        } else {
-                            Text("Inject everywhere".t)
-                        }
-                    }
-                    Button {
-                        LearnedMemoryStore.shared.setInjection(id: memory.id, .chatOnly)
-                        refreshToken &+= 1
-                    } label: {
-                        if memory.effectiveInjection == .chatOnly {
-                            Label("Chat only (Fn + C)".t, systemImage: "checkmark")
-                        } else {
-                            Text("Chat only (Fn + C)".t)
-                        }
-                    }
-                } label: {
-                    Image(systemName: memory.effectiveInjection == .chatOnly
-                          ? "text.bubble.fill" : "text.bubble")
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .frame(width: 20)
-                .help(memory.effectiveInjection == .chatOnly
-                      ? "Injects only in chat (Fn + C)"
-                      : "Injects in every scenario")
-
                 Button {
                     editingID = memory.id
                     editTerm = memory.term ?? ""

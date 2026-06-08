@@ -2,28 +2,22 @@ import Foundation
 import UserNotifications
 import AppKit
 
-/// Proactive chat scheduler. Posts a "Time to chat with Glotty"
+/// Proactive chat-reminder scheduler. Posts a "Time to chat with Glotty"
 /// notification at the user-configured cadence (off / hourly / 4h /
 /// daily / weekly). The notification's Start action opens the
 /// conversational chat popup (the same Fn → C surface).
-///
-/// Pre-chat history: this used to manage a background-generated
-/// quiz library so multiple-choice notifications could fire instantly
-/// without an LLM call. Chat sessions take their first turn from the
-/// LLM on open, so there's no library to maintain anymore — just
-/// the reminder timer.
 @MainActor
-final class PracticeScheduler: NSObject, ObservableObject {
-    static let shared = PracticeScheduler()
+final class ReminderScheduler: NSObject, ObservableObject {
+    static let shared = ReminderScheduler()
 
     /// UserDefaults key + default. Interval in minutes; 0 == disabled.
-    static let intervalKey            = "glotty.practice.intervalMinutes"
+    static let intervalKey            = "glotty.reminder.intervalMinutes"
     static let defaultIntervalMinutes = 0
 
     /// Notification category + action identifiers — tied to handlers in
     /// `AppDelegate`'s `UNUserNotificationCenterDelegate` conformance.
-    static let notificationCategory    = "glotty.practice.session"
-    static let notificationActionStart = "glotty.practice.start"
+    static let notificationCategory    = "glotty.reminder.session"
+    static let notificationActionStart = "glotty.reminder.start"
 
     private var notificationTimer: Timer?
 
@@ -56,7 +50,7 @@ final class PracticeScheduler: NSObject, ObservableObject {
     }
 
     /// Post one reminder banner immediately. Used by the "Send a
-    /// reminder now" button in Settings → Practice as a test path,
+    /// reminder now" button in Settings → Chat as a test path,
     /// and by the notification timer when it fires on schedule.
     func fireSessionNow() async {
         await postNotification()
@@ -145,10 +139,10 @@ final class PracticeScheduler: NSObject, ObservableObject {
         content.body  = hook
         content.sound = .default
         content.categoryIdentifier = Self.notificationCategory
-        content.userInfo = ["kind": "practice-session"]
+        content.userInfo = ["kind": "reminder-session"]
 
         let request = UNNotificationRequest(
-            identifier: "glotty.practice.\(UUID().uuidString)",
+            identifier: "glotty.reminder.\(UUID().uuidString)",
             content: content,
             trigger: nil
         )
@@ -171,7 +165,7 @@ final class PracticeScheduler: NSObject, ObservableObject {
         // source text we know the user is likely thinking about. There's
         // none at notification time, so an empty string still pulls in
         // profile-style memories (always-on facts/preferences/projects).
-        // Proactive practice is the Fn+C tutor chat, just scheduler-initiated —
+        // The proactive nudge is the Fn+C tutor chat, just scheduler-initiated —
         // so `.chatOnly` memories belong here too.
         let userContext = LearnedMemoryStore.shared.contextBlock(for: "", purpose: .chat)
         // Topics Glotty has already pitched in the last few days. The

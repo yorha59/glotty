@@ -13,7 +13,7 @@ enum SettingsTab: String, Hashable, CaseIterable, Identifiable {
     case hotkey
     case history
     case memory
-    case practice
+    case chat
     case usage
     case backup
     case system
@@ -31,7 +31,7 @@ enum SettingsTab: String, Hashable, CaseIterable, Identifiable {
         case .hotkey:        return "Hotkey"
         case .history:       return "History"
         case .memory:        return "Memory"
-        case .practice:      return "Chat"
+        case .chat:          return "Chat"
         case .usage:         return "Usage"
         case .backup:        return "Backup"
         case .system:        return "System"
@@ -52,7 +52,7 @@ enum SettingsTab: String, Hashable, CaseIterable, Identifiable {
         case .hotkey:        return "keyboard"
         case .history:       return "clock.arrow.circlepath"
         case .memory:        return "brain"
-        case .practice:      return "bubble.left.and.bubble.right"
+        case .chat:          return "bubble.left.and.bubble.right"
         case .usage:         return "chart.bar"
         case .backup:        return "externaldrive"
         case .system:        return "gearshape.2"
@@ -102,7 +102,7 @@ struct SettingsView: View {
         case .hotkey:        hotkeyTab
         case .history:       memoryTab
         case .memory:        memoryDetailTab
-        case .practice:      practiceTab
+        case .chat:          chatTab
         case .usage:         usageTab
         case .backup:        backupTab
         case .system:        systemTab
@@ -169,10 +169,10 @@ struct SettingsView: View {
             .formStyle(.grouped)
     }
 
-    private var practiceTab: some View {
+    private var chatTab: some View {
         Form {
             GlottyPersonaSection()
-            PracticeSettingsSection()
+            ChatSettingsSection()
         }
         .formStyle(.grouped)
     }
@@ -3060,15 +3060,15 @@ private struct MemorySettingsSection: View {
 }
 
 
-/// Practice tab — controls Glotty's proactive chat-reminder nudges.
+/// Chat tab — controls Glotty's proactive chat-reminder nudges.
 /// The scheduler posts a macOS notification at the configured
 /// interval; clicking it opens a fresh chat with Glotty (same surface
 /// as Fn → C). Default is off, so Glotty only becomes proactive if
 /// the user opts in.
 @MainActor
-private struct PracticeSettingsSection: View {
-    @AppStorage(PracticeScheduler.intervalKey)
-    private var intervalMinutes: Int = PracticeScheduler.defaultIntervalMinutes
+private struct ChatSettingsSection: View {
+    @AppStorage(ReminderScheduler.intervalKey)
+    private var intervalMinutes: Int = ReminderScheduler.defaultIntervalMinutes
     /// Language Glotty replies in during Fn → C chats. Empty = unset, which
     /// falls back to the system language at runtime (see PopupView's
     /// `tutorReplyLanguage`). Same key the in-chat "Reply in" picker writes.
@@ -3118,10 +3118,10 @@ private struct PracticeSettingsSection: View {
                     }
                 }
                 .pickerStyle(.menu)
-                .onChange(of: intervalMinutes) { _, _ in PracticeScheduler.shared.start() }
+                .onChange(of: intervalMinutes) { _, _ in ReminderScheduler.shared.start() }
 
                 Button("Send a chat reminder now") {
-                    Task { await PracticeScheduler.shared.fireSessionNow() }
+                    Task { await ReminderScheduler.shared.fireSessionNow() }
                 }
             } header: {
                 Text("Proactive chat reminders")
@@ -3224,7 +3224,7 @@ private struct PracticeSettingsSection: View {
 
 /// Shows token-usage totals over a selectable time window (today / this week /
 /// this month / all time), broken down by feature (translate/explain/polish/
-/// practice) and by provider (Z.AI / Kimi). Data comes from `UsageStore`.
+/// chat) and by provider (Z.AI / Kimi). Data comes from `UsageStore`.
 @MainActor
 private struct UsageSettingsSection: View {
     @ObservedObject private var store = UsageStore.shared

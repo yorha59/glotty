@@ -462,7 +462,7 @@ private struct WelcomeView: View {
         case 0:
             return OSLocalizer.string("Glotty is a language tutor that lives in your menu bar. We'll start with the permissions Glotty needs, then tour the three core actions, set up an LLM, and chat briefly so I know how to address you.")
         case 1:
-            return OSLocalizer.string("Glotty reads the text you've selected, listens for the Fn-leader chord, and sends you the occasional practice reminder. The OS keeps these behind dedicated permission switches — grant each one in System Settings and the status here will update automatically.")
+            return OSLocalizer.string("Glotty reads the text you've selected, listens for the Fn-leader chord, and sends you the occasional chat reminder. The OS keeps these behind dedicated permission switches — grant each one in System Settings and the status here will update automatically.")
         case 2:
             return OSLocalizer.string("Decode foreign text into a chosen language. Highlight any text, hold Fn, then within 600ms tap T. A popup shows the translation; press Esc to dismiss. Runs locally via Apple's translation — no LLM required.")
         case 3:

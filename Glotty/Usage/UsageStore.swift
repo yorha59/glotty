@@ -1,7 +1,7 @@
 import Foundation
 
 /// Threads the current usage mode down from the call site (PopupView,
-/// PracticeScheduler) into the provider's SSE-parsing code, without
+/// ReminderScheduler) into the provider's SSE-parsing code, without
 /// requiring every protocol method to grow a `mode:` parameter. Callers
 /// wrap their provider calls with `UsageContext.$mode.withValue(.polish)`;
 /// providers read `UsageContext.mode` when they record a UsageEvent.
@@ -18,8 +18,6 @@ enum UsageMode: String, Codable, Sendable, CaseIterable {
     case explain
     case polish
     case chat              // ad-hoc / popup-generated question
-    case practiceGenerate  // legacy: pre-chat MCQ library top-off (no longer emitted; kept for old on-disk decode)
-    case practiceQna       // legacy: pre-chat post-session Q&A (no longer emitted; kept for old on-disk decode)
     case memoryExtract     // post-chat extraction of learned memories
 
     var displayName: String {
@@ -28,8 +26,6 @@ enum UsageMode: String, Codable, Sendable, CaseIterable {
         case .explain:          return String(localized: "Explain")
         case .polish:           return String(localized: "Polish")
         case .chat:             return String(localized: "Chat (ad-hoc)")
-        case .practiceGenerate: return String(localized: "Practice generation")
-        case .practiceQna:      return String(localized: "Practice Q&A")
         case .memoryExtract:    return String(localized: "Memory extraction")
         }
     }

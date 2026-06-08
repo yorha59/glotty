@@ -480,7 +480,7 @@ final class PopupController {
     }
 
     /// True if at least one chat-mode popup is currently visible.
-    /// Used by `PracticeScheduler` to skip proactive notifications
+    /// Used by `ReminderScheduler` to skip proactive notifications
     /// while the user is mid-conversation — interrupting a live
     /// chat with a "want to chat?" banner reads as broken.
     func hasOpenChatPopup() -> Bool {

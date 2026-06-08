@@ -248,8 +248,8 @@ enum BackupPreferences {
         "glotty.hotkey.chat",
         "glotty.hotkey.leader",
 
-        // Practice / chat reminders
-        "glotty.practice.intervalMinutes",
+        // Chat reminders
+        "glotty.reminder.intervalMinutes",
 
         // Memory
         "glotty.memory.enabled",            // history-recording toggle

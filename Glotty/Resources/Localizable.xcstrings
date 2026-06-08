@@ -4066,6 +4066,98 @@
         }
       }
     },
+    "Chat only": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur Chat"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo chat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat uniquement"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チャットのみ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "채팅 전용"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅聊天"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "僅聊天"
+          }
+        }
+      }
+    },
+    "Chat only (Fn + C)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur Chat (Fn + C)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo chat (Fn + C)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat uniquement (Fn + C)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チャットのみ (Fn + C)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "채팅 전용 (Fn + C)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅聊天 (Fn + C)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "僅聊天 (Fn + C)"
+          }
+        }
+      }
+    },
     "Chat reminder frequency": {
       "localizations": {
         "de": {
@@ -6203,6 +6295,52 @@
         }
       }
     },
+    "Deliver proactive chat reminders so Glotty can check in with you in your target language.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Botte proaktive Chat-Erinnerungen, damit Glotty sich bei dir in deiner Zielsprache melden kann."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entregar recordatorios proactivos de chat para que Glotty pueda comprobar cómo te va en tu idioma de destino."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fournir des rappels de chat proactifs afin que Glotty puisse vous contacter dans votre langue cible."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロアクティブなチャットのリマインダーを配信し、Glottyがあなたの目標言語で確認できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "적극적인 채팅 알림을 제공하여 Glotty가 대상 언어로 사용자에게 확인할 수 있도록 합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主动发送聊天提醒，以便 Glotty 能用您的目标语言与您交流。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主動發送聊天提醒，讓 Glotty 能以您的目標語言與您聯繫。"
+          }
+        }
+      }
+    },
     "Deliver proactive practice reminders when it's time for a quick quiz on your recent mistakes.": {
       "localizations": {
         "de": {
@@ -7533,6 +7671,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "每個提供者金鑰，均從金鑰串讀取。這就是檔案加密的原因。"
+          }
+        }
+      }
+    },
+    "Every scenario": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jedes Szenario"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos los escenarios"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque scénario"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのシナリオ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 시나리오"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有场景"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有情境"
           }
         }
       }
@@ -9539,6 +9723,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "Glotty 讀取 Apple 內建 **Dictionary** 應用程式填充的字典目錄。開啟它一次 — 它會拉取可用列表 — 然後回到此處。"
+          }
+        }
+      }
+    },
+    "Glotty reads the text you've selected, listens for the Fn-leader chord, and sends you the occasional chat reminder. The OS keeps these behind dedicated permission switches — grant each one in System Settings and the status here will update automatically.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty liest den von dir ausgewählten Text, hört auf den Fn-Leiter-Akkord und sendet dir gelegentlich Chat-Erinnerungen. Das Betriebssystem hält diese hinter dedizierten Berechtigungsschaltern — erteile jede in den Systemeinstellungen, und der Status hier wird sich automatisch aktualisieren."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty lee el texto que has seleccionado, escucha el acorde Fn-leader y te envía recordatorios de chat de vez en cuando. El sistema operativo mantiene estos detrás de interruptores de permisos dedicados — concede cada uno en Configuración del sistema y el estado aquí se actualizará automáticamente."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty lit le texte que vous avez sélectionné, écoute l'accord Fn-leader, et vous envoie des rappels de chat occasionnels. Le système d'exploitation conserve ces fonctionnalités derrière des interrupteurs de permission dédiés — accordez chacune dans les Réglages Système et le statut ici se mettra à jour automatiquement."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glottyが選択したテキストを読み取り、Fnリーダーコードを待機し、時折チャットのリマインダーを送信します。OSはこれらを専用の許可スイッチの背後で保持します — System Settingsで各許可を付与すると、ここでのステータスが自動的に更新されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty가 선택한 텍스트를 읽고 Fn-리더 코드를 듣고 가끔 채팅 알림을 보냅니다. 운영체제는 이를 전용 전환 기능 뒤에 유지합니다 — 시스템 설정에서 각각을 부여하고 여기 상태가 자동으로 업데이트됩니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 会读取您选择的文本，监听 Fn-前缀组合键，并偶尔发送聊天提醒。系统将这些功能置于专门的权限开关之后 — 请在系统设置中为每个功能授予权限，此处的状态将自动更新。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 會讀取您選取的文字，監聽 Fn 領導鍵，並定期發送聊天提醒。作業系統將這些功能設在專用的權限開關後 — 請在「系統設定」中授權各項功能，此處的狀態將自動更新。"
           }
         }
       }
@@ -18756,6 +18986,52 @@
         }
       }
     },
+    "Runs Apple's on-device foundation model. No API key, no network — your text never leaves the Mac, and it works offline. Requires an Apple Silicon Mac with Apple Intelligence enabled (macOS 26+). Output quality is lighter than the larger cloud models; switch providers above for the most demanding polish.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Führt Apples on-device Foundation-Modell aus. Kein API-Schlüssel, kein Netzwerk — dein Text verlässt den Mac nie, und es funktioniert offline. Erfordert einen Apple Silicon Mac mit aktiviertem Apple Intelligence (macOS 26+). Die Ausgabequalität ist geringer als bei den größeren Cloud-Modellen; wechsle oben zu Anbietern für die anspruchsvollste Nachbearbeitung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ejecuta el modelo foundation de Apple en el dispositivo. No hay clave de API, no hay red — tu texto nunca sale del Mac y funciona sin conexión. Requiere un Mac con Apple Silicon con Apple Intelligence activado (macOS 26+). La calidad de salida es más ligera que la de los modelos de nube más grandes; cambia de proveedores arriba para el pulido más exigente."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exécute le modèle de base sur l'appareil d'Apple. Pas de clé API, pas de réseau — votre texte ne quitte jamais votre Mac, et il fonctionne hors ligne. Nécessite un Mac Apple Silicon avec Apple Intelligence activé (macOS 26+). La qualité de sortie est plus légère que celle des modèles cloud plus volumineux ; changez de fournisseur ci-dessus pour le polissage le plus exigeant."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appleのデバイス上の基盤モデルを実行します。APIキーもネットワークも不要 — テキストがMacから出ることはなく、オフラインでも動作します。Apple Intelligenceが有効になったApple Silicon Macが必要です（macOS 26+）。出力品質はより大きなクラウドモデルより軽量です；最も高度な仕上げには上のプロバイダーを切り替えてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple의 기기 내 기본 모델을 실행합니다. API 키 없이, 네트워크 없이 — 텍스트는 Mac을 벗어나지 않으며 오프라인에서 작동합니다. Apple Intelligence가 활성화된 Apple Silicon Mac이 필요합니다 (macOS 26+). 출력 품질은 더 큰 클라우드 모델보다 가볍습니다; 가장 엄격한 연마를 위해 위에서 공급업체를 전환하십시오."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行苹果的设备端基础模型。无需 API 密钥，无需网络 — 您的文本永远不会离开 Mac，且可在离线状态下工作。需要配备 Apple Silicon 的 Mac 并启用 Apple Intelligence (macOS 26+)。输出质量比大型云模型更轻量；如需最佳润色效果，请在上方切换提供商。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "採用 Apple 的裝置內基礎模型。無需 API 金鑰，也無需網路 — 您的文字不會離開 Mac，並可在離線狀態下運作。需要支援 Apple Intelligence 的 Apple Silicon Mac (macOS 26+)。輸出品質相比大型雲端模型較為輕量；對於最高品質的需求，請在上方切換供應商。"
+          }
+        }
+      }
+    },
     "Same model as OpenAI direct, routed through OpenRouter — useful if you only want one API key.": {
       "localizations": {
         "de": {
@@ -22856,6 +23132,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "關閉時，翻譯彈出視窗中只會顯示每種類型（單語+雙語）中最高優先順序的辭典。"
+          }
+        }
+      }
+    },
+    "When this memory set is injected into prompts": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn dieser Speicheratz in Eingabeaufforderungen eingefügt wird"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuando este conjunto de memoria se inyecta en las indicaciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lorsque ce jeu de souvenirs est injecté dans les invites"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このメモリーセットがプロンプトに挿入されたとき"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 메모리 세트가 프롬프트에 주입될 때"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当此记忆集被注入到提示中时"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "當此記憶集被注入提示中"
           }
         }
       }

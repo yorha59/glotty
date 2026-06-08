@@ -363,14 +363,14 @@ enum SettingsRegistry {
         ))
         entries.append(.integer(
             id: "reminder_interval_minutes",
-            defaultsKey: PracticeScheduler.intervalKey,
+            defaultsKey: ReminderScheduler.intervalKey,
             displayName: String(localized: "Chat reminder frequency"),
             description: "How often (in minutes) the proactive chat reminder fires. 0 disables reminders entirely.",
             min: 0,
             max: 1440,
             // Reschedule so the new interval kicks in immediately;
             // without this the next fire still uses the old gap.
-            onChange: { PracticeScheduler.shared.start() }
+            onChange: { ReminderScheduler.shared.start() }
         ))
 
         // MARK: Model (active provider only)

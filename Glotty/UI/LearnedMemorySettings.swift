@@ -52,11 +52,15 @@ struct LearnedMemorySettingsSection: View {
                     // entry. Chinese, Japanese, Korean etc. don't
                     // distinguish singular/plural — keeping it as one
                     // key avoids two near-identical catalog entries.
-                    Text(String(format: "%d memories · always injected".t, count))
+                    Text(String(format: "%d memories".t, count))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
+                injectionPicker(current: MemoryContextStore.shared.globalInjection) { rule in
+                    MemoryContextStore.shared.globalInjection = rule
+                    refreshToken &+= 1
+                }
                 Button("Manage\u{2026}") {
                     MemoryItemsWindowController.shared.show(scope: .global)
                 }
@@ -78,6 +82,32 @@ struct LearnedMemorySettingsSection: View {
             if case .global = $0.effectiveScope { return true }
             return false
         }.count
+    }
+
+    /// Compact menu for a memory set's injection rule — `.everywhere`
+    /// (Translate/Explain/Polish/Chat) or `.chatOnly` (only the Fn+C tutor
+    /// chat). Reused by the Global section and each context row.
+    @ViewBuilder
+    private func injectionPicker(current: MemoryInjectionScope,
+                                 set: @escaping (MemoryInjectionScope) -> Void) -> some View {
+        Menu {
+            Button { set(.everywhere) } label: {
+                if current == .everywhere {
+                    Label("Every scenario".t, systemImage: "checkmark")
+                } else { Text("Every scenario".t) }
+            }
+            Button { set(.chatOnly) } label: {
+                if current == .chatOnly {
+                    Label("Chat only (Fn + C)".t, systemImage: "checkmark")
+                } else { Text("Chat only (Fn + C)".t) }
+            }
+        } label: {
+            Label(current == .chatOnly ? "Chat only".t : "Every scenario".t,
+                  systemImage: current == .chatOnly ? "text.bubble" : "square.grid.2x2")
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("When this memory set is injected into prompts")
     }
 
     // MARK: - Contexts
@@ -165,6 +195,10 @@ struct LearnedMemorySettingsSection: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
+                injectionPicker(current: ctx.effectiveInjection) { rule in
+                    MemoryContextStore.shared.setInjection(id: ctx.id, rule)
+                    refreshToken &+= 1
+                }
                 Button("Manage\u{2026}") {
                     MemoryItemsWindowController.shared.show(scope: .context(ctx.id))
                 }

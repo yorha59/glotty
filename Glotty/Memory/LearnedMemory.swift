@@ -102,10 +102,6 @@ struct LearnedMemory: Codable, Identifiable, Sendable, Hashable {
     /// Set by `MemoryExtractor` from the chat's effective language when
     /// a new memory is recorded.
     var sourceLanguage: String?
-    /// Injection rule — `.everywhere` (default) or `.chatOnly`. Optional so
-    /// legacy entries on disk without this field decode cleanly; read via
-    /// `effectiveInjection` so callers don't have to nil-check.
-    var injection: MemoryInjectionScope?
 
     init(
         id: UUID = UUID(),
@@ -117,8 +113,7 @@ struct LearnedMemory: Codable, Identifiable, Sendable, Hashable {
         proposedAt: Date = Date(),
         status: LearnedMemoryStatus = .pending,
         scope: MemoryScope? = nil,
-        sourceLanguage: String? = nil,
-        injection: MemoryInjectionScope? = nil
+        sourceLanguage: String? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -130,17 +125,12 @@ struct LearnedMemory: Codable, Identifiable, Sendable, Hashable {
         self.status = status
         self.scope = scope
         self.sourceLanguage = sourceLanguage
-        self.injection = injection
     }
 
     /// Resolved scope — pre-context legacy entries (no `scope` field
     /// on disk) decode as nil and behave as `.global`, so existing
     /// memories keep injecting as they always did.
     var effectiveScope: MemoryScope { scope ?? .global }
-
-    /// Resolved injection rule — legacy entries (no `injection` field) decode
-    /// as nil and behave as `.everywhere`, preserving today's behavior.
-    var effectiveInjection: MemoryInjectionScope { injection ?? .everywhere }
 }
 
 /// Persistent store for learned memories. Mirrors `MemoryStore`'s
@@ -297,18 +287,8 @@ final class LearnedMemoryStore {
             proposedAt: old.proposedAt,
             status: old.status,
             scope: old.scope,
-            sourceLanguage: old.sourceLanguage,
-            injection: old.injection
+            sourceLanguage: old.sourceLanguage
         )
-        rewriteAll()
-        notifyChange()
-    }
-
-    /// Set a memory's injection rule (Everywhere vs Chat-only). Backs the
-    /// per-row control in the Memory manage panel.
-    func setInjection(id: UUID, _ injection: MemoryInjectionScope) {
-        guard let idx = cache.firstIndex(where: { $0.id == id }) else { return }
-        cache[idx].injection = injection
         rewriteAll()
         notifyChange()
     }
@@ -358,21 +338,21 @@ final class LearnedMemoryStore {
                       purpose: MemoryInjectionPurpose = .general) -> String {
         let haystack = sourceText.lowercased()
         let activeID = MemoryContextStore.shared.activeContextID
+        let globalRule = MemoryContextStore.shared.globalInjection
 
         let relevant = accepted().filter { memory in
-            // 0. Injection rule — a `.chatOnly` memory only injects when the
-            //    caller is the Fn+C tutor chat (or proactive practice). For
-            //    Translate / Explain / Polish (and the follow-up chat inside
-            //    those dialogs) it stays dormant.
-            if memory.effectiveInjection == .chatOnly, purpose != .chat {
-                return false
-            }
-            // 1. Active-context scoping (unchanged).
+            // 1. Active-context scoping + the set's injection rule. A set
+            //    (Global or a context) marked `.chatOnly` keeps its memories
+            //    out of everything except the Fn+C tutor chat (and proactive
+            //    practice). Translate / Explain / Polish — including the
+            //    follow-up chat inside those dialogs — stay `.general`.
             switch memory.effectiveScope {
             case .global:
-                break
+                if globalRule == .chatOnly, purpose != .chat { return false }
             case .context(let id):
                 if id != activeID { return false }
+                let rule = MemoryContextStore.shared.context(id: id)?.effectiveInjection ?? .everywhere
+                if rule == .chatOnly, purpose != .chat { return false }
             }
             // 2. Strict language match. Per the user's directive:
             //    "only inject memory when the memory language is the

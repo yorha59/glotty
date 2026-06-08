@@ -83,10 +83,9 @@ struct TutorResponse: Equatable {
     let toolCalls: [PendingToolCall]
 }
 
-/// Prompt builder for the conversational practice tutor (replaces
-/// the legacy Fn → C multiple-choice flow). The tutor picks a topic
-/// from what it knows about the user (memory context) and holds a
-/// natural conversation in the target language, gently correcting
+/// Prompt builder for the conversational chat tutor. The tutor picks
+/// a topic from what it knows about the user (memory context) and holds
+/// a natural conversation in the target language, gently correcting
 /// errors inline as it goes.
 enum TutorPrompt {
     /// Build the system + history prompt. `targetLanguage` is the
@@ -361,7 +360,7 @@ enum TutorPrompt {
 
         2. open_settings_tab(tab) — open one Settings tab for the user when they're asking about something you can't change with `set_setting`. Use this for: dictionaries, API key, LLM provider, hotkeys, backup, permissions, anything else not in the list above.
 
-        Available tab ids: profile, translation, dictionaries, languageModel, polish, hotkey, history, memory, practice, usage, backup, system, permissions.
+        Available tab ids: profile, translation, dictionaries, languageModel, polish, hotkey, history, memory, chat, usage, backup, system, permissions.
 
         Rules:
           - Emit at most one `tool_calls` entry per turn.
