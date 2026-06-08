@@ -3403,7 +3403,8 @@ struct PopupView: View {
         // message — picks up profile + glossary + memories so the
         // tutor knows what topics to pull from.
         let contextSource = tutorThread.last?.reply ?? ""
-        let userContext = LearnedMemoryStore.shared.contextBlock(for: contextSource)
+        // Fn+C tutor chat — the one place `.chatOnly` memories inject.
+        let userContext = LearnedMemoryStore.shared.contextBlock(for: contextSource, purpose: .chat)
         // System turns (tool-call outcomes) are surfaced to the LLM
         // as bracketed status notes so the model knows what the app
         // confirmed / declined in the prior round.

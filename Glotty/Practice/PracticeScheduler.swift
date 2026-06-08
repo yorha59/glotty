@@ -171,7 +171,9 @@ final class PracticeScheduler: NSObject, ObservableObject {
         // source text we know the user is likely thinking about. There's
         // none at notification time, so an empty string still pulls in
         // profile-style memories (always-on facts/preferences/projects).
-        let userContext = LearnedMemoryStore.shared.contextBlock(for: "")
+        // Proactive practice is the Fn+C tutor chat, just scheduler-initiated —
+        // so `.chatOnly` memories belong here too.
+        let userContext = LearnedMemoryStore.shared.contextBlock(for: "", purpose: .chat)
         // Topics Glotty has already pitched in the last few days. The
         // notification hook needs this filter too — without it the
         // hook gravitates to whatever's most prominent in memory and

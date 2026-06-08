@@ -145,13 +145,15 @@ enum PolishPrompt {
     /// unchanged when there's no context to inject. Centralized here
     /// rather than in each call site so explain/polish/chat all
     /// share the same injection format.
-    static func prependedWithUserContext(_ body: String, sourceText: String) -> String {
+    static func prependedWithUserContext(_ body: String,
+                                         sourceText: String,
+                                         purpose: MemoryInjectionPurpose = .general) -> String {
         // Hop to the main actor to read the store. Awaiting from a
         // potentially-non-main caller is the wrong shape (prompt
         // builders are sync), so use MainActor.assumeIsolated — the
         // store is touched on main from every call site we have.
         let context = MainActor.assumeIsolated {
-            LearnedMemoryStore.shared.contextBlock(for: sourceText)
+            LearnedMemoryStore.shared.contextBlock(for: sourceText, purpose: purpose)
         }
         guard !context.isEmpty else { return body }
         return context + "\n\n" + body

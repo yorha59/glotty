@@ -44,6 +44,25 @@ enum LearnedMemoryStatus: String, Codable, Sendable {
 /// One piece of learned context about the user. Proposed by the
 /// post-chat extractor; persisted across sessions; injected into
 /// future LLM calls once the user accepts it.
+/// When a memory is allowed to be injected into LLM prompts.
+///   - `.everywhere` (default): every scenario — Translate, Explain, Polish, Chat.
+///   - `.chatOnly`: only the Fn+C tutor chat (and proactive practice). NOT
+///     Polish or Explain — including the follow-up chat *inside* those dialogs.
+enum MemoryInjectionScope: String, Codable, Sendable {
+    case everywhere
+    case chatOnly
+}
+
+/// The calling context passed to `contextBlock(...)` so it can honor each
+/// memory's `injection` rule. Not persisted — derived from which feature is
+/// building the prompt. `.chat` is the Fn+C tutor (and proactive practice);
+/// everything else (Translate / Explain / Polish / their in-dialog follow-up
+/// chat / UI localization) is `.general`.
+enum MemoryInjectionPurpose: Sendable {
+    case general
+    case chat
+}
+
 struct LearnedMemory: Codable, Identifiable, Sendable, Hashable {
     let id: UUID
     let kind: LearnedMemoryKind
@@ -83,6 +102,10 @@ struct LearnedMemory: Codable, Identifiable, Sendable, Hashable {
     /// Set by `MemoryExtractor` from the chat's effective language when
     /// a new memory is recorded.
     var sourceLanguage: String?
+    /// Injection rule — `.everywhere` (default) or `.chatOnly`. Optional so
+    /// legacy entries on disk without this field decode cleanly; read via
+    /// `effectiveInjection` so callers don't have to nil-check.
+    var injection: MemoryInjectionScope?
 
     init(
         id: UUID = UUID(),
@@ -94,7 +117,8 @@ struct LearnedMemory: Codable, Identifiable, Sendable, Hashable {
         proposedAt: Date = Date(),
         status: LearnedMemoryStatus = .pending,
         scope: MemoryScope? = nil,
-        sourceLanguage: String? = nil
+        sourceLanguage: String? = nil,
+        injection: MemoryInjectionScope? = nil
     ) {
         self.id = id
         self.kind = kind
@@ -106,12 +130,17 @@ struct LearnedMemory: Codable, Identifiable, Sendable, Hashable {
         self.status = status
         self.scope = scope
         self.sourceLanguage = sourceLanguage
+        self.injection = injection
     }
 
     /// Resolved scope — pre-context legacy entries (no `scope` field
     /// on disk) decode as nil and behave as `.global`, so existing
     /// memories keep injecting as they always did.
     var effectiveScope: MemoryScope { scope ?? .global }
+
+    /// Resolved injection rule — legacy entries (no `injection` field) decode
+    /// as nil and behave as `.everywhere`, preserving today's behavior.
+    var effectiveInjection: MemoryInjectionScope { injection ?? .everywhere }
 }
 
 /// Persistent store for learned memories. Mirrors `MemoryStore`'s
@@ -267,8 +296,19 @@ final class LearnedMemoryStore {
             sourceEventID: old.sourceEventID,
             proposedAt: old.proposedAt,
             status: old.status,
-            scope: old.scope
+            scope: old.scope,
+            sourceLanguage: old.sourceLanguage,
+            injection: old.injection
         )
+        rewriteAll()
+        notifyChange()
+    }
+
+    /// Set a memory's injection rule (Everywhere vs Chat-only). Backs the
+    /// per-row control in the Memory manage panel.
+    func setInjection(id: UUID, _ injection: MemoryInjectionScope) {
+        guard let idx = cache.firstIndex(where: { $0.id == id }) else { return }
+        cache[idx].injection = injection
         rewriteAll()
         notifyChange()
     }
@@ -313,11 +353,20 @@ final class LearnedMemoryStore {
     ///     contexts are dormant.
     /// Returns an empty string when there's nothing to inject — the
     /// caller can prepend it unconditionally.
-    func contextBlock(for sourceText: String, targetLanguage: String? = nil) -> String {
+    func contextBlock(for sourceText: String,
+                      targetLanguage: String? = nil,
+                      purpose: MemoryInjectionPurpose = .general) -> String {
         let haystack = sourceText.lowercased()
         let activeID = MemoryContextStore.shared.activeContextID
 
         let relevant = accepted().filter { memory in
+            // 0. Injection rule — a `.chatOnly` memory only injects when the
+            //    caller is the Fn+C tutor chat (or proactive practice). For
+            //    Translate / Explain / Polish (and the follow-up chat inside
+            //    those dialogs) it stays dormant.
+            if memory.effectiveInjection == .chatOnly, purpose != .chat {
+                return false
+            }
             // 1. Active-context scoping (unchanged).
             switch memory.effectiveScope {
             case .global:

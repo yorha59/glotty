@@ -24,7 +24,16 @@ final class MemoryItemsWindowController {
             self?.window?.close()
         }
         let host = NSHostingController(rootView: view)
-        host.sizingOptions = [.preferredContentSize]
+        // One-shot intrinsic sizing (like HUDController) — NOT
+        // `.preferredContentSize`. The latter makes the hosting controller
+        // re-push its size into the window *continuously*; combined with the
+        // inner `ScrollView` + the outer `.fixedSize(vertical:)`, a populated
+        // scope produced an oscillating preferred height that re-invalidated
+        // the window's constraints *during* its own layout pass. AppKit throws
+        // on that re-entrancy (`_postWindowNeedsUpdateConstraints`), crashing
+        // the app whenever a non-empty Memory scope was opened. `[]` sizes the
+        // window once below and then leaves it (user-resizable) alone.
+        host.sizingOptions = []
 
         let title = Self.titleFor(scope: scope)
 
@@ -42,10 +51,10 @@ final class MemoryItemsWindowController {
         w.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         w.isReleasedWhenClosed = false
         host.view.layoutSubtreeIfNeeded()
-        let preferred = host.preferredContentSize
+        let fitting = host.view.fittingSize
         w.setContentSizeClampedToScreen(
-            preferred.width > 0 && preferred.height > 0
-                ? preferred
+            fitting.width > 0 && fitting.height > 0
+                ? fitting
                 : NSSize(width: contentWidth, height: 420)
         )
         w.contentMinSize = NSSize(width: contentWidth, height: 240)
@@ -229,6 +238,40 @@ struct MemoryItemsView: View {
                 .menuIndicator(.hidden)
                 .frame(width: 20)
                 .help("Move to a different scope")
+
+                // Injection rule — when this memory may enter prompts.
+                // `.everywhere` (default) or `.chatOnly` (Fn+C tutor only).
+                Menu {
+                    Button {
+                        LearnedMemoryStore.shared.setInjection(id: memory.id, .everywhere)
+                        refreshToken &+= 1
+                    } label: {
+                        if memory.effectiveInjection == .everywhere {
+                            Label("Inject everywhere".t, systemImage: "checkmark")
+                        } else {
+                            Text("Inject everywhere".t)
+                        }
+                    }
+                    Button {
+                        LearnedMemoryStore.shared.setInjection(id: memory.id, .chatOnly)
+                        refreshToken &+= 1
+                    } label: {
+                        if memory.effectiveInjection == .chatOnly {
+                            Label("Chat only (Fn + C)".t, systemImage: "checkmark")
+                        } else {
+                            Text("Chat only (Fn + C)".t)
+                        }
+                    }
+                } label: {
+                    Image(systemName: memory.effectiveInjection == .chatOnly
+                          ? "text.bubble.fill" : "text.bubble")
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .frame(width: 20)
+                .help(memory.effectiveInjection == .chatOnly
+                      ? "Injects only in chat (Fn + C)"
+                      : "Injects in every scenario")
 
                 Button {
                     editingID = memory.id
