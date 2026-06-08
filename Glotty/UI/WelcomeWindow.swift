@@ -235,7 +235,11 @@ final class WelcomeWindowController: ObservableObject {
 
         let w = NSWindow(contentViewController: host)
         w.title = OSLocalizer.string("Welcome to Glotty")
-        w.styleMask = [.titled, .closable, .fullSizeContentView]
+        // `.resizable` is the fallback for the screen-clamp below: if the
+        // auto-chosen size still doesn't suit the user's display, they can
+        // drag any edge to resize. The ScrollView + pinned footer keep the
+        // layout intact at any size.
+        w.styleMask = [.titled, .closable, .resizable, .fullSizeContentView]
         w.titlebarAppearsTransparent = true
         w.isReleasedWhenClosed = false
         w.standardWindowButton(.miniaturizeButton)?.isHidden = true
@@ -254,6 +258,7 @@ final class WelcomeWindowController: ObservableObject {
         // Back/Next on-screen and the ScrollView absorbs the overflow
         // on short displays.
         w.setContentSizeClampedToScreen(NSSize(width: 520, height: 700))
+        w.contentMinSize = NSSize(width: 420, height: 320)
         w.center()
         // NO `.moveToActiveSpace`: in regular mode (restart) Welcome lives
         // on its own home Space and macOS slides a foreign full-screen app

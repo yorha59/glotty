@@ -23,9 +23,12 @@ final class PermissionsWindowController {
         let host = NSHostingController(rootView: view)
         let w = NSWindow(contentViewController: host)
         w.title = "Glotty — \("Permissions".t)"
-        w.styleMask = [.titled, .closable, .miniaturizable]
+        // `.resizable` as the fallback to the screen-clamped size below —
+        // the user can always drag an edge if the auto size doesn't fit.
+        w.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         w.isReleasedWhenClosed = false
         w.setContentSizeClampedToScreen(NSSize(width: 480, height: 460))
+        w.contentMinSize = NSSize(width: 400, height: 340)
         w.center()
         w.level = .floating
         // .canJoinAllSpaces and .moveToActiveSpace are mutually exclusive — picking one.

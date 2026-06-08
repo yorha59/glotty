@@ -63,12 +63,15 @@ final class TranslateGuideWindowController: ObservableObject {
         // user has completed setup and expects strings in the
         // Glotty UI language they (implicitly or explicitly) chose.
         w.title = "Set up Translate".t
-        w.styleMask = [.titled, .closable, .fullSizeContentView]
+        // `.resizable` as the fallback to the screen-clamped size below —
+        // the user can always drag an edge if the auto size doesn't fit.
+        w.styleMask = [.titled, .closable, .resizable, .fullSizeContentView]
         w.titlebarAppearsTransparent = true
         w.isReleasedWhenClosed = false
         w.standardWindowButton(.miniaturizeButton)?.isHidden = true
         w.standardWindowButton(.zoomButton)?.isHidden = true
         w.setContentSizeClampedToScreen(NSSize(width: 460, height: 340))
+        w.contentMinSize = NSSize(width: 360, height: 260)
         w.center()
         w.collectionBehavior = [.moveToActiveSpace]
         window = w
