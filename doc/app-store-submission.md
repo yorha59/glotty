@@ -83,9 +83,12 @@ upload, bump `CURRENT_PROJECT_VERSION` in `project.yml`, then
 `xcodegen generate`. (`MARKETING_VERSION` is the user-facing version;
 `CURRENT_PROJECT_VERSION` is the build number.)
 
-Current state: **build 2 (full-feature) is uploaded and VALID.** Build 1
-was the first experiment (2026-06-03). Both cleared the upload-time
-private-API scan (Transporter "SPI analysis").
+Current state: **build 3 (full-feature) uploaded 2026-06-09** — first
+build with the Apple Intelligence (FoundationModels) provider and the
+set-level memory injection rules. Cleared the upload-time SPI scan and is
+processing → VALID. Builds 1 (2026-06-03) and 2 were earlier experiments;
+all three cleared the upload-time private-API scan (Transporter "SPI
+analysis").
 
 ---
 
@@ -121,7 +124,7 @@ above it is green.
 - [ ] **Screenshots** (required) — Mac sizes only: `1280×800`, `1440×900`,
       `2560×1600`, or `2880×1800`. At least 1, up to 10. Capture the popup
       translating/explaining, the leader HUD, and Settings.
-- [ ] **Build** — attach **build 2**.
+- [ ] **Build** — attach **build 3**.
 - [ ] **Copyright** — e.g. `© 2026 Simon Zu`.
 
 ### Phase 3 — App Review notes (don't skip — cheapest insurance)
@@ -158,7 +161,7 @@ Chat, using the user's own key.
 
 ### Phase 4 — Submit
 
-- [ ] Build 2 attached, all sections green.
+- [ ] Build 3 attached, all sections green.
 - [ ] Release option: **Manual** (you press the button after approval).
 - [ ] **Add for Review → Submit for Review**.
 
