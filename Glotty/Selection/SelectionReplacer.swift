@@ -17,13 +17,43 @@ final class SelectionReplacer {
         case failed          // nothing editable to write into
     }
 
+    /// Bundle ids of terminal emulators. In a terminal the highlighted text is
+    /// just a copy selection — it isn't the insertion point — so a synthesized
+    /// Cmd+V inserts the correction at the prompt cursor (appending) instead of
+    /// replacing the selection. There's no way to replace selected scrollback
+    /// text in a terminal, so we must NOT paste there; the caller copies the
+    /// correction to the clipboard instead.
+    private static let terminalBundleIDs: Set<String> = [
+        "com.apple.Terminal",
+        "com.googlecode.iterm2",
+        "co.zeit.hyper",
+        "net.kovidgoyal.kitty",
+        "com.github.wez.wezterm",
+        "dev.warp.Warp", "dev.warp.Warp-Stable",
+        "org.alacritty", "io.alacritty",
+        "com.mitchellh.ghostty",
+        "com.apple.dt.Xcode",          // integrated console — paste won't replace
+    ]
+
     /// Replace the current selection with `replacement`. Returns how it was
     /// written (or `.failed` if no editable target accepted it).
     @discardableResult
     func replace(with replacement: String) async -> Outcome {
         if replaceViaAccessibility(replacement) { return .accessibility }
+        // The AX path didn't take. Before falling back to a synthesized paste,
+        // bail on terminals — there, Cmd+V appends at the cursor rather than
+        // replacing the selection, which produced "correct word tacked on after
+        // the typo". Let the caller surface "copied to clipboard" instead.
+        if frontmostIsTerminal() { return .failed }
         if await replaceViaPaste(replacement) { return .paste }
         return .failed
+    }
+
+    private func frontmostIsTerminal() -> Bool {
+        guard let id = NSWorkspace.shared.frontmostApplication?.bundleIdentifier else {
+            return false
+        }
+        return Self.terminalBundleIDs.contains(id)
     }
 
     // MARK: - AX path
