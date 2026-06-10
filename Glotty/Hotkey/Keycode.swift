@@ -13,6 +13,7 @@ enum Keycode {
     static let defaultExplain   = 14  // E
     static let defaultPolish    = 35  // P
     static let defaultChat      = 8   // C — open a free-form chat with Glotty
+    static let defaultReplace   = 15  // R — polish the selection and write it back in place
 
     /// User-defaults keys that override the defaults above. NB: the persisted
     /// key for Explain still uses the legacy "express" identifier so that any
@@ -21,6 +22,7 @@ enum Keycode {
     static let explainDefaultsKey   = "glotty.hotkey.express"
     static let polishDefaultsKey    = "glotty.hotkey.polish"
     static let chatDefaultsKey      = "glotty.hotkey.chat"
+    static let replaceDefaultsKey   = "glotty.hotkey.replace"
     static let leaderDefaultsKey    = "glotty.hotkey.leader"
 
     /// Default leader (matches the spike's original "Fn → key" behavior).
@@ -78,5 +80,11 @@ enum Keycode {
     static func currentChat() -> Int {
         let stored = UserDefaults.standard.object(forKey: chatDefaultsKey) as? Int
         return stored ?? defaultChat
+    }
+
+    /// Read the active replace keycode (defaults override or hardcoded default).
+    static func currentReplace() -> Int {
+        let stored = UserDefaults.standard.object(forKey: replaceDefaultsKey) as? Int
+        return stored ?? defaultReplace
     }
 }

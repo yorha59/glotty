@@ -13,6 +13,9 @@ final class FnLeaderHotkey {
     /// Fn → C — opens a free-form chat with Glotty (no selection
     /// required; the popup starts with the tutor's opening turn).
     var onChatFire: (() -> Void)?
+    /// Fn → R — polishes the current selection and writes the result
+    /// straight back over it, in place, with no popup.
+    var onReplaceFire: (() -> Void)?
     var onShowHUD: (() -> Void)?
     var onHideHUD: (() -> Void)?
 
@@ -130,6 +133,7 @@ final class FnLeaderHotkey {
             let explainKey   = Int64(Keycode.currentExplain())
             let polishKey    = Int64(Keycode.currentPolish())
             let chatKey      = Int64(Keycode.currentChat())
+            let replaceKey   = Int64(Keycode.currentReplace())
 
             if keycode == translateKey, active {
                 FnLeaderHotkey.debug("FIRE Fn→translate (key \(keycode))")
@@ -162,6 +166,16 @@ final class FnLeaderHotkey {
                 firedDuringCurrentHold = true
                 cancelHUD()
                 let cb = onChatFire
+                DispatchQueue.main.async { cb?() }
+                return nil
+            }
+            if keycode == replaceKey, active,
+               replaceKey != translateKey, replaceKey != explainKey,
+               replaceKey != polishKey, replaceKey != chatKey {
+                FnLeaderHotkey.debug("FIRE Fn→replace (key \(keycode))")
+                firedDuringCurrentHold = true
+                cancelHUD()
+                let cb = onReplaceFire
                 DispatchQueue.main.async { cb?() }
                 return nil
             }

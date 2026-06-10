@@ -2647,6 +2647,7 @@ private struct HotkeySettingsSection: View {
     @AppStorage(Keycode.explainDefaultsKey)   private var explainKey:   Int = Keycode.defaultExplain
     @AppStorage(Keycode.polishDefaultsKey)    private var polishKey:    Int = Keycode.defaultPolish
     @AppStorage(Keycode.chatDefaultsKey)      private var chatKey:      Int = Keycode.defaultChat
+    @AppStorage(Keycode.replaceDefaultsKey)   private var replaceKey:   Int = Keycode.defaultReplace
     @AppStorage(Keycode.leaderDefaultsKey)    private var leaderRaw:    String = Keycode.defaultLeader.rawValue
 
     private var leaderBinding: Binding<LeaderKey> {
@@ -2657,7 +2658,7 @@ private struct HotkeySettingsSection: View {
     }
 
     private var hasCollision: Bool {
-        let codes = [translateKey, explainKey, polishKey, chatKey]
+        let codes = [translateKey, explainKey, polishKey, chatKey, replaceKey]
         return Set(codes).count < codes.count
     }
 
@@ -2700,6 +2701,13 @@ private struct HotkeySettingsSection: View {
                 prefix: "\(leaderBinding.wrappedValue.label) →",
                 keycode: $chatKey,
                 defaultKeycode: Keycode.defaultChat
+            )
+
+            KeyRecorderRow(
+                title: "Correct spelling of selected word",
+                prefix: "\(leaderBinding.wrappedValue.label) →",
+                keycode: $replaceKey,
+                defaultKeycode: Keycode.defaultReplace
             )
 
             if hasCollision {

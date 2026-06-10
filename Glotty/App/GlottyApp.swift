@@ -49,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var popup: PopupController!
     private var hud: HUDController!
     private let grabber = SelectionGrabber()
+    private let replacer = SelectionReplacer()
     private let permissionsWindow = PermissionsWindowController()
     private let settingsWindow = SettingsWindowController.shared
 
@@ -391,6 +392,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hk.onExplainFire = { [weak self] in self?.handleFire(mode: .explain) }
         hk.onPolishFire = { [weak self] in self?.handleFire(mode: .polish) }
         hk.onChatFire = { [weak self] in self?.handleFire(mode: .chat) }
+        hk.onReplaceFire = { [weak self] in self?.handleReplace() }
         hk.onShowHUD = { [weak self] in self?.hud.show() }
         hk.onHideHUD = { [weak self] in self?.hud.hide() }
         do {
@@ -498,6 +500,89 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 "grabbed \(text.count) chars in \(String(format: "%.0f", elapsed))ms (mode=\(mode))"
             )
             popup.show(sourceText: text, mode: mode)
+        }
+    }
+
+    /// Fn → R — spell-correct the selected word in place. Local + instant via
+    /// `NSSpellChecker` (no LLM). Single suggestion → replace directly; multiple
+    /// → float a clickable candidate list at the word and replace on pick.
+    /// Word-scoped: a multi-word selection is rejected with a hint.
+    private func handleReplace() {
+        SpellCandidateController.shared.dismiss()
+        AppActivation.dismissAllRegistered()
+        Task { @MainActor in
+            guard let raw = await grabber.grab() else {
+                dbg("replace — no selection available")
+                HUDController.shared.showHint(
+                    String(
+                        format: String(localized: "Select some text first, then press %@."),
+                        Keycode.currentLeader().label)
+                )
+                return
+            }
+            let word = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            switch SpellCorrection.check(word) {
+            case .notAWord:
+                HUDController.shared.toast(
+                    String(localized: "Select a single word to spell-check."),
+                    systemImage: "character.cursor.ibeam")
+            case .correct(let alternatives):
+                // Already correct — don't auto-change anything. If the checker
+                // has alternatives, offer them in the list so the user can pick;
+                // otherwise just confirm it's spelled right.
+                if alternatives.isEmpty {
+                    HUDController.shared.toast(
+                        String(format: String(localized: "“%@” is spelled correctly."), word),
+                        systemImage: "checkmark.circle", duration: 1.6)
+                } else {
+                    self.presentCandidates(alternatives)
+                }
+            case .corrections(let guesses):
+                guard !guesses.isEmpty else {
+                    HUDController.shared.toast(
+                        String(format: String(localized: "No suggestions for “%@”."), word),
+                        systemImage: "questionmark.circle")
+                    return
+                }
+                // A single correction is unambiguous — apply it straight away.
+                // Multiple → let the user choose from the list.
+                if guesses.count == 1 {
+                    await self.replaceSelection(with: guesses[0])
+                } else {
+                    self.presentCandidates(guesses)
+                }
+            }
+        }
+    }
+
+    /// Float the candidate list anchored at the selected word; replace the
+    /// selection when the user picks one.
+    private func presentCandidates(_ candidates: [String]) {
+        let rect = grabber.selectionScreenRect()
+        SpellCandidateController.shared.show(candidates: candidates, nearAXRect: rect) {
+            [weak self] picked in
+            Task { @MainActor in await self?.replaceSelection(with: picked) }
+        }
+    }
+
+    /// Write `word` over the current selection, with a confirming toast. If
+    /// nothing editable accepts it, drop the correction on the clipboard rather
+    /// than losing it.
+    private func replaceSelection(with word: String) async {
+        let outcome = await replacer.replace(with: word)
+        switch outcome {
+        case .accessibility, .paste:
+            dbg("spell replace ok (\(outcome)) → “\(word)”")
+            HUDController.shared.toast(
+                String(format: String(localized: "Replaced with “%@”."), word),
+                systemImage: "checkmark.circle", duration: 1.3)
+        case .failed:
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(word, forType: .string)
+            dbg("spell replace — no editable target; copied to clipboard")
+            HUDController.shared.toast(
+                String(localized: "Can't edit here — correction copied to clipboard."),
+                systemImage: "doc.on.clipboard", duration: 2.6)
         }
     }
 

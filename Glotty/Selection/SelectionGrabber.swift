@@ -43,6 +43,49 @@ final class SelectionGrabber {
         return text.isEmpty ? nil : text
     }
 
+    /// Screen rectangle of the current selection, via the focused element's
+    /// selected range + `kAXBoundsForRangeParameterizedAttribute`. Returns AX
+    /// coordinates (top-left origin, primary-screen space). `nil` when the app
+    /// doesn't expose AX text geometry (Electron, etc.) — callers fall back to
+    /// the mouse location for placement.
+    func selectionScreenRect() -> CGRect? {
+        let systemWide = AXUIElementCreateSystemWide()
+
+        var focusedAny: AnyObject?
+        guard AXUIElementCopyAttributeValue(
+                systemWide, kAXFocusedUIElementAttribute as CFString, &focusedAny) == .success,
+              let focusedRef = focusedAny,
+              CFGetTypeID(focusedRef) == AXUIElementGetTypeID() else {
+            return nil
+        }
+        let focused = focusedRef as! AXUIElement
+
+        var rangeAny: AnyObject?
+        guard AXUIElementCopyAttributeValue(
+                focused, kAXSelectedTextRangeAttribute as CFString, &rangeAny) == .success,
+              let rangeRef = rangeAny,
+              CFGetTypeID(rangeRef) == AXValueGetTypeID() else {
+            return nil
+        }
+        let rangeValue = rangeRef as! AXValue
+
+        var boundsAny: AnyObject?
+        guard AXUIElementCopyParameterizedAttributeValue(
+                focused, kAXBoundsForRangeParameterizedAttribute as CFString,
+                rangeValue, &boundsAny) == .success,
+              let boundsRef = boundsAny,
+              CFGetTypeID(boundsRef) == AXValueGetTypeID() else {
+            return nil
+        }
+
+        var rect = CGRect.zero
+        guard AXValueGetValue(boundsRef as! AXValue, .cgRect, &rect),
+              rect.width > 0 || rect.height > 0 else {
+            return nil
+        }
+        return rect
+    }
+
     // MARK: - Pasteboard fallback
 
     private func grabViaPasteboard() async -> String? {
