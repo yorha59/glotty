@@ -10884,6 +10884,98 @@
         }
       }
     },
+    "Hover delay": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hover-Verzögerung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retraso de hover"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Délai de survol"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホバーディレイ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "호버 지연"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "悬停延迟"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "懸停延遲"
+          }
+        }
+      }
+    },
+    "Hover menu": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hover-Menü"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menú de hover"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu de survol"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホバーメニュー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "호버 메뉴"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "悬停菜单"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "懸停選單"
+          }
+        }
+      }
+    },
     "How Glotty acts in chat. Reset by clearing the fields. Affects the conversational chat (Fn → C) and proactive reminder notifications.": {
       "localizations": {
         "de": {
@@ -16803,6 +16895,52 @@
         }
       }
     },
+    "Prefer not to memorize shortcuts? Select text, then rest the pointer on it for a moment — a menu with the same commands pops up to click. Works wherever the app exposes text to macOS.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tastenkürzel nicht merken? Wählen Sie Text aus und halten Sie den Zeiger darauf für einen Moment — ein Menü mit den gleichen Befehlen erscheint zum Anklicken. Funktioniert überall, wo die Texte für macOS verfügbar gemacht werden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Preferiría no memorizar los atajos? Seleccione texto, luego deje el puntero sobre él por un momento — aparece un menú con los mismos comandos para hacer clic. Funciona donde quiera que la aplicación exponga texto a macOS."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Préfère ne pas mémoriser les raccourcis ? Sélectionnez du texte, puis laissez le pointeur se reposer dessus un instant — un menu avec les mêmes commandes apparaît pour cliquer. Fonctionne partout où l'application expose du texte à macOS."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ショートカットを覚えるのが面倒？テキストを選択し、マウスをしばらくその上に置いてください — 同じコマンドのメニューがポップアップしてクリックできます。アプリがテキストをmacOSに公開している場所ならどこでも動作します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단축키를 외우지 않으시겠어요? 텍스트를 선택한 다음 포인터를 잠시 그 위에 멈추세요 — 동일한 명령이 있는 메뉴가 클릭을 위해 나타납니다. 앱이 macOS에 텍스트를 노출하는 곳에서 작동합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不想记忆快捷键？选择文本，然后将指针放在上面片刻 — 一个包含相同命令的菜单会弹出供点击。在应用程序向 macOS 显示文本的任何地方都适用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不喜歡記捷徑鍵？選取文字，然後將指標停在文字上片刻 — 會彈出具有相同命令的選單供點擊使用。只要應用程式向 macOS 顯示文字，此功能就能運作。"
+          }
+        }
+      }
+    },
     "Prefer not to say": {
       "localizations": {
         "de": {
@@ -20086,6 +20224,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "顯示紀錄自"
+          }
+        }
+      }
+    },
+    "Show the action menu when hovering a selection": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktionenmenü bei Auswahl anzeigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar el menú de acciones al pasar el cursor sobre una selección"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher le menu d'action au survol d'une sélection"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択範囲をホバーしたときにアクションメニューを表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택 항목을 호버할 때 작업 메뉴 표시"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "悬停选择时显示操作菜单"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "懸停在選取範圍上時顯示動作選單"
           }
         }
       }
@@ -24148,6 +24332,52 @@
         }
       }
     },
+    "globe": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erde"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "globo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "globe"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地球"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지구"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地球"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地球"
+          }
+        }
+      }
+    },
     "glossary": {
       "localizations": {
         "de": {
@@ -24282,6 +24512,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "https://…/v1/chat/completions"
+          }
+        }
+      }
+    },
+    "lightbulb": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glühbirne"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "bombilla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ampoule"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電球"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전구"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "灯泡"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "燈泡"
           }
         }
       }

@@ -2649,6 +2649,8 @@ private struct HotkeySettingsSection: View {
     @AppStorage(Keycode.chatDefaultsKey)      private var chatKey:      Int = Keycode.defaultChat
     @AppStorage(Keycode.replaceDefaultsKey)   private var replaceKey:   Int = Keycode.defaultReplace
     @AppStorage(Keycode.leaderDefaultsKey)    private var leaderRaw:    String = Keycode.defaultLeader.rawValue
+    @AppStorage(SelectionHoverWatcher.enabledKey) private var hoverEnabled: Bool = true
+    @AppStorage(SelectionHoverWatcher.dwellKey)   private var hoverDwell: Double = SelectionHoverWatcher.defaultDwell
 
     private var leaderBinding: Binding<LeaderKey> {
         Binding(
@@ -2720,6 +2722,30 @@ private struct HotkeySettingsSection: View {
             Text("Shortcuts")
         } footer: {
             Text("Press **Record**, then tap the key you want as the second step of the hotkey. **Esc** during recording cancels. **Reset** restores the default.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+
+        Section {
+            Toggle("Show the action menu when hovering a selection", isOn: $hoverEnabled)
+            if hoverEnabled {
+                LabeledContent {
+                    HStack(spacing: 10) {
+                        Slider(value: $hoverDwell,
+                               in: SelectionHoverWatcher.dwellRange, step: 0.1)
+                            .frame(width: 160)
+                        Text(String(format: "%.1fs", hoverDwell))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                } label: {
+                    Text("Hover delay")
+                }
+            }
+        } header: {
+            Text("Hover menu")
+        } footer: {
+            Text("Prefer not to memorize shortcuts? Select text, then rest the pointer on it for a moment — a menu with the same commands pops up to click. Works wherever the app exposes text to macOS.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

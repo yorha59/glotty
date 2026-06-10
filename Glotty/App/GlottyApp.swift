@@ -50,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hud: HUDController!
     private let grabber = SelectionGrabber()
     private let replacer = SelectionReplacer()
+    private var hoverWatcher: SelectionHoverWatcher?
     private let permissionsWindow = PermissionsWindowController()
     private let settingsWindow = SettingsWindowController.shared
 
@@ -167,6 +168,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         installHotkey()
         dbg("installHotkey done")
+
+        // Shortcut-free trigger: hover over a selection to pop up the same
+        // command menu. Shares the grabber and routes to the same handlers as
+        // the hotkeys. Opt-out via Settings (glotty.hover.enabled).
+        let watcher = SelectionHoverWatcher(grabber: grabber)
+        watcher.onAction = { [weak self] kind in
+            switch kind {
+            case .translate: self?.handleFire(mode: .translate)
+            case .explain:   self?.handleFire(mode: .explain)
+            case .polish:    self?.handleFire(mode: .polish)
+            case .chat:      self?.handleFire(mode: .chat)
+            case .replace:   self?.handleReplace()
+            }
+        }
+        watcher.start()
+        hoverWatcher = watcher
+        dbg("hover watcher started")
 
         // First-run walkthrough — no-op if the user has already finished
         // or dismissed it. Runs after permissions / hotkey setup so the

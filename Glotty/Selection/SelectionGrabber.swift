@@ -86,6 +86,91 @@ final class SelectionGrabber {
         return rect
     }
 
+    /// What the hover trigger needs: the selected text plus geometry, read in
+    /// one silent AX pass (no clipboard). `selectionRect` is the precise bounds
+    /// of the selection when the app exposes them; `elementFrame` is the focused
+    /// text element's frame, used as a coarser fallback hit-area/anchor for the
+    /// many apps that don't implement bounds-for-range. Both are AX coords
+    /// (top-left origin, primary-screen space).
+    struct HoverSelection {
+        let text: String
+        let selectionRect: CGRect?
+        let elementFrame: CGRect?
+    }
+
+    /// Returns `nil` when there's no selection, or the app exposes neither the
+    /// selection bounds nor the element frame (so we can't know the pointer is
+    /// over it) — hover just won't trigger there.
+    func hoverSelection() -> HoverSelection? {
+        let systemWide = AXUIElementCreateSystemWide()
+
+        var focusedAny: AnyObject?
+        guard AXUIElementCopyAttributeValue(
+                systemWide, kAXFocusedUIElementAttribute as CFString, &focusedAny) == .success,
+              let focusedRef = focusedAny,
+              CFGetTypeID(focusedRef) == AXUIElementGetTypeID() else {
+            return nil
+        }
+        let focused = focusedRef as! AXUIElement
+
+        var textAny: AnyObject?
+        guard AXUIElementCopyAttributeValue(
+                focused, kAXSelectedTextAttribute as CFString, &textAny) == .success,
+              let text = textAny as? String,
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+
+        let selRect = boundsForSelectedRange(focused)
+        let elemFrame = frame(of: focused)
+        guard selRect != nil || elemFrame != nil else { return nil }
+        return HoverSelection(text: text, selectionRect: selRect, elementFrame: elemFrame)
+    }
+
+    /// Precise selection bounds via `kAXBoundsForRangeParameterizedAttribute`.
+    /// Many apps don't implement it — returns `nil` there.
+    private func boundsForSelectedRange(_ el: AXUIElement) -> CGRect? {
+        var rangeAny: AnyObject?
+        guard AXUIElementCopyAttributeValue(
+                el, kAXSelectedTextRangeAttribute as CFString, &rangeAny) == .success,
+              let rangeRef = rangeAny,
+              CFGetTypeID(rangeRef) == AXValueGetTypeID() else {
+            return nil
+        }
+        var boundsAny: AnyObject?
+        guard AXUIElementCopyParameterizedAttributeValue(
+                el, kAXBoundsForRangeParameterizedAttribute as CFString,
+                rangeRef as! AXValue, &boundsAny) == .success,
+              let boundsRef = boundsAny,
+              CFGetTypeID(boundsRef) == AXValueGetTypeID() else {
+            return nil
+        }
+        var rect = CGRect.zero
+        guard AXValueGetValue(boundsRef as! AXValue, .cgRect, &rect),
+              rect.width > 0 || rect.height > 0 else {
+            return nil
+        }
+        return rect
+    }
+
+    /// Focused element frame from `kAXPosition` + `kAXSize` — widely supported.
+    private func frame(of el: AXUIElement) -> CGRect? {
+        var posAny: AnyObject?
+        var sizeAny: AnyObject?
+        guard AXUIElementCopyAttributeValue(el, kAXPositionAttribute as CFString, &posAny) == .success,
+              let posRef = posAny, CFGetTypeID(posRef) == AXValueGetTypeID(),
+              AXUIElementCopyAttributeValue(el, kAXSizeAttribute as CFString, &sizeAny) == .success,
+              let sizeRef = sizeAny, CFGetTypeID(sizeRef) == AXValueGetTypeID() else {
+            return nil
+        }
+        var pos = CGPoint.zero
+        var size = CGSize.zero
+        AXValueGetValue(posRef as! AXValue, .cgPoint, &pos)
+        AXValueGetValue(sizeRef as! AXValue, .cgSize, &size)
+        guard size.width > 0, size.height > 0 else { return nil }
+        return CGRect(origin: pos, size: size)
+    }
+
     // MARK: - Pasteboard fallback
 
     private func grabViaPasteboard() async -> String? {
