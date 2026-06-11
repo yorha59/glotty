@@ -374,6 +374,9 @@ struct PopupView: View {
     /// don't re-hydrate (and re-fire an opening LLM call) on every
     /// SwiftUI body recompute.
     @State private var didHydrateChatToday: Bool = false
+    /// One-shot guard so a chat opened on a selection seeds that text as the
+    /// opening user message exactly once (see the chat `.task`).
+    @State private var didSeedSelection: Bool = false
     /// Polish-mode discussion thread. Triggered by the "Discuss" button under
     /// the polish output — the user keeps chatting in the same popup until
     /// they're satisfied. Each Send appends a `.user` turn, then a `.assistant`
@@ -565,7 +568,17 @@ struct PopupView: View {
                 // for today. Otherwise the user is resuming an
                 // existing conversation and we should just show it.
                 if tutorRunCounter == 0 {
-                    if tutorThread.isEmpty {
+                    let seed = sourceText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !seed.isEmpty, !didSeedSelection, !onboarding {
+                        // Opened on a selection — seed it as the opening user
+                        // message so the tutor responds about that text (works
+                        // whether or not today's thread already has history).
+                        didSeedSelection = true
+                        let userTurn = TutorTurn(role: .user, reply: seed)
+                        tutorThread.append(userTurn)
+                        persistTutorTurn(userTurn)
+                        await runTutorTurn()
+                    } else if tutorThread.isEmpty {
                         await runTutorTurn()
                     } else {
                         tutorStatus = .ready

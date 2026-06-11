@@ -28,7 +28,6 @@ final class SelectionHoverWatcher {
     private var lastMoveAt: CFAbsoluteTime = 0
     private var restChecked = false          // one AX probe per rest period
     private var cooldownUntil: CFAbsoluteTime = 0
-    private var suppressRect: CGRect?        // Cocoa rect we just showed for; don't reshow until the pointer leaves it
     private var shownSelectionRect: CGRect?  // Cocoa rect of the selection the menu is currently showing for
 
     private let pollInterval: CFTimeInterval = 0.15
@@ -86,14 +85,14 @@ final class SelectionHoverWatcher {
             lastPos = pos
             lastMoveAt = now
             restChecked = false
-            if let s = suppressRect, !s.contains(pos) { suppressRect = nil }
             return
         }
 
         // Pointer is still — probe once per rest, after the dwell, past cooldown.
+        // `restChecked` (reset on the next movement) is what prevents flashing;
+        // re-resting after any move legitimately re-triggers the menu.
         guard !restChecked, now - lastMoveAt >= dwell, now >= cooldownUntil else { return }
         restChecked = true
-        if let s = suppressRect, s.contains(pos) { return }
 
         guard let sel = grabber.hoverSelection() else { return }
         // Hit-test against the precise selection bounds when available, else the
@@ -110,35 +109,30 @@ final class SelectionHoverWatcher {
         shownSelectionRect = hitCocoa
         HoverActionMenuController.shared.show(items: buildItems(), nearAXRect: axRect) { [weak self] in
             guard let self else { return }
-            // Re-arm: suppress until the pointer leaves this selection, with a
-            // short cooldown so the menu can't immediately flash back.
-            self.suppressRect = self.shownSelectionRect
+            // Short cooldown only — so a dismiss can't instantly re-fire in the
+            // same beat, but re-hovering shortly after works.
             self.shownSelectionRect = nil
-            self.cooldownUntil = CFAbsoluteTimeGetCurrent() + 0.25
+            self.cooldownUntil = CFAbsoluteTimeGetCurrent() + 0.2
         }
     }
 
     private func buildItems() -> [HoverActionMenuController.Item] {
-        let native = Self.nativeLangName
-        let polish = Self.polishLangName
+        // Concise labels — this is a click menu, not the keyboard reference, so
+        // the verb alone reads cleaner than the HUD's "Translate to <lang>".
         func item(_ icon: String, _ label: String, _ kind: Kind) -> HoverActionMenuController.Item {
             .init(icon: icon, label: label) { [weak self] in self?.onAction?(kind) }
         }
         return [
-            item("globe", String(format: String(localized: "Translate to %@"), native), .translate),
-            item("lightbulb", String(format: String(localized: "Explain in %@"), native), .explain),
-            item("wand.and.stars",
-                 String(format: String(localized: "Polish to idiomatic %@"), polish), .polish),
-            item("bubble.left.and.bubble.right",
-                 String(format: String(localized: "Chat with Glotty in %@"), native), .chat),
-            item("textformat.abc",
-                 String(localized: "Correct the selected word's spelling"), .replace),
+            item("globe", String(localized: "Translate"), .translate),
+            item("lightbulb", String(localized: "Explain"), .explain),
+            item("wand.and.stars", String(localized: "Polish"), .polish),
+            item("bubble.left.and.bubble.right", String(localized: "Chat"), .chat),
+            item("textformat.abc", String(localized: "Correct spelling"), .replace),
         ]
     }
 
     private func resetState() {
         shownSelectionRect = nil
-        suppressRect = nil
         restChecked = false
     }
 
@@ -147,18 +141,5 @@ final class SelectionHoverWatcher {
         let primaryH = (NSScreen.screens.first { $0.frame.origin == .zero }
                         ?? NSScreen.screens.first)?.frame.height ?? 0
         return CGRect(x: r.minX, y: primaryH - r.maxY, width: r.width, height: r.height)
-    }
-
-    // Localized language names — mirror HUDController's helpers so the hover
-    // menu labels read identically to the leader HUD.
-    static var nativeLangName: String {
-        let raw = UserDefaults.standard.string(forKey: "glotty.targetLang")?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return LanguageOptions.localizedName(for: raw.isEmpty ? "en" : raw)
-    }
-    static var polishLangName: String {
-        let raw = UserDefaults.standard.string(forKey: "glotty.polishLang")?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return LanguageOptions.localizedName(for: raw.isEmpty ? "en" : raw)
     }
 }

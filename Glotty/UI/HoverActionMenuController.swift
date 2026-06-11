@@ -39,7 +39,7 @@ final class HoverActionMenuController {
         let host = NSHostingView(rootView: view)
         host.layoutSubtreeIfNeeded()
         var size = host.fittingSize
-        if size.width < 2 || size.height < 2 { size = fallbackSize(rowCount: items.count) }
+        if size.width < 2 || size.height < 2 { size = fallbackSize(itemCount: items.count) }
         host.frame = NSRect(origin: .zero, size: size)
 
         let p = NSPanel(
@@ -113,13 +113,15 @@ final class HoverActionMenuController {
         return origin
     }
 
-    private func fallbackSize(rowCount: Int) -> NSSize {
-        let rows = CGFloat(max(1, rowCount))
-        let rowHeight: CGFloat = 32
-        let cardWidth: CGFloat = 260
-        let vStackPadding: CGFloat = 12
-        let height = 2 * shadowMargin + vStackPadding + rows * rowHeight + (rows - 1)
-        return NSSize(width: cardWidth + 2 * shadowMargin, height: height)
+    private func fallbackSize(itemCount: Int) -> NSSize {
+        // Horizontal bar: one row of compact icon+label columns.
+        let n = CGFloat(max(1, itemCount))
+        let itemWidth: CGFloat = 74
+        let rowHeight: CGFloat = 50
+        let innerPad: CGFloat = 8           // HStack .padding(4) on both sides
+        let width = 2 * shadowMargin + innerPad + n * itemWidth + (n - 1) * 2
+        let height = 2 * shadowMargin + innerPad + rowHeight
+        return NSSize(width: width, height: height)
     }
 }
 
@@ -129,26 +131,25 @@ private struct HoverMenuView: View {
     @State private var hovered: Int?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
+        HStack(spacing: 2) {
             ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
                 Button {
                     onPicked()
                     item.run()
                 } label: {
-                    HStack(spacing: 10) {
+                    VStack(spacing: 3) {
                         Image(systemName: item.icon)
-                            .frame(width: 18)
+                            .font(.system(size: 16))
                         Text(item.label)
+                            .font(.system(size: 11))
                             .lineLimit(1)
-                            .truncationMode(.tail)
-                        Spacer(minLength: 8)
                     }
-                    .padding(.horizontal, 12)
+                    .padding(.horizontal, 8)
                     .padding(.vertical, 7)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(minWidth: 46)
                     .contentShape(Rectangle())
                     .background(
-                        RoundedRectangle(cornerRadius: 6)
+                        RoundedRectangle(cornerRadius: 7)
                             .fill(hovered == idx ? Color.accentColor.opacity(0.85) : .clear)
                     )
                     .foregroundStyle(hovered == idx ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
@@ -157,11 +158,10 @@ private struct HoverMenuView: View {
                 .onHover { hovered = $0 ? idx : (hovered == idx ? nil : hovered) }
             }
         }
-        .padding(6)
-        .frame(width: 260, alignment: .leading)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+        .padding(4)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(Color.primary.opacity(0.08))
         )
         .shadow(color: .black.opacity(0.20), radius: 8, y: 3)

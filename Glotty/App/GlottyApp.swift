@@ -292,6 +292,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindow.show()
     }
 
+    @objc private func openChat() {
+        dbg("openChat invoked (menu bar)")
+        handleFire(mode: .chat)
+    }
+
     @objc private func openMemorySettings() {
         settingsWindow.show(selecting: .memory)
     }
@@ -330,6 +335,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(settings)
 
         menu.addItem(.separator())
+
+        let chat = NSMenuItem(
+            title: "Chat with Glotty".t,
+            action: #selector(openChat),
+            keyEquivalent: "")
+        chat.target = self
+        chat.image = NSImage(
+            systemSymbolName: "bubble.left.and.bubble.right", accessibilityDescription: nil)
+        menu.addItem(chat)
 
         // Memory submenu — shows the active memory context inline and
         // lets the user switch with one click. Labelled "Memory" in
@@ -380,8 +394,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         memoryItem.submenu = memorySubmenu
         menu.addItem(memoryItem)
 
-        menu.addItem(.separator())
-
         let welcome = NSMenuItem(
             title: "Show welcome".t,
             action: #selector(showWelcome),
@@ -389,6 +401,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         welcome.target = self
         welcome.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
         menu.addItem(welcome)
+
+        menu.addItem(.separator())
 
         let quit = NSMenuItem(
             title: "Quit Glotty".t,
@@ -486,11 +500,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // app stays regular, and the popup's IME is dead.
         AppActivation.dismissAllRegistered()
         Task { @MainActor in
-            // Chat mode doesn't need a selection — it pulls practice topics
-            // from MemoryStore instead, so the popup opens with an empty
-            // source text.
+            // Chat picks up the current selection when there is one — selecting
+            // text and opening chat means "let's talk about this". With nothing
+            // selected it opens the normal tutor chat (empty source text).
             if mode == .chat {
-                popup.show(sourceText: "", mode: mode)
+                let sel = (await grabber.grab())?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                popup.show(sourceText: sel, mode: .chat)
                 return
             }
             let started = CFAbsoluteTimeGetCurrent()
