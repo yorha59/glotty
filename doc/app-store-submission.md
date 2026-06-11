@@ -229,8 +229,8 @@ plus `index.html`. No build step.
 
 **Already published** to GitHub Pages (repo `github.com/yorha59/glotty-site`,
 public, serves `main`/root) — paste these into App Store Connect:
-- Privacy Policy URL → <https://yorha59.github.io/glotty-site/privacy.html>
-- Support URL → <https://yorha59.github.io/glotty-site/support.html>
+- Privacy Policy URL → <https://glotty.hemoon.de/privacy.html>
+- Support URL → <https://glotty.hemoon.de/support.html>
 
 The `website/` files here are the source of truth; to update the live
 pages, copy them into the `glotty-site` repo and push.
