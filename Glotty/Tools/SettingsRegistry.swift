@@ -258,6 +258,13 @@ enum SettingsRegistry {
             description: "Third-person pronouns Glotty uses when referring to the user. Empty string means prefer not to say.",
             options: ["", "he/him", "she/her"]
         ))
+        entries.append(.freeformString(
+            id: "about_me",
+            defaultsKey: LearnedMemoryStore.userNotesKey,
+            displayName: String(localized: "About you"),
+            description: "Free-form notes about the user — interests, goals, what they're learning and why — that Glotty keeps in mind during chat. Update this when the user shares lasting context about themselves.",
+            placeholder: "a short bio / notes about the user"
+        ))
 
         // MARK: Persona
         entries.append(.freeformString(
@@ -288,6 +295,44 @@ enum SettingsRegistry {
             defaultsKey: "glotty.dictionary.showAllMatches",
             displayName: String(localized: "Show all matching dictionaries"),
             description: "When true, the translation popup renders every enabled dictionary that has content for the selection. When false, only the top-priority dictionary in each kind (monolingual / bilingual) is shown."
+        ))
+
+        // MARK: Hover action menu
+        // Default-true boolean, so we read via `object(forKey:)` rather than
+        // the `.boolean` factory (which returns false for an unset key).
+        entries.append(SettingEntry(
+            id: "hover_menu",
+            displayName: String(localized: "Hover action menu"),
+            description: "Whether resting the pointer on a text selection pops up the action menu (Translate / Explain / Polish / Chat / Correct spelling). On by default.",
+            kind: .boolean,
+            sensitivity: .normal,
+            read: {
+                (UserDefaults.standard.object(forKey: SelectionHoverWatcher.enabledKey) as? Bool ?? true)
+                    ? "true" : "false"
+            },
+            write: {
+                UserDefaults.standard.set($0.lowercased() == "true", forKey: SelectionHoverWatcher.enabledKey)
+            }
+        ))
+        let dwellMinMs = Int(SelectionHoverWatcher.dwellRange.lowerBound * 1000)
+        let dwellMaxMs = Int(SelectionHoverWatcher.dwellRange.upperBound * 1000)
+        entries.append(SettingEntry(
+            id: "hover_delay_ms",
+            displayName: String(localized: "Hover delay"),
+            description: "How long (in milliseconds) the pointer must rest on a selection before the hover action menu appears. Only relevant when the hover menu is on.",
+            kind: .integer(min: dwellMinMs, max: dwellMaxMs),
+            sensitivity: .normal,
+            read: {
+                let v = UserDefaults.standard.object(forKey: SelectionHoverWatcher.dwellKey) as? Double
+                    ?? SelectionHoverWatcher.defaultDwell
+                return String(Int((v * 1000).rounded()))
+            },
+            write: { value in
+                if let ms = Int(value) {
+                    UserDefaults.standard.set(Double(ms) / 1000.0, forKey: SelectionHoverWatcher.dwellKey)
+                }
+            },
+            displayValue: { ms in Int(ms).map { "\($0) ms" } ?? ms }
         ))
 
         // MARK: System (UI) language

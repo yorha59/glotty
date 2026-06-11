@@ -297,6 +297,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         handleFire(mode: .chat)
     }
 
+    @objc private func setModel(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? String,
+            let entry = SettingsRegistry.find(id: "model") else { return }
+        dbg("setModel invoked (menu bar) -> \(id)")
+        entry.write(id)
+    }
+
     @objc private func openMemorySettings() {
         settingsWindow.show(selecting: .memory)
     }
@@ -344,6 +351,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         chat.image = NSImage(
             systemSymbolName: "bubble.left.and.bubble.right", accessibilityDescription: nil)
         menu.addItem(chat)
+
+        // Model submenu — switch the active provider's model inline (built from
+        // the same registry the chat's set_setting uses). Omitted when the
+        // active provider has no enumerated model list (custom / on-device).
+        if let modelEntry = SettingsRegistry.find(id: "model"),
+            case .enumeration(let options, let display) = modelEntry.kind, !options.isEmpty {
+            let current = modelEntry.read()
+            let currentLabel = current.map { modelEntry.displayValue?($0) ?? $0 } ?? "—"
+            let modelItem = NSMenuItem(
+                title: "\("Model".t): \(currentLabel)", action: nil, keyEquivalent: "")
+            modelItem.image = NSImage(systemSymbolName: "cpu", accessibilityDescription: nil)
+            let modelSub = NSMenu()
+            for opt in options {
+                let it = NSMenuItem(
+                    title: display[opt] ?? opt, action: #selector(setModel(_:)), keyEquivalent: "")
+                it.target = self
+                it.representedObject = opt
+                it.state = (opt == current) ? .on : .off
+                modelSub.addItem(it)
+            }
+            modelItem.submenu = modelSub
+            menu.addItem(modelItem)
+        }
 
         // Memory submenu — shows the active memory context inline and
         // lets the user switch with one click. Labelled "Memory" in
