@@ -573,9 +573,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             case .corrections(let guesses):
                 guard !guesses.isEmpty else {
-                    HUDController.shared.toast(
-                        String(format: String(localized: "No suggestions for “%@”."), word),
-                        systemImage: "questionmark.circle")
+                    // Local checker had nothing — try the LLM fallback for badly
+                    // mangled words (only if a provider is configured).
+                    if LLMRegistry.current() != nil {
+                        HUDController.shared.toast(
+                            String(localized: "Checking spelling…"),
+                            systemImage: "sparkles", duration: 20)
+                        let llm = await SpellCorrection.llmGuesses(for: word)
+                        if llm.count == 1 {
+                            await self.replaceSelection(with: llm[0])
+                        } else if llm.count > 1 {
+                            self.presentCandidates(llm)
+                        } else {
+                            HUDController.shared.toast(
+                                String(format: String(localized: "No suggestions for “%@”."), word),
+                                systemImage: "questionmark.circle")
+                        }
+                    } else {
+                        HUDController.shared.toast(
+                            String(format: String(localized: "No suggestions for “%@”."), word),
+                            systemImage: "questionmark.circle")
+                    }
                     return
                 }
                 // A single correction is unambiguous — apply it straight away.

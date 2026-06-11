@@ -107,4 +107,40 @@ enum SpellCorrection {
                 .prefix(maxCandidates)
         )
     }
+
+    /// LLM fallback for the cases `NSSpellChecker` can't handle — a word too
+    /// mangled for its dictionary edit-distance to reach (e.g. "simotanious" →
+    /// "simultaneous"). Only used when the local checker returns no guesses, so
+    /// the fast path stays LLM-free. Returns up to a few candidate corrections
+    /// (single word each), or `[]` if there's no provider / nothing usable.
+    @MainActor
+    static func llmGuesses(for word: String) async -> [String] {
+        guard let provider = LLMRegistry.current() else { return [] }
+        let prompt = """
+            The single word below is misspelled. Reply with ONLY the corrected \
+            spelling — just the word, or up to 3 likely corrections separated by \
+            commas. No explanation, no quotes, no punctuation other than the commas.
+
+            Word: \(word)
+            """
+        var raw = ""
+        do {
+            try await UsageContext.$mode.withValue(.polish) {
+                for try await chunk in provider.chatCompletionStream(prompt: prompt) {
+                    raw = chunk
+                }
+            }
+        } catch {
+            return []
+        }
+        // Parse comma/newline-separated single-word candidates; drop anything
+        // multi-word, empty, or identical to the input.
+        let parts = raw.split(whereSeparator: { ",;\n".contains($0) })
+        let cleaned = parts
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .filter { $0.rangeOfCharacter(from: .whitespacesAndNewlines) == nil }
+            .filter { $0.caseInsensitiveCompare(word) != .orderedSame }
+        return dedupe(cleaned, excluding: word)
+    }
 }
