@@ -210,6 +210,8 @@ struct LanguageModelSettingsSection: View {
     @AppStorage("glotty.llmProvider") private var providerID: String = "zai"
     @AppStorage("glotty.kimi.endpoint") private var kimiEndpoint: String = ""
     @AppStorage("glotty.kimi.model") private var kimiModel: String = ""
+    @AppStorage("glotty.minimax.endpoint") private var minimaxEndpoint: String = ""
+    @AppStorage("glotty.minimax.model") private var minimaxModel: String = ""
     @AppStorage("glotty.deepseek.endpoint") private var deepseekEndpoint: String = ""
     @AppStorage("glotty.deepseek.model") private var deepseekModel: String = ""
     @State private var apiKey: String = ""
@@ -304,6 +306,7 @@ struct LanguageModelSettingsSection: View {
         }
         providerMenuButton(id: "deepseek", label: "DeepSeek")
         providerMenuButton(id: "kimi-coding", label: "Kimi For Coding")
+        providerMenuButton(id: "minimax-coding", label: "MiniMax (Coding)")
         // On-device Apple model — only offered when the OS reports it usable.
         if AppleFoundationProvider().isAvailable() {
             providerMenuButton(id: "apple-foundation", label: "Apple Intelligence (On-Device)")
@@ -346,6 +349,7 @@ struct LanguageModelSettingsSection: View {
         }
         if providerID == "deepseek" { return "DeepSeek" }
         if providerID == "kimi-coding" { return "Kimi For Coding" }
+        if providerID == "minimax-coding" { return "MiniMax (Coding)" }
         if providerID == "apple-foundation" { return "Apple Intelligence (On-Device)" }
         return providerID
     }
@@ -362,6 +366,8 @@ struct LanguageModelSettingsSection: View {
             deepseekFields
         } else if providerID == "kimi-coding" {
             kimiFields
+        } else if providerID == "minimax-coding" {
+            minimaxFields
         } else if providerID == "apple-foundation" {
             appleFoundationFields
         } else {
@@ -649,6 +655,60 @@ struct LanguageModelSettingsSection: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+
+        testRow
+    }
+
+    // MARK: - MiniMax fields (Anthropic-compatible, Bearer auth)
+
+    private var minimaxModelBinding: Binding<String> {
+        Binding(
+            get: { minimaxModel.isEmpty ? MiniMaxCodingProvider.defaultModel : minimaxModel },
+            set: { minimaxModel = $0 }
+        )
+    }
+
+    @ViewBuilder
+    private var minimaxFields: some View {
+        apiKeyRow(promptText: "Paste your MiniMax API key")
+
+        TextField("Endpoint",
+                  text: $minimaxEndpoint,
+                  prompt: Text(MiniMaxCodingProvider.defaultEndpoint))
+            .textContentType(.URL)
+
+        HStack {
+            modelIDInput(
+                label: "Model",
+                binding: $minimaxModel,
+                placeholder: MiniMaxCodingProvider.defaultModel,
+                suggestions: MiniMaxCodingProvider.availableModels().map { ($0.id, $0.displayName.t) }
+            )
+            .id(modelListRefreshToken)
+            modelRefreshControl(providerID: "minimax-coding") {
+                let raw = (minimaxEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                           ? MiniMaxCodingProvider.defaultEndpoint : minimaxEndpoint)
+                let endpoint = URL(string: raw) ?? URL(string: MiniMaxCodingProvider.defaultEndpoint)!
+                await refreshModels(
+                    providerID: "minimax-coding",
+                    endpoint: endpoint,
+                    keychainAccount: MiniMaxCodingProvider.keychainAccount,
+                    auth: .bearer
+                )
+            }
+        }
+
+        if let summary = MiniMaxCodingProvider.model(for: minimaxModelBinding.wrappedValue)?.summary {
+            Text(summary.t)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+
+        Text("MiniMax's coding plan uses the same Anthropic-compatible API as Claude Code. International host: api.minimax.io · China: api.minimaxi.com (edit the endpoint above).")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
 
         testRow
     }

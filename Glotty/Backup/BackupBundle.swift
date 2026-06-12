@@ -221,6 +221,7 @@ enum BackupPreferences {
         "glotty.grok.endpoint",       "glotty.grok.model",
         "glotty.deepseek.endpoint",   "glotty.deepseek.model",
         "glotty.kimi.endpoint",       "glotty.kimi.model",
+        "glotty.minimax.endpoint",    "glotty.minimax.model",
         "glotty.customProviders",     // [CustomProviderConfig] as Data
 
         // Chat / tutor behavior

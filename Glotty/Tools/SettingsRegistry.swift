@@ -451,6 +451,12 @@ enum SettingsRegistry {
                 userDefaultsKey: "glotty.kimi.model",
                 description: "The Kimi model used for polish, explain, and chat. Switching takes effect on the next LLM call."
             )
+        } else if activeProviderID == "minimax-coding" {
+            modelSpec = (
+                options: MiniMaxCodingProvider.supportedModels.map { ($0.id, $0.displayName) },
+                userDefaultsKey: "glotty.minimax.model",
+                description: "The MiniMax model used for polish, explain, and chat. Switching takes effect on the next LLM call."
+            )
         } else {
             // Custom OpenAI-compatible providers don't have an enumerated
             // model list — the user supplies a free-text model id when they

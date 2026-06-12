@@ -355,6 +355,8 @@ enum LLMRegistry {
         // Kimi's Anthropic-format API).
         providers.append(DeepSeekProvider())
         providers.append(KimiCodingProvider())
+        // MiniMax coding plan — Anthropic-shaped like Kimi but Bearer-auth.
+        providers.append(MiniMaxCodingProvider())
         // Apple's on-device model — only when the OS reports it usable
         // (Apple Silicon + macOS 26 + Apple Intelligence enabled + model
         // downloaded). Gated here so it never shows on machines that can't

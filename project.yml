@@ -59,8 +59,8 @@ targets:
         # App Store submissions require both. The Dev ID DMG pipeline
         # also picks these up — make-dmg-signed.sh stamps the version
         # into the output filename.
-        MARKETING_VERSION: "1.0.5"
-        CURRENT_PROJECT_VERSION: "10"
+        MARKETING_VERSION: "1.0.6"
+        CURRENT_PROJECT_VERSION: "11"
         ENABLE_HARDENED_RUNTIME: YES
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"

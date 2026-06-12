@@ -2994,6 +2994,52 @@
         }
       }
     },
+    "Auto-fetched from MiniMax. No bundled description.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch abgerufen von MiniMax. Keine integrierte Beschreibung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtenido automáticamente de MiniMax. Sin descripción empaquetada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-récupéré depuis MiniMax. Pas de description fournie."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MiniMaxから自動取得。バンドルされた説明はありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MiniMax에서 자동으로 가져왔습니다. 번들된 설명이 없습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从 MiniMax 自动获取。无捆绑描述。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由 MiniMax 自動擷取。未提供內建描述。"
+          }
+        }
+      }
+    },
     "Automatic": {
       "extractionState": "manual",
       "localizations": {
@@ -13297,6 +13343,98 @@
         }
       }
     },
+    "MiniMax's coding plan uses the same Anthropic-compatible API as Claude Code. International host: api.minimax.io · China: api.minimaxi.com (edit the endpoint above).": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MiniMax's Codierungsplan verwendet die gleiche Anthropic-kompatible API wie Claude Code. Internationaler Host: api.minimax.io · China: api.minimaxi.com (den Endpunkt oben bearbeiten)."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El plan de programación de MiniMax utiliza la misma API compatible con Anthropic que Claude Code. Host internacional: api.minimax.io · China: api.minimaxi.com (editar el endpoint anterior)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le plan de codage MiniMax utilise la même API compatible avec Anthropic que Claude Code. Hôte international : api.minimax.io · Chine : api.minimaxi.com (modifiez le point de ci-dessus)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MiniMaxのコーディングプランは、Claude Codeと同じAnthropic互換APIを使用します。国際ホスト: api.minimax.io · 中国: api.minimaxi.com (上のエンドポイントを編集)。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MiniMax의 코딩 계획은 Claude Code와 동일한 Anthropic 호환 API를 사용합니다. 국제 호스트: api.minimax.io · 중국: api.minimaxi.com (위의 엔드포인트를 편집하세요)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MiniMax 的编程计划使用与 Claude Code 相同的兼容 Anthropic API。国际主机：api.minimax.io · 中国：api.minimaxi.com（编辑上面的端点）。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MiniMax 的程式設計計畫使用與 Claude Code 相同的相容於 Anthropic 的 API。國際主機：api.minimax.io · 中國：api.minimaxi.com（編輯上方端點）。"
+          }
+        }
+      }
+    },
+    "MiniMax's current coding/agentic model on the Anthropic-compatible coding-plan endpoint.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MiniMax's aktueller Codierungs/Agentic-Modell auf dem Anthropic-kompatiblen Codierungsplan-Endpunkt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo actual de programación/agente de MiniMax en el endpoint de plan de programación compatible con Anthropic."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le modèle de codage/agissant actuel de MiniMax sur le point de terminaison de plan de codage compatible avec Anthropic."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MiniMaxの現在のコーディング/エージェントモデル（Anthropic互換コーディングプランエンドポイント上）。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anthropic 호환 코딩 계획 엔드포인트에서 사용 중인 MiniMax의 현재 코딩/에이전트 모델입니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MiniMax 在兼容 Anthropic 的编程计划端点上使用的当前编码/智能体模型。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MiniMax 在相容於 Anthropic 的程式設計計畫端點上的目前程式設計/代理模型。"
+          }
+        }
+      }
+    },
     "Mistake type": {
       "localizations": {
         "de": {
@@ -13753,6 +13891,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "新旗艦 — 更強的推理能力，較慢，價格約為 Flash 的 3 倍（輸入 $0.435/百萬 · 輸出 $0.87/百萬）。對於 Flash 無法勝任的困難重寫來說值得。"
+          }
+        }
+      }
+    },
+    "Newer flagship where available on the coding plan.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neueres Flaggschiff wo verfügbar im Codierungsplan."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo más reciente disponible en el plan de programación."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle phare plus récent lorsque disponible sur le plan de codage."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コーディングプランで利用可能な場合は、新しいフラッグシップモデルが使用されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "코딩 계획에서 사용 가능한 최신 플래그십입니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编程计划中可用的更新旗舰模型。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "程式設計計畫上可用的最新旗艦型號。"
           }
         }
       }
@@ -17496,6 +17680,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "按一下 **Fn** 鍵，然後在 600 毫秒內按 **T**。"
+          }
+        }
+      }
+    },
+    "Previous coding model. Use if your plan hasn't been moved to M2.7.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorheriges Codierungsmodell. Verwenden, wenn Ihr Plan nicht auf M2.7 migriert wurde."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelo de programación anterior. Úsalo si tu plan no se ha migrado a M2.7."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle de codage précédent. À utiliser si votre plan n'a pas été déplacé vers M2.7."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以前のコーディングモデル。あなたのプランがM2.7に移行されていない場合に使用してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이전 코딩 모델입니다. 계획이 M2.7로 이전되지 않은 경우 사용하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先前的编码模型。如果您的计划尚未迁移到 M2.7，请使用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先前程式設計模型。如果您的計畫尚未移轉至 M2.7，請使用此版本。"
           }
         }
       }
