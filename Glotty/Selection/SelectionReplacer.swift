@@ -37,16 +37,24 @@ final class SelectionReplacer {
 
     /// Replace the current selection with `replacement`. Returns how it was
     /// written (or `.failed` if no editable target accepted it).
+    ///
+    /// We use the synthesized-paste path for every app except terminals. We do
+    /// NOT try AX `setSelectedText` first: Chromium-based apps (Chrome, Electron)
+    /// report that attribute as settable and return `.success`, but don't
+    /// actually replace the text — so corrections silently no-op'd in the
+    /// browser while we reported success. Paste reliably replaces the selection
+    /// in native fields and Chromium/Electron alike. Terminals are excluded
+    /// because there a paste appends at the prompt instead of replacing.
     @discardableResult
     func replace(with replacement: String) async -> Outcome {
-        if replaceViaAccessibility(replacement) { return .accessibility }
-        // The AX path didn't take. Before falling back to a synthesized paste,
-        // bail on terminals — there, Cmd+V appends at the cursor rather than
-        // replacing the selection, which produced "correct word tacked on after
-        // the typo". Let the caller surface "copied to clipboard" instead.
-        if frontmostIsTerminal() { return .failed }
-        if await replaceViaPaste(replacement) { return .paste }
-        return .failed
+        let front = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?"
+        if frontmostIsTerminal() {
+            Log.debug(.app, "replace — terminal (\(front)); deferring to clipboard")
+            return .failed
+        }
+        let ok = await replaceViaPaste(replacement)
+        Log.debug(.app, "replace — paste into \(front) → \(ok)")
+        return ok ? .paste : .failed
     }
 
     private func frontmostIsTerminal() -> Bool {
@@ -56,48 +64,7 @@ final class SelectionReplacer {
         return Self.terminalBundleIDs.contains(id)
     }
 
-    // MARK: - AX path
-
-    /// Set `kAXSelectedTextAttribute` on the focused element. Guarded by
-    /// `AXUIElementIsAttributeSettable` so we never clobber a read-only field
-    /// (a web article you're only reading, a label) — those report the
-    /// attribute as not settable, and we fall through to the paste path which
-    /// is itself a harmless no-op there.
-    private func replaceViaAccessibility(_ replacement: String) -> Bool {
-        let systemWide = AXUIElementCreateSystemWide()
-
-        var focusedAny: AnyObject?
-        let focusResult = AXUIElementCopyAttributeValue(
-            systemWide,
-            kAXFocusedUIElementAttribute as CFString,
-            &focusedAny
-        )
-        guard focusResult == .success,
-              let focusedRef = focusedAny,
-              CFGetTypeID(focusedRef) == AXUIElementGetTypeID() else {
-            return false
-        }
-        let focused = focusedRef as! AXUIElement
-
-        var settable: DarwinBoolean = false
-        let settableResult = AXUIElementIsAttributeSettable(
-            focused,
-            kAXSelectedTextAttribute as CFString,
-            &settable
-        )
-        guard settableResult == .success, settable.boolValue else {
-            return false
-        }
-
-        let setResult = AXUIElementSetAttributeValue(
-            focused,
-            kAXSelectedTextAttribute as CFString,
-            replacement as CFTypeRef
-        )
-        return setResult == .success
-    }
-
-    // MARK: - Paste fallback
+    // MARK: - Paste
 
     /// Put the replacement on the pasteboard, synthesize Cmd+V to paste over the
     /// selection, then restore the user's original clipboard. Symmetric with
@@ -114,8 +81,9 @@ final class SelectionReplacer {
 
         // Wait for the target app to consume the paste before we put the
         // user's clipboard back, otherwise the restore can race the Cmd+V
-        // and the app pastes the old contents.
-        try? await Task.sleep(nanoseconds: 120_000_000) // 120ms
+        // and the app pastes the old contents. Chromium can be slower to
+        // apply the paste than native fields, so we give it a bit longer.
+        try? await Task.sleep(nanoseconds: 220_000_000) // 220ms
 
         if let savedString {
             pasteboard.clearContents()

@@ -19,7 +19,7 @@ final class SelectionHoverWatcher {
     /// Default dwell before the menu appears, and the bounds the Settings slider
     /// (and any stored value) is clamped to.
     static let defaultDwell = 0.6
-    static let dwellRange: ClosedRange<Double> = 0.2...1.5
+    static let dwellRange: ClosedRange<Double> = 0.1...5.0
 
     private let grabber: SelectionGrabber
     private var timer: Timer?
