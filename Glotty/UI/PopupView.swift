@@ -178,6 +178,9 @@ struct PolishChatTurn: Identifiable, Equatable {
     let id = UUID()
     let role: Role
     var text: String
+    /// Copy-ready phrasings the model chose to surface, rendered as
+    /// click-to-copy chips under the bubble. Nil/empty when it offered none.
+    var phrases: [String]? = nil
 }
 
 struct PopupView: View {
@@ -200,6 +203,9 @@ struct PopupView: View {
     /// native lang, polish target) and applies each answer via
     /// `set_setting` tool calls — see `TutorPrompt.build`.
     let onboarding: Bool
+    /// Non-empty when this chat is a practice session — the due "re-attempt
+    /// the scenario" cards the tutor drills the user on (see PracticeStore).
+    let practiceItems: [PracticeItem]
     /// Fired the first time the user expands the polish chat from the
     /// collapsed pill. Lets `PopupController` grow the panel vertically
     /// so the new chat region doesn't squeeze the polish content above.
@@ -238,6 +244,7 @@ struct PopupView: View {
          replay: PopupReplayPayload? = nil,
          proactive: Bool = false,
          onboarding: Bool = false,
+         practiceItems: [PracticeItem] = [],
          onClose: @escaping () -> Void,
          onChatExpand: (() -> Void)? = nil,
          onHide: (() -> Void)? = nil,
@@ -249,6 +256,7 @@ struct PopupView: View {
         self.replay = replay
         self.proactive = proactive
         self.onboarding = onboarding
+        self.practiceItems = practiceItems
         self.onClose = onClose
         self.onChatExpand = onChatExpand
         self.onHide = onHide
@@ -277,7 +285,7 @@ struct PopupView: View {
                 // popup opens with it already expanded.
                 if let storedThread = replay.polishChatThread, !storedThread.isEmpty {
                     let restored = storedThread.map {
-                        PolishChatTurn(role: $0.role == .user ? .user : .assistant, text: $0.text)
+                        PolishChatTurn(role: $0.role == .user ? .user : .assistant, text: $0.text, phrases: $0.phrases)
                     }
                     _polishChatThread = State(initialValue: restored)
                     _polishChatExpanded = State(initialValue: true)
@@ -293,7 +301,7 @@ struct PopupView: View {
                 _polishStatus = State(initialValue: .ready)
                 if let storedThread = replay.polishChatThread, !storedThread.isEmpty {
                     let restored = storedThread.map {
-                        PolishChatTurn(role: $0.role == .user ? .user : .assistant, text: $0.text)
+                        PolishChatTurn(role: $0.role == .user ? .user : .assistant, text: $0.text, phrases: $0.phrases)
                     }
                     _polishChatThread = State(initialValue: restored)
                     _polishChatExpanded = State(initialValue: true)
@@ -319,6 +327,8 @@ struct PopupView: View {
     /// parsed variant cards once the stream finishes.
     @State private var polishRawText: String = ""
     @State private var copiedVariantIndex: Int? = nil
+    /// Which discussion-chat phrase chip just flashed "copied" (keyed by text).
+    @State private var copiedPhrase: String? = nil
     /// Goes true briefly when the user clicks the translate result to copy
     /// it. Drives the green tint + checkmark confirmation in the same way
     /// `copiedVariantIndex` does for polish variants. Auto-resets after
@@ -343,6 +353,13 @@ struct PopupView: View {
     /// `runTutorTurn` runs again. Also bumped once on appear to
     /// kick off the opening tutor turn.
     @State private var tutorRunCounter: Int = 0
+    /// Practice session only: the queue of agenda-item indices still to
+    /// be drilled, front-first. The app presents the front item's
+    /// scenario card (no LLM); the model only judges the attempt. On a
+    /// PASS the item is resolved and leaves the queue; on a MISS it's
+    /// recycled to the BOTTOM so the session keeps cycling until every
+    /// item has been answered correctly. Seeded once when the session opens.
+    @State private var practiceQueue: [Int] = []
     @State private var tutorProviderName: String = ""
     /// User-controlled toggle in the chat header. When ON, the
     /// tutor prompt includes the SettingsRegistry capability block
@@ -559,7 +576,9 @@ struct PopupView: View {
                     // scripted opener; `persistTutorTurn` separately
                     // refuses to write onboarding turns to ChatStore,
                     // so today's real thread stays untouched.
-                    if !onboarding {
+                    // Practice sessions are ephemeral drills — start fresh,
+                    // never merge with (or write to) today's saved chat thread.
+                    if !onboarding && practiceItems.isEmpty {
                         hydrateTodayChat()
                     }
                 }
@@ -578,6 +597,20 @@ struct PopupView: View {
                         tutorThread.append(userTurn)
                         persistTutorTurn(userTurn)
                         await runTutorTurn()
+                    } else if !practiceItems.isEmpty, tutorThread.isEmpty {
+                        // Practice opener is purely mechanical — seed the
+                        // queue with every agenda item and present the first
+                        // scenario (the user's draft + what they meant) as a
+                        // card with NO LLM call, then wait for their
+                        // re-attempt. The model only enters once the user
+                        // replies, to judge it (see TutorPrompt.practicePrompt).
+                        practiceQueue = Array(practiceItems.indices)
+                        if let front = practiceQueue.first {
+                            let card = practicePresentation(
+                                practiceItems[front], remaining: practiceQueue.count)
+                            tutorThread.append(TutorTurn(role: .tutor, reply: card))
+                        }
+                        tutorStatus = .ready
                     } else if tutorThread.isEmpty {
                         await runTutorTurn()
                     } else {
@@ -706,29 +739,74 @@ struct PopupView: View {
         // Hide-to-bubble button at the top-right, mirroring the native
         // close button at the top-left. Sits in the trafficLightInset
         // strip so it doesn't overlap content.
-        .overlay(alignment: .topTrailing) { hideButton }
+        .overlay(alignment: .topTrailing) { topRightControls }
     }
 
-    /// Privacy "hide" affordance. Tucks the popup away behind a small
-    /// bubble (`PopupController.hideToBubble`) so nobody glancing at the
-    /// screen sees the translation/chat; a click on the bubble restores
-    /// it. The eye-slash icon reads as "hide from view" rather than a
-    /// second close button.
+    /// Top-right controls strip: a Regenerate button (LLM modes) to the LEFT of
+    /// the hide-to-bubble button, both tucked in the trafficLightInset strip so
+    /// they don't overlap content.
     @ViewBuilder
-    private var hideButton: some View {
-        if let onHide {
-            Button(action: onHide) {
-                Image(systemName: "eye.slash")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(PopupTokens.tertiaryText)
-                    .frame(width: 20, height: 20)
-                    .background(.thinMaterial, in: Circle())
-                    .overlay(Circle().strokeBorder(PopupTokens.border, lineWidth: 0.5))
+    private var topRightControls: some View {
+        HStack(spacing: 6) {
+            if canRegenerate {
+                circleIconButton(systemName: "arrow.clockwise", action: regenerate)
+                    .help("Regenerate")
             }
-            .buttonStyle(.plain)
-            .help("Hide from view — click the bubble to bring it back")
-            .padding(.top, 5)
-            .padding(.trailing, 8)
+            // Privacy "hide" affordance. Tucks the popup away behind a small
+            // bubble (`PopupController.hideToBubble`) so nobody glancing at the
+            // screen sees the translation/chat; a click on the bubble restores
+            // it. The eye-slash icon reads as "hide from view" rather than a
+            // second close button.
+            if let onHide {
+                circleIconButton(systemName: "eye.slash", action: onHide)
+                    .help("Hide from view — click the bubble to bring it back")
+            }
+        }
+        .padding(.top, 5)
+        .padding(.trailing, 8)
+    }
+
+    private func circleIconButton(systemName: String,
+                                  action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(PopupTokens.tertiaryText)
+                .frame(width: 20, height: 20)
+                .background(.thinMaterial, in: Circle())
+                .overlay(Circle().strokeBorder(PopupTokens.border, lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Regenerate is offered only for the LLM single-shot answers (Explain,
+    /// Polish) once they're ready. Translate is deterministic (Apple
+    /// Translation) so re-running yields the same output; chat has its own
+    /// per-turn retry affordance.
+    private var canRegenerate: Bool {
+        switch mode {
+        case .explain: if case .ready = explainStatus { return true }; return false
+        case .polish:  if case .ready = polishStatus  { return true }; return false
+        default:       return false
+        }
+    }
+
+    /// Re-fire the current LLM mode's task by bumping its retry counter (same
+    /// mechanism the failure "Retry" buttons use), so the user gets a fresh
+    /// answer without re-selecting the text.
+    private func regenerate() {
+        switch mode {
+        case .explain:
+            explainStatus = .working
+            explainText = ""
+            explainRetryCounter &+= 1
+        case .polish:
+            polishStatus = .working
+            polishRawText = ""
+            polishResult = .empty
+            polishRetryCounter &+= 1
+        default:
+            break
         }
     }
 
@@ -2318,11 +2396,18 @@ struct PopupView: View {
                                 .foregroundStyle(PopupTokens.secondaryText)
                         }
                     } else {
-                        Self.markdownText(turn.text)
-                            .font(.system(size: PopupTokens.bodySize))
-                            .foregroundStyle(PopupTokens.primaryText)
-                            .textSelection(.enabled)
-                            .fixedSize(horizontal: false, vertical: true)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Self.markdownText(turn.text)
+                                .font(.system(size: PopupTokens.bodySize))
+                                .foregroundStyle(PopupTokens.primaryText)
+                                .textSelection(.enabled)
+                                .fixedSize(horizontal: false, vertical: true)
+                            // Copy-ready phrasing buttons live inside the same
+                            // bubble so the reply reads as one message.
+                            if let phrases = turn.phrases, !phrases.isEmpty {
+                                phraseChips(phrases)
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal, 10)
@@ -2368,6 +2453,56 @@ struct PopupView: View {
         polishChatThread.append(PolishChatTurn(role: .user, text: trimmed))
         polishChatInput = ""
         polishChatRunCounter += 1
+    }
+
+    /// Marker the discussion model wraps copy-ready phrasings in. The reply text
+    /// shown in the bubble is everything BEFORE it; the lines inside become chips.
+    private static let phrasesMarker = "<phrases>"
+
+    /// While streaming, show only the prose up to a (possibly partially typed)
+    /// `<phrases>` marker so the raw markup never flashes in the bubble.
+    static func proseForStreaming(_ raw: String) -> String {
+        let lower = raw.lowercased()
+        if let r = lower.range(of: phrasesMarker) {
+            return String(raw[raw.startIndex..<r.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        // Trailing partial marker, e.g. "...<phra"
+        for n in stride(from: phrasesMarker.count - 1, through: 1, by: -1) {
+            if lower.hasSuffix(String(phrasesMarker.prefix(n))) {
+                return String(raw.dropLast(n))
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+        return raw
+    }
+
+    /// Split a finished reply into (prose, phrases). Phrases live between
+    /// `<phrases>` and `</phrases>`, one per line; bullets are stripped.
+    static func splitPhrases(_ raw: String) -> (prose: String, phrases: [String]) {
+        let lower = raw.lowercased()
+        guard let open = lower.range(of: phrasesMarker) else {
+            return (raw.trimmingCharacters(in: .whitespacesAndNewlines), [])
+        }
+        let prose = String(raw[raw.startIndex..<open.lowerBound])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        var block = String(raw[open.upperBound...])
+        if let close = block.lowercased().range(of: "</phrases>") {
+            block = String(block[block.startIndex..<close.lowerBound])
+        }
+        let phrases = block
+            .split(whereSeparator: \.isNewline)
+            .map { line -> String in
+                var s = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                for bullet in ["- ", "* ", "• ", "– "] where s.hasPrefix(bullet) {
+                    s = String(s.dropFirst(bullet.count))
+                }
+                // Drop surrounding quotes the model sometimes adds.
+                s = s.trimmingCharacters(in: CharacterSet(charactersIn: "\"“”"))
+                return s.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            .filter { !$0.isEmpty }
+        return (prose, Array(phrases.prefix(6)))
     }
 
     /// LLM call backing the discussion thread under polish or explain.
@@ -2435,8 +2570,28 @@ struct PopupView: View {
             """
         }
 
+        // Language the copy-ready phrasings are written in — the language the
+        // user is actually writing (polish target / the text being explained),
+        // not necessarily the chat reply language.
+        let draftLangName: String = {
+            switch mode {
+            case .explain:
+                return PolishPrompt.englishName(for: detectedSource?.rawValue ?? polishTargetLanguage())
+            case .polish, .translate, .chat:
+                return PolishPrompt.englishName(for: polishTargetLanguage())
+            }
+        }()
+
         let body = """
         You are \(roleDescription). Reply concisely (2-5 sentences) in \(PolishPrompt.englishName(for: language)) unless the user asks otherwise. Reference the earlier context when relevant.
+
+        Sometimes — NOT every turn — the user is trying to PRODUCE text: they want the right way to say something, they are clarifying what they actually meant, or the earlier rewrite did not capture their intent. ONLY in that case, list 2-4 concrete, ready-to-use phrasings at the very END of your reply inside a <phrases>…</phrases> block, one per line, written in \(draftLangName), and do NOT repeat them in your prose. Example ending:
+        <phrases>
+        first natural option
+        second natural option
+        </phrases>
+
+        Do NOT emit the <phrases> block when the user is only asking to UNDERSTAND something rather than to write it — e.g. "what does X mean?", a definition, a grammar or usage question, the difference between two words, or any comprehension question. There is nothing for them to copy in those cases, so answer in prose alone and omit the block entirely. When in doubt, omit it.
 
         \(contextBlock)
 
@@ -2452,11 +2607,18 @@ struct PopupView: View {
         let prompt = PolishPrompt.prependedWithUserContext(body, sourceText: sourceText)
 
         do {
+            var raw = ""
             try await UsageContext.$mode.withValue(.chat) {
                 for try await chunk in provider.chatCompletionStream(prompt: prompt) {
-                    polishChatThread[assistantIndex].text = chunk
+                    raw = chunk
+                    // Hide the trailing <phrases> block (even partially typed)
+                    // while streaming; it turns into copy chips once finished.
+                    polishChatThread[assistantIndex].text = Self.proseForStreaming(chunk)
                 }
             }
+            let (prose, phrases) = Self.splitPhrases(raw)
+            polishChatThread[assistantIndex].text = prose
+            polishChatThread[assistantIndex].phrases = phrases.isEmpty ? nil : phrases
             polishChatStatus = .ready
             persistPolishChatThread()
             // Fire memory extraction now so cards appear in-dialog
@@ -2487,7 +2649,8 @@ struct PopupView: View {
         let snapshot = polishChatThread.map { turn in
             PolishChatTurnSnapshot(
                 role: turn.role == .user ? .user : .assistant,
-                text: turn.text
+                text: turn.text,
+                phrases: turn.phrases
             )
         }
         let updated = MemoryEvent(
@@ -2694,6 +2857,57 @@ struct PopupView: View {
         }
         .help("Click to copy the polished version (native-language translation shown below for reference)")
         .animation(.easeOut(duration: 0.15), value: copied)
+    }
+
+    /// Copy-ready phrasing buttons, styled like the Polish variant cards: just
+    /// the text, click to copy, brief green tint + checkmark as confirmation.
+    /// No leading icon — the whole card is the button.
+    @ViewBuilder
+    private func phraseChips(_ phrases: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(phrases, id: \.self) { phrase in
+                let copied = copiedPhrase == phrase
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    // No `.textSelection` — it would capture the click and
+                    // break tap-to-copy (same reason as variantCard).
+                    Text(phrase)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(PopupTokens.primaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if copied {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(PopupTokens.variantCardPadding)
+                .background(
+                    RoundedRectangle(cornerRadius: PopupTokens.variantCardRadius, style: .continuous)
+                        .fill(copied ? Color.green.opacity(0.12) : PopupTokens.variantTint)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: PopupTokens.variantCardRadius, style: .continuous)
+                                .strokeBorder(PopupTokens.border, lineWidth: 1)
+                        )
+                )
+                .contentShape(Rectangle())
+                .onTapGesture { copyPhrase(phrase) }
+                .help("Click to copy")
+                .animation(.easeOut(duration: 0.15), value: copied)
+            }
+        }
+    }
+
+    private func copyPhrase(_ text: String) {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(text, forType: .string)
+        Self.dbg("copied chat phrase (\(text.count) chars)")
+        copiedPhrase = text
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+            if copiedPhrase == text { copiedPhrase = nil }
+        }
     }
 
     private func copyVariant(_ text: String, index: Int) {
@@ -3075,6 +3289,24 @@ struct PopupView: View {
         ))
     }
 
+    /// Record a polish/explain result as a new History entry — or, if this
+    /// popup already recorded one this session (i.e. the user hit Regenerate),
+    /// replace that entry in place via its id, so History always reflects the
+    /// latest answer instead of stacking a duplicate and orphaning the first.
+    /// `make` receives the id to stamp onto the event.
+    private func recordOrUpdateEvent(_ make: (UUID) -> MemoryEvent) {
+        let existingID = polishEventID.flatMap { id in
+            MemoryStore.shared.allEvents().contains { $0.id == id } ? id : nil
+        }
+        let event = make(existingID ?? UUID())
+        if existingID != nil {
+            MemoryStore.shared.update(event)
+        } else {
+            MemoryStore.shared.record(event)
+        }
+        polishEventID = event.id
+    }
+
     /// Explain calls the LLM with the explain prompt (prose, no JSON) and
     /// streams the accumulated text into `explainText` chunk by chunk so the
     /// popup fills in live.
@@ -3099,18 +3331,19 @@ struct PopupView: View {
             elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
             Self.dbg("explain ok — \(explainText.count) chars in \(elapsedMs)ms")
 
-            let event = MemoryEvent(
-                kind: .explain,
-                sourceText: sourceText,
-                sourceLang: detectedSource?.rawValue,
-                targetLang: outputLanguage,
-                result: explainText
-            )
-            MemoryStore.shared.record(event)
-            // Capture id so a follow-up chat under this explanation
-            // can persist its thread onto the same event via
-            // MemoryStore.update — same flow polish uses.
-            polishEventID = event.id
+            // Record (or, after Regenerate, replace) this explanation in
+            // History. The captured id also lets a follow-up chat under this
+            // explanation persist its thread onto the same event.
+            recordOrUpdateEvent { id in
+                MemoryEvent(
+                    kind: .explain,
+                    sourceText: sourceText,
+                    sourceLang: detectedSource?.rawValue,
+                    targetLang: outputLanguage,
+                    result: explainText,
+                    id: id
+                )
+            }
         } catch {
             Self.dbg("explain FAIL — err=\(error.localizedDescription)")
             explainStatus = .failed(error.localizedDescription)
@@ -3167,7 +3400,8 @@ struct PopupView: View {
         // today's saved thread, otherwise the user's first real chat
         // of the day would open with the setup Q&A still showing.
         // Re-opening Welcome later also restarts onboarding fresh.
-        if onboarding { return }
+        // Practice drills are ephemeral too — keep them out of the daily thread.
+        if onboarding || !practiceItems.isEmpty { return }
         let snapRole: TutorTurnSnapshot.Role
         switch turn.role {
         case .user:   snapRole = .user
@@ -3390,6 +3624,25 @@ struct PopupView: View {
         )
     }
 
+    /// Compose the scenario card for `item` — the prompt the user
+    /// re-attempts, built by the app with NO LLM round-trip. Shows what
+    /// they originally wrote and what they meant (the reference answer is
+    /// deliberately withheld), then asks for a fresh attempt. `remaining`
+    /// is the number of items still in the queue (including this one), so
+    /// the header reflects progress as items resolve and recycle.
+    private func practicePresentation(_ item: PracticeItem, remaining: Int) -> String {
+        var lines: [String] = []
+        lines.append(String(format: "Practice — %d left".t, remaining))
+        lines.append("")
+        lines.append(String(format: "You wrote: %@".t, item.draft))
+        if let meaning = item.meaning, !meaning.isEmpty {
+            lines.append(String(format: "You meant: %@".t, meaning))
+        }
+        lines.append("")
+        lines.append("Say it naturally now — type your new version below.".t)
+        return lines.joined(separator: "\n")
+    }
+
     /// Drive one round of the tutor conversation. On the very first
     /// call (counter == 0, thread empty), this produces the opening
     /// turn — no user message yet. Subsequent calls produce a tutor
@@ -3450,7 +3703,8 @@ struct PopupView: View {
             proactive: isFirstTurn && proactive,
             recentTopics: recentTopics,
             allowToolCalls: chatAllowSettingsChanges || onboarding,
-            onboarding: onboarding
+            onboarding: onboarding,
+            practiceItems: practiceItems
         )
 
         var raw = ""
@@ -3487,6 +3741,38 @@ struct PopupView: View {
         )
         tutorThread.append(newTurn)
         persistTutorTurn(newTurn)
+        // Practice session — the app drives presentation, so the item under
+        // judgment is always the FRONT of the queue; the model only supplies
+        // the ✓/✗ verdict. The verdict also feeds the spaced-repetition
+        // schedule (✓ → longer interval, ✗ → back in ~a day). A PASS resolves
+        // the item and drops it from the queue; a MISS recycles it to the
+        // BOTTOM so it comes back around later this session. We then present
+        // the new front card (again, no LLM). A turn with no verdict (e.g. the
+        // user asked a question instead of attempting) leaves the queue as-is
+        // so the same card stays up.
+        if !practiceItems.isEmpty,
+           let verdict = parsed.practiceOutcomes.first,
+           let front = practiceQueue.first {
+            PracticeStore.shared.recordOutcome(
+                eventID: practiceItems[front].eventID, correct: verdict.correct)
+            Self.dbg("practice outcome — item \(front + 1) correct=\(verdict.correct) queue=\(practiceQueue)")
+            practiceQueue.removeFirst()
+            if !verdict.correct {
+                // Missed — send it to the bottom to re-attempt later.
+                practiceQueue.append(front)
+            }
+            if let next = practiceQueue.first {
+                let card = practicePresentation(
+                    practiceItems[next], remaining: practiceQueue.count)
+                tutorThread.append(TutorTurn(role: .tutor, reply: card))
+            } else {
+                // Queue cleared — every item answered correctly. The model
+                // can't see the queue, so the app posts the wrap-up itself.
+                tutorThread.append(TutorTurn(
+                    role: .tutor,
+                    reply: "All done — you cleared every practice item. Nice work! 🎉".t))
+            }
+        }
         // If the tool call resolved as immediately rejected (unknown
         // / blocked / invalid), append a system turn so the LLM sees
         // the rejection on the next round and doesn't loop.
@@ -3604,17 +3890,20 @@ struct PopupView: View {
                         .init(category: $0.category, original: $0.original, explanation: $0.explanation)
                     }
                 )
-                let event = MemoryEvent(
-                    kind: .polish,
-                    sourceText: sourceText,
-                    sourceLang: detectedSource?.rawValue,
-                    targetLang: outputLanguage,
-                    result: polishResult.variants.first?.text,
-                    issues: issueSnapshots.isEmpty ? nil : issueSnapshots,
-                    polishSnapshot: snapshot
-                )
-                MemoryStore.shared.record(event)
-                polishEventID = event.id
+                // Record (or, after Regenerate, replace) this polish run in
+                // History so it reflects the latest answer, not a duplicate.
+                recordOrUpdateEvent { id in
+                    MemoryEvent(
+                        kind: .polish,
+                        sourceText: sourceText,
+                        sourceLang: detectedSource?.rawValue,
+                        targetLang: outputLanguage,
+                        result: polishResult.variants.first?.text,
+                        issues: issueSnapshots.isEmpty ? nil : issueSnapshots,
+                        polishSnapshot: snapshot,
+                        id: id
+                    )
+                }
             }
         } catch {
             Self.dbg("polish FAIL — err=\(error.localizedDescription)")

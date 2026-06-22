@@ -29,6 +29,18 @@ final class SelectionHoverWatcher {
     private var restChecked = false          // one AX probe per rest period
     private var cooldownUntil: CFAbsoluteTime = 0
     private var shownSelectionRect: CGRect?  // Cocoa rect of the selection the menu is currently showing for
+    /// Last selected text we observed — used to detect a *fresh* selection (so
+    /// the bar fires once per selection, not on every rest).
+    private var lastSelectionText: String?
+    /// Where the most recent left-mouse-up landed (where a drag-select ends) and
+    /// when. The bar only fires while the pointer is still resting there — i.e.
+    /// the user selected and DIDN'T move away.
+    private var lastMouseUpPos: NSPoint?
+    private var lastMouseUpAt: CFAbsoluteTime = 0
+    private var mouseUpMonitor: Any?
+    /// How far the pointer may be from the selection-end point and still count
+    /// as "didn't move after selecting".
+    private let selectionEndTolerance: CGFloat = 12
 
     private let pollInterval: CFTimeInterval = 0.15
     private let moveThreshold: CGFloat = 3
@@ -54,6 +66,30 @@ final class SelectionHoverWatcher {
         t.tolerance = 0.05
         RunLoop.main.add(t, forMode: .common)
         timer = t
+
+        // Track where drag-selections end (the last left-mouse-up) in other
+        // apps. The hover bar only fires while the pointer is still resting at
+        // that point — so moving the cursor after selecting cancels it.
+        if mouseUpMonitor == nil {
+            mouseUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseUp]) {
+                [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    let pos = NSEvent.mouseLocation
+                    let now = CFAbsoluteTimeGetCurrent()
+                    self.lastMouseUpPos = pos
+                    self.lastMouseUpAt = now
+                    // Re-arm the dwell from the release. A long selection often
+                    // holds the cursor still mid-drag (a pause or auto-scroll),
+                    // which fires a probe and sets restChecked=true; without
+                    // this reset the post-release probe would be skipped because
+                    // the cursor "didn't move" after the mouse-up.
+                    self.restChecked = false
+                    self.lastMoveAt = now
+                    self.lastPos = pos
+                }
+            }
+        }
     }
 
     private var enabled: Bool {
@@ -94,14 +130,27 @@ final class SelectionHoverWatcher {
         guard !restChecked, now - lastMoveAt >= dwell, now >= cooldownUntil else { return }
         restChecked = true
 
-        guard let sel = grabber.hoverSelection() else { return }
-        // Hit-test against the precise selection bounds when available, else the
-        // focused element's frame. Anchor the menu under the selection when we
-        // have its rect, otherwise at the pointer.
-        guard let hitAX = sel.selectionRect ?? sel.elementFrame else { return }
-        let hitCocoa = cocoaRect(fromAX: hitAX)
-        guard hitCocoa.insetBy(dx: -6, dy: -6).contains(pos) else { return }
+        guard let sel = grabber.hoverSelection() else {
+            lastSelectionText = nil
+            return
+        }
+        // Fire only right after a NEW selection that the user hasn't moved away
+        // from: (1) the selected text just changed, and (2) the pointer is still
+        // resting where the selection ended (the last mouse-up). Moving the
+        // cursor after selecting → no bar. Works the same in native apps and in
+        // Chromium/Electron (no selection-bounds needed for the gate).
+        guard sel.text != lastSelectionText else { return }
+        guard let up = lastMouseUpPos,
+              now - lastMouseUpAt < 5,
+              hypot(pos.x - up.x, pos.y - up.y) <= selectionEndTolerance else { return }
+        lastSelectionText = sel.text
 
+        // Anchor under the selection when we have its bounds, otherwise at the
+        // pointer. The hit region (for keeping the menu up) is the selection /
+        // element frame, or a small area around the pointer as a last resort.
+        let hitAX = sel.selectionRect ?? sel.elementFrame
+        let hitCocoa = hitAX.map { cocoaRect(fromAX: $0) }
+            ?? CGRect(x: pos.x - 20, y: pos.y - 12, width: 40, height: 24)
         present(axRect: sel.selectionRect, hitCocoa: hitCocoa)
     }
 
@@ -134,6 +183,7 @@ final class SelectionHoverWatcher {
     private func resetState() {
         shownSelectionRect = nil
         restChecked = false
+        lastSelectionText = nil
     }
 
     /// AX rect (top-left origin, primary-screen space) → Cocoa rect (bottom-left).

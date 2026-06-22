@@ -223,7 +223,8 @@ final class PopupController {
               mode: PopupMode = .translate,
               replay: PopupReplayPayload? = nil,
               proactive: Bool = false,
-              onboarding: Bool = false) {
+              onboarding: Bool = false,
+              practiceItems: [PracticeItem] = []) {
         let mouse = NSEvent.mouseLocation
         let screenFrame = (NSScreen.screens.first { $0.frame.contains(mouse) } ?? NSScreen.main)?.visibleFrame
             ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
@@ -266,6 +267,7 @@ final class PopupController {
             replay: replay,
             proactive: proactive,
             onboarding: onboarding,
+            practiceItems: practiceItems,
             onClose: { [weak self, weak panelRef] in
                 guard let panelRef else { return }
                 self?.dismiss(panelRef)

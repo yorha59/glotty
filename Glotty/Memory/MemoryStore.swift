@@ -44,6 +44,9 @@ struct PolishChatTurnSnapshot: Codable, Hashable, Sendable {
     enum Role: String, Codable, Sendable { case user, assistant }
     let role: Role
     let text: String
+    /// Copy-ready phrasings the model surfaced in this turn (optional so old
+    /// snapshots without the field decode to nil).
+    var phrases: [String]? = nil
 }
 
 /// One row in the user's history. Append-only — we never rewrite events, only

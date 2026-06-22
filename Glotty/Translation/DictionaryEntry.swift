@@ -9,6 +9,13 @@ import NaturalLanguage
 // (English) entry from the bilingual (English↔Chinese) one for the same word. Apple
 // is unlikely to break this symbol; if they do, multi-dict lookup degrades silently
 // to the public single-dict path.
+//
+// MAS build (`#if MAS`) deliberately omits these `dlsym` bindings: `DCSGetActiveDictionaries`
+// is a private symbol and trips App Review static analysis (Guideline 2.5.1). The
+// sandbox/App Store variant uses only the public `DCSCopyTextDefinition` single-lookup
+// path (see `entry(for:)` / `allSourcedEntries`), losing the per-dict monolingual ↔
+// bilingual split but keeping definition lookup working.
+#if !MAS
 private typealias DCSGetActiveDictionariesFn = @convention(c) () -> Unmanaged<CFArray>?
 private typealias DCSCopyTextDefinitionFn = @convention(c) (CFTypeRef?, CFString, CFRange) -> Unmanaged<CFString>?
 
@@ -23,6 +30,7 @@ private let dynDCSCopyTextDefinition: DCSCopyTextDefinitionFn? = {
           let sym = dlsym(handle, "DCSCopyTextDefinition") else { return nil }
     return unsafeBitCast(sym, to: DCSCopyTextDefinitionFn.self)
 }()
+#endif
 
 /// Structured dictionary entry parsed from `DCSCopyTextDefinition`.
 /// Two formats are handled by the parser:
@@ -123,6 +131,12 @@ enum DictionaryLookup {
     }
 
     static func availableDictionaries() -> [DictionaryInfo] {
+        #if MAS
+        // Sandbox/App Store: per-dict enumeration needs the private
+        // `DCSGetActiveDictionaries`, which we don't link. No dictionary
+        // picker on MAS — lookups go through the combined public path.
+        return []
+        #else
         guard let getDicts = dynDCSGetActiveDictionaries,
               let dictsUnmanaged = getDicts() else { return [] }
         let dictsArray = retainArray(from: dictsUnmanaged)
@@ -138,6 +152,7 @@ enum DictionaryLookup {
         // background walk completes.
         DictionaryCatalog.loadIfNeeded()
         return infos
+        #endif
     }
 
     /// Attach metadata from the asset catalog if available — turns a bare
@@ -158,6 +173,16 @@ enum DictionaryLookup {
     }
 
     static func allSourcedEntries(for text: String, selectedIDs: [String] = []) -> [SourcedEntry] {
+        #if MAS
+        // Sandbox/App Store: single combined definition from the active
+        // dictionaries via the public `DCSCopyTextDefinition`. No per-dict
+        // enumeration (that needs the private `DCSGetActiveDictionaries`), so
+        // the monolingual/bilingual split degrades to one merged entry.
+        guard let entry = entry(for: text), entry.hasContent else { return [] }
+        return [SourcedEntry(
+            dictionary: DictionaryInfo(id: "system", name: "Dictionary", path: ""),
+            entry: entry)]
+        #else
         guard let getDicts = dynDCSGetActiveDictionaries,
               let copyDef = dynDCSCopyTextDefinition,
               let dictsUnmanaged = getDicts() else { return [] }
@@ -194,6 +219,7 @@ enum DictionaryLookup {
             }
         }
         return entries
+        #endif
     }
 
     private static func retainArray(from unmanaged: Unmanaged<CFArray>) -> [CFTypeRef] {

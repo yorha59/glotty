@@ -13,6 +13,14 @@ options:
   createIntermediateGroups: true
   knownRegions: [en, zh-Hans, zh-Hant, ja, ko, es, fr, de]
 
+# Build configurations. Release-AppStore = Mac App Store variant
+# (release-type; sandbox entitlements + the `MAS` compile flag are
+# applied per-target below). Web builds (Debug/Release) are unchanged.
+configs:
+  Debug: debug
+  Release: release
+  Release-AppStore: release
+
 settings:
   base:
     SWIFT_VERSION: "5"
@@ -30,6 +38,9 @@ settings:
     # Release (the CD / notarized .pkg path): build the full fat binary.
     Release:
       ONLY_ACTIVE_ARCH: NO
+    # MAS archive: full fat binary too.
+    Release-AppStore:
+      ONLY_ACTIVE_ARCH: NO
 
 targets:
   Glotty:
@@ -38,6 +49,10 @@ targets:
     deploymentTarget: "15.0"
     sources:
       - path: Glotty
+        # Referenced only via INFOPLIST_FILE in the MAS config — keep it out
+        # of Compile Sources / Copy Resources for every target.
+        excludes:
+          - Info-MAS.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ruojunye.glotty
@@ -65,6 +80,19 @@ targets:
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
         DEVELOPMENT_TEAM: "47D8DFFZQ4"
+      configs:
+        # Mac App Store variant. Sandbox entitlements satisfy MAS; the
+        # `MAS` compile flag makes `#if MAS` select the App-Store-safe
+        # impls (Services instead of AX/event-tap). See project memory
+        # for the 2.4.5 rejection rationale.
+        Release-AppStore:
+          CODE_SIGN_ENTITLEMENTS: Glotty/Glotty-AppStore.entitlements
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) MAS"
+          # NSServices is an array-of-dicts → can't be expressed via
+          # INFOPLIST_KEY_*. MAS uses a hand-written plist; web keeps
+          # auto-generating its own (GENERATE_INFOPLIST_FILE stays YES there).
+          GENERATE_INFOPLIST_FILE: NO
+          INFOPLIST_FILE: Glotty/Info-MAS.plist
 
   # Sandbox build for exercising destructive features (backup
   # import/export) in a fully isolated environment. Different bundle
@@ -77,6 +105,10 @@ targets:
     deploymentTarget: "15.0"
     sources:
       - path: Glotty
+        # Referenced only via INFOPLIST_FILE in the MAS config — keep it out
+        # of Compile Sources / Copy Resources for every target.
+        excludes:
+          - Info-MAS.plist
     settings:
       base:
         PRODUCT_NAME: GlottyLab
@@ -128,3 +160,22 @@ schemes:
         GlottyLab: all
     run:
       config: Debug
+  # Mac App Store build. Pick this scheme in Xcode (or
+  # `xcodebuild -scheme Glotty-AppStore`) to build the sandboxed,
+  # MAS-flagged variant. Test action stays on Debug.
+  Glotty-AppStore:
+    build:
+      targets:
+        Glotty: all
+    run:
+      config: Release-AppStore
+    profile:
+      config: Release-AppStore
+    analyze:
+      config: Release-AppStore
+    archive:
+      config: Release-AppStore
+    test:
+      config: Debug
+      targets:
+        - GlottyTests

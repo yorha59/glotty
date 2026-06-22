@@ -81,6 +81,17 @@ struct TutorResponse: Equatable {
     /// its reply. For v1 we honour at most one entry — multi-tool
     /// confirmation UX adds complexity that hasn't proven necessary.
     let toolCalls: [PendingToolCall]
+    /// Practice-session verdicts: which agenda item(s) the tutor just judged
+    /// and whether the user got them right. Drives spaced-repetition
+    /// rescheduling. Empty outside a practice session.
+    let practiceOutcomes: [PracticeOutcome]
+}
+
+/// One graded practice item the tutor reports in a practice session. `item` is
+/// the 1-based index into the session's agenda (`PopupView.practiceItems`).
+struct PracticeOutcome: Equatable, Sendable {
+    let item: Int
+    let correct: Bool
 }
 
 /// Prompt builder for the conversational chat tutor. The tutor picks
@@ -106,6 +117,7 @@ enum TutorPrompt {
         recentTopics: [String] = [],
         allowToolCalls: Bool = false,
         onboarding: Bool = false,
+        practiceItems: [PracticeItem] = [],
         persona: GlottyPersona = .current()
     ) -> String {
         // Onboarding chat (launched from the Welcome window's final
@@ -120,6 +132,18 @@ enum TutorPrompt {
             return MainActor.assumeIsolated {
                 onboardingPrompt(history: history, persona: persona)
             }
+        }
+
+        // Practice session — a structured drill on past mistakes, not free
+        // chat. Branches early so the friend-tone guardrails don't fight it.
+        if !practiceItems.isEmpty {
+            return practicePrompt(
+                history: history,
+                items: practiceItems,
+                targetLanguage: targetLanguage,
+                nativeLanguage: nativeLanguage,
+                persona: persona
+            )
         }
 
         let targetName = PolishPrompt.englishName(for: targetLanguage)
@@ -432,11 +456,24 @@ enum TutorPrompt {
                 ))
             }
         }
+        // Practice-session verdicts (silent — no confirm card). Each entry is
+        // `{item: <1-based number>, correct: <bool>}`.
+        var practiceOutcomes: [PracticeOutcome] = []
+        if let rawOutcomes = dict["practice_outcomes"] as? [[String: Any]] {
+            for entry in rawOutcomes {
+                guard let item = (entry["item"] as? NSNumber)?.intValue
+                        ?? (entry["item"] as? Int) else { continue }
+                let correct = (entry["correct"] as? Bool)
+                    ?? ((entry["correct"] as? NSNumber)?.boolValue ?? false)
+                practiceOutcomes.append(PracticeOutcome(item: item, correct: correct))
+            }
+        }
         return TutorResponse(
             reply: reply,
             correctedText: correctedText,
             correctionNote: correctionNote,
-            toolCalls: toolCalls
+            toolCalls: toolCalls,
+            practiceOutcomes: practiceOutcomes
         )
     }
 
@@ -458,6 +495,63 @@ enum TutorPrompt {
     /// We deliberately don't loop in the general conversational
     /// prompt's tone guardrails / recent-topics block — this chat
     /// is task-focused (collect 4 answers, exit), not free
+    /// Structured practice drill: re-present the user's past polish mistakes
+    /// one at a time (their draft + the meaning), have them re-attempt, judge
+    /// each attempt, and report verdicts via `practice_outcomes` so the app
+    /// reschedules them. The coach speaks in the user's native language for
+    /// clear feedback; the practiced phrases stay in their original language.
+    private static func practicePrompt(
+        history: [(role: String, text: String)],
+        items: [PracticeItem],
+        targetLanguage: String,
+        nativeLanguage: String,
+        persona: GlottyPersona
+    ) -> String {
+        let nativeName = PolishPrompt.englishName(for: nativeLanguage)
+        let agenda = items.enumerated().map { idx, item -> String in
+            let issues = item.issues.isEmpty ? "—" : item.issues.joined(separator: "; ")
+            let meaning = (item.meaning?.isEmpty == false) ? item.meaning! : "(not recorded)"
+            return """
+              \(idx + 1). They wrote: "\(item.draft)"
+                 They meant: \(meaning)
+                 Natural answer: "\(item.answer)"
+                 What was off: \(issues)
+            """
+        }.joined(separator: "\n")
+
+        let historyBlock = history.isEmpty
+            ? "(no messages yet)"
+            : history.map { "\($0.role.capitalized): \($0.text)" }.joined(separator: "\n\n")
+
+        return """
+        \(persona.systemDescription) Right now you are running a short PRACTICE SESSION — not free chat. The user previously polished some phrases that needed fixing; now they re-attempt them so the corrections stick. Speak in \(nativeName) so your feedback is clear, but the phrases they practice stay in the language of the "Natural answer".
+
+        How the drill works:
+        - The app ITSELF presents each scenario card (what they wrote + what they meant) — that is NOT your job. Do NOT present, re-present, or repeat a scenario's draft/meaning back.
+        - When the user replies with their attempt, judge whether it correctly and naturally expresses the intended meaning. An equally natural phrasing that differs from the reference still counts as correct — judge meaning + naturalness, not an exact match; be lenient on typos/tiny slips.
+        - Give a brief verdict (1-2 sentences) and STOP. If they were off, show the natural answer and the key fix. Do NOT add "ready for the next one?" or any transition, and do NOT congratulate them on finishing — the app shows the next scenario card (or the wrap-up) on its own. A missed item comes back around later in the session, so don't treat any item as the last.
+
+        AGENDA (\(items.count) item\(items.count == 1 ? "" : "s")):
+        \(agenda)
+
+        Conversation so far:
+        \(historyBlock)
+
+        Output ONLY a JSON object, nothing outside it:
+        {
+          "reply": "<your message in \(nativeName): present the next item, or give a verdict>",
+          "practice_outcomes": [{"item": <1-based item number>, "correct": <true|false>}]
+        }
+
+        Rules for `practice_outcomes`:
+        - Each user message is an attempt at the scenario the app just showed (the most recent "You wrote… / You meant…" card above). Judge it and add exactly ONE entry: the agenda item number it matches (by its draft/meaning) plus whether it was correct.
+        - If the user's message is NOT an attempt (e.g. they ask a question), answer it and set `practice_outcomes` to [] — the app keeps the same card up.
+        - Report each item at most once.
+
+        You NEVER present or re-present a scenario — the app shows every card itself. Every turn of yours reacts to the user's latest attempt: a short verdict plus the `practice_outcomes` entry. Don't restate the draft or meaning; don't number the next item.
+        """
+    }
+
     /// conversation. Keep the prompt short so the model stays on
     /// script.
     @MainActor

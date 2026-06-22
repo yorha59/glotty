@@ -23,6 +23,12 @@ buildServer.json
 .claude/
 session
 
+# Other coding-agent working dirs + skill lockfiles (caveman install, etc.)
+.trae/
+.qwen/
+.agents/
+skills-lock.json
+
 # Local DMG build output (scripts/make-dmg.sh)
 dist/
 

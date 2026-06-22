@@ -43,6 +43,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var mascot: MenuBarMascot?
     private var hotkey: FnLeaderHotkey?
+    #if MAS
+    /// MAS chat trigger — a Carbon global hotkey (⌘⌥C). Web uses the Fn-leader
+    /// chord instead, so this only exists in the App Store build.
+    private var chatHotkey: ChatHotkey?
+    #endif
     /// Accessed from MemorySettingsSection's drill-in to reopen a popup for
     /// a stored memory event. Internal-not-private so other module code can
     /// route into the same controller without an NSApp dance.
@@ -166,6 +171,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         PermissionCheck.registerSilentlyIfMissing()
         dbg("registerSilentlyIfMissing done")
 
+        #if MAS
+        // Mac App Store front-end. No global CGEvent tap and no AX hover —
+        // both are rejected under Guideline 2.4.5. Selection commands arrive
+        // through NSServices (right-click → Services, or the ⌘⌥ default
+        // shortcuts); chat (which needs no selection) arrives through a Carbon
+        // RegisterEventHotKey combo. Handlers live in the MAS extension
+        // (MASFrontend.swift) and route into the same handleFire/handleReplace.
+        NSApp.servicesProvider = self
+        NSUpdateDynamicServices()
+        dbg("MAS Services provider registered")
+        installChatHotkey()
+        dbg("MAS chat hotkey installed")
+        #else
         installHotkey()
         dbg("installHotkey done")
 
@@ -185,6 +203,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         watcher.start()
         hoverWatcher = watcher
         dbg("hover watcher started")
+        #endif
 
         // First-run walkthrough — no-op if the user has already finished
         // or dismissed it. Runs after permissions / hotkey setup so the
@@ -297,6 +316,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         handleFire(mode: .chat)
     }
 
+    /// Open the chat as a spaced-repetition practice session over the due
+    /// polish mistakes. No selection involved — the agenda comes from
+    /// PracticeStore.
+    @objc private func startPractice() {
+        let items = PracticeStore.shared.dueSession()
+        dbg("startPractice invoked — \(items.count) due items")
+        guard !items.isEmpty else {
+            HUDController.shared.toast(
+                String(localized: "Nothing to practice right now."),
+                systemImage: "checkmark.circle")
+            return
+        }
+        // Same teardown the other chord/menu actions do so the popup opens in
+        // agent mode (IME over full-screen).
+        AppActivation.dismissAllRegistered()
+        popup.show(sourceText: "", mode: .chat, practiceItems: items)
+    }
+
     @objc private func setModel(_ sender: NSMenuItem) {
         guard let id = sender.representedObject as? String,
             let entry = SettingsRegistry.find(id: "model") else { return }
@@ -351,6 +388,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         chat.image = NSImage(
             systemSymbolName: "bubble.left.and.bubble.right", accessibilityDescription: nil)
         menu.addItem(chat)
+
+        // Practice mistakes — a spaced-repetition drill on past polish mistakes
+        // that are due, run in the chat. Shows the due count; disabled when none.
+        let dueCount = PracticeStore.shared.dueCount()
+        let practiceTitle = dueCount > 0
+            ? String(format: String(localized: "Practice mistakes (%d due)"), dueCount)
+            : String(localized: "Practice mistakes")
+        let practice = NSMenuItem(
+            title: practiceTitle, action: #selector(startPractice), keyEquivalent: "")
+        practice.target = self
+        practice.isEnabled = dueCount > 0
+        practice.image = NSImage(
+            systemSymbolName: "checkmark.rectangle.stack", accessibilityDescription: nil)
+        menu.addItem(practice)
 
         // Model submenu — switch the active provider's model inline (built from
         // the same registry the chat's set_setting uses). Omitted when the
@@ -448,6 +499,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         WelcomeWindowController.shared.show()
     }
 
+    #if !MAS
     private func installHotkey() {
         let hk = FnLeaderHotkey()
         hk.onFire = { [weak self] in self?.handleFire(mode: .translate) }
@@ -465,8 +517,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             dbg("hotkey install failed: \(error). Input Monitoring permission likely denied.")
         }
     }
+    #else
+    /// MAS chat trigger. Carbon `RegisterEventHotKey` (⌘⌥C) — system-wide,
+    /// needs no Accessibility/Input-Monitoring permission, so it's App-Store
+    /// legal. Other actions (translate/explain/polish) come via NSServices.
+    private func installChatHotkey() {
+        let hk = ChatHotkey()
+        hk.onFire = { [weak self] in self?.handleFire(mode: .chat) }
+        do {
+            try hk.install()
+            chatHotkey = hk
+            dbg("chat hotkey (⌘⌥C) installed")
+        } catch {
+            dbg("chat hotkey install failed: \(error)")
+        }
+    }
+    #endif
 
-    private func handleFire(mode: PopupMode) {
+    /// `providedText` is the seam between the web and MAS front-ends. Web passes
+    /// nil → we pull the selection via the Accessibility grabber (Fn-leader / hover).
+    /// MAS passes the text the system handed us through an NSService, so no AX read
+    /// and no permission are needed.
+    func handleFire(mode: PopupMode, providedText: String? = nil) {
         // Welcome flow takes precedence over real Fn-leader actions.
         // During first-launch onboarding the user hasn't configured a
         // provider / polish target / dictionary selection — running
@@ -512,6 +584,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // and translate to verify the feature works end-to-end. The
         // card's controller owns the "guidance shown" flag and only
         // flips it on dismiss, so the gate fires at most once.
+        #if !MAS
+        // Web only: the dictionary-onboarding guide hinges on enumerating the
+        // user's activated macOS dictionaries. The MAS build can't enumerate
+        // them (no private `DCSGetActiveDictionaries`), so `availableDictionaries()`
+        // is always empty there — showing this guide every time would be wrong.
         if mode == .translate,
             !UserDefaults.standard.bool(forKey: TranslateGuideWindowController.userDefaultsKey),
             DictionaryLookup.availableDictionaries().isEmpty
@@ -519,6 +596,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             TranslateGuideWindowController.shared.show()
             return
         }
+        #endif
         // A popup's IME candidate window over another app's full-screen
         // Space works ONLY in agent (.accessory) mode — a regular-mode
         // app's panel has candidates suppressed there (still true on
@@ -534,13 +612,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // text and opening chat means "let's talk about this". With nothing
             // selected it opens the normal tutor chat (empty source text).
             if mode == .chat {
-                let sel = (await grabber.grab())?
+                let raw: String?
+                if let providedText { raw = providedText } else { raw = await grabber.grab() }
+                let sel = raw?
                     .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                 popup.show(sourceText: sel, mode: .chat)
                 return
             }
             let started = CFAbsoluteTimeGetCurrent()
-            guard let text = await grabber.grab(),
+            let grabbed: String?
+            if let providedText { grabbed = providedText } else { grabbed = await grabber.grab() }
+            guard let text = grabbed,
                 !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             else {
                 // Don't fail silently — a no-op here reads as "the app is
@@ -571,11 +653,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// `NSSpellChecker` (no LLM). Single suggestion → replace directly; multiple
     /// → float a clickable candidate list at the word and replace on pick.
     /// Word-scoped: a multi-word selection is rejected with a hint.
-    private func handleReplace() {
+    func handleReplace(providedText: String? = nil) {
         SpellCandidateController.shared.dismiss()
         AppActivation.dismissAllRegistered()
         Task { @MainActor in
-            guard let raw = await grabber.grab() else {
+            let grabbed: String?
+            if let providedText { grabbed = providedText } else { grabbed = await grabber.grab() }
+            guard let raw = grabbed else {
                 dbg("replace — no selection available")
                 HUDController.shared.showHint(
                     String(
