@@ -440,8 +440,20 @@ private struct WelcomeView: View {
     private var currentTitle: String {
         switch step {
         case 0: return OSLocalizer.string("Welcome to Glotty")
-        case 1: return OSLocalizer.string("1. Grant permissions")
-        case 2: return OSLocalizer.string("2.1 Translate (Fn → T)")
+        case 1:
+            #if MAS
+            // MAS has no permissions step — the App Store build triggers via
+            // the Services menu / shortcuts, which need no TCC grants.
+            return OSLocalizer.string("1. How Glotty works")
+            #else
+            return OSLocalizer.string("1. Grant permissions")
+            #endif
+        case 2:
+            #if MAS
+            return OSLocalizer.string("2.1 Translate (⌘⌥T)")
+            #else
+            return OSLocalizer.string("2.1 Translate (Fn → T)")
+            #endif
         // Use "Refine" instead of "Polish" as the verb here. Earlier
         // "Polish" was being preserved by the LLM as a proper-noun
         // brand name (and could also read as "Polish, the language"),
@@ -449,9 +461,19 @@ private struct WelcomeView: View {
         // — Chinese with the English word awkwardly preserved.
         // "Refine your draft" is unambiguously a verb-noun phrase and
         // translates cleanly to "润色你的草稿". The user-facing action
-        // chord (Fn → P) still points at the same Polish feature.
-        case 3: return OSLocalizer.string("2.2 Refine your draft (Fn → P)")
-        case 4: return OSLocalizer.string("2.3 Explain a word or phrase (Fn → E)")
+        // chord (Fn → P / ⌘⌥P) still points at the same Polish feature.
+        case 3:
+            #if MAS
+            return OSLocalizer.string("2.2 Refine your draft (⌘⌥P)")
+            #else
+            return OSLocalizer.string("2.2 Refine your draft (Fn → P)")
+            #endif
+        case 4:
+            #if MAS
+            return OSLocalizer.string("2.3 Explain a word or phrase (⌘⌥E)")
+            #else
+            return OSLocalizer.string("2.3 Explain a word or phrase (Fn → E)")
+            #endif
         case 5: return OSLocalizer.string("3. Set up your AI provider")
         default: return OSLocalizer.string("4. Let's get to know each other")
         }
@@ -460,15 +482,35 @@ private struct WelcomeView: View {
     private var currentBody: String {
         switch step {
         case 0:
+            #if MAS
+            return OSLocalizer.string("Glotty is a language tutor that lives in your menu bar. We'll tour the three core actions, set up an LLM, and chat briefly so I know how to address you.")
+            #else
             return OSLocalizer.string("Glotty is a language tutor that lives in your menu bar. We'll start with the permissions Glotty needs, then tour the three core actions, set up an LLM, and chat briefly so I know how to address you.")
+            #endif
         case 1:
+            #if MAS
+            return OSLocalizer.string("Glotty adds Translate, Explain, and Polish to the system Services menu — no special permissions needed. Select text in any app, then right-click → Services, or press the matching ⌘⌥ shortcut. Chat opens anywhere with ⌘⌥C.")
+            #else
             return OSLocalizer.string("Glotty reads the text you've selected, listens for the Fn-leader chord, and sends you the occasional chat reminder. The OS keeps these behind dedicated permission switches — grant each one in System Settings and the status here will update automatically.")
+            #endif
         case 2:
+            #if MAS
+            return OSLocalizer.string("Decode foreign text into a chosen language. Select any text, then press ⌘⌥T (or right-click → Services → Translate with Glotty). A popup shows the translation; press Esc to dismiss. Runs locally via Apple's translation — no LLM required.")
+            #else
             return OSLocalizer.string("Decode foreign text into a chosen language. Highlight any text, hold Fn, then within 600ms tap T. A popup shows the translation; press Esc to dismiss. Runs locally via Apple's translation — no LLM required.")
+            #endif
         case 3:
+            #if MAS
+            return OSLocalizer.string("Rewrite your own writing in idiomatic form. Select a draft, then press ⌘⌥P. Glotty returns 1–3 polished rewrites plus a list of grammar / word-choice issues. Press Esc to dismiss.")
+            #else
             return OSLocalizer.string("Rewrite your own writing in idiomatic form. Highlight a draft, hold Fn, tap P. Glotty returns 1–3 polished rewrites plus a list of grammar / word-choice issues. Press Esc to dismiss.")
+            #endif
         case 4:
+            #if MAS
+            return OSLocalizer.string("Deeper explanation in your native language — meaning, tone, usage, and how it shifts across contexts. Select a word, idiom, or sentence, then press ⌘⌥E. Glotty streams a four-section explanation. Press Esc to dismiss.")
+            #else
             return OSLocalizer.string("Deeper explanation in your native language — meaning, tone, usage, and how it shifts across contexts. Highlight a word, idiom, or sentence, hold Fn, tap E. Glotty streams a four-section explanation. Press Esc to dismiss.")
+            #endif
         case 5:
             return OSLocalizer.string("Polish, Explain, and Chat call out to an LLM, so Glotty needs at least one provider configured before they work. Pick a stock provider — OpenAI, Google Gemini, Z.AI, DeepSeek, Kimi — or paste any OpenAI-compatible endpoint and API key. Come back when you're done.")
         default:
@@ -488,13 +530,31 @@ private struct WelcomeView: View {
         case 0:
             importConfigCard
         case 1:
+            #if MAS
+            masServicesCard
+            #else
             permissionsChecklist
+            #endif
         case 2:
+            #if MAS
+            // No Fn chord on MAS to trigger the live demo, so reveal the
+            // pre-baked result as soon as the step appears.
+            translateDemo.onAppear { controller.revealedDemos.insert(.translate) }
+            #else
             translateDemo
+            #endif
         case 3:
+            #if MAS
+            polishDemo.onAppear { controller.revealedDemos.insert(.polish) }
+            #else
             polishDemo
+            #endif
         case 4:
+            #if MAS
+            explainDemo.onAppear { controller.revealedDemos.insert(.explain) }
+            #else
             explainDemo
+            #endif
         case 5:
             // Embed the real Language Model section inline so the user
             // configures their provider inside onboarding — no detour
@@ -579,6 +639,38 @@ private struct WelcomeView: View {
             importStatus = error.localizedDescription
         }
     }
+
+    #if MAS
+    /// MAS replacement for the permissions checklist. The App Store build needs
+    /// no TCC grants — it works through the system Services menu and ⌘⌥
+    /// shortcuts — so step 1 just shows how to trigger each action.
+    private var masServicesCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            masTriggerRow("textformat", OSLocalizer.string("Translate"), "⌘⌥T")
+            masTriggerRow("wand.and.stars", OSLocalizer.string("Polish"), "⌘⌥P")
+            masTriggerRow("character.book.closed", OSLocalizer.string("Explain"), "⌘⌥E")
+            masTriggerRow("bubble.left.and.text.bubble.right", OSLocalizer.string("Chat"), "⌘⌥C")
+            Text(OSLocalizer.string("Select text in any app, then choose Glotty from the Services menu (right-click → Services) or press the shortcut. Translate / Explain / Polish shortcuts are rebindable in System Settings → Keyboard → Keyboard Shortcuts → Services."))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 6)
+        }
+    }
+
+    private func masTriggerRow(_ symbol: String, _ label: String, _ shortcut: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .frame(width: 18)
+                .foregroundStyle(.tint)
+            Text(label)
+            Spacer()
+            Text(shortcut)
+                .font(.system(.body, design: .monospaced))
+                .foregroundStyle(.secondary)
+        }
+    }
+    #endif
 
     /// One row per system permission Glotty needs, with current
     /// status + an "Open System Settings" deep link to the right

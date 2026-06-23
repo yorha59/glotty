@@ -1,6 +1,9 @@
 import AppKit
 import SwiftUI
 import UserNotifications
+#if MAS
+import Carbon.HIToolbox
+#endif
 
 /// Thin wrapper around `Log.debug(.app, ...)` so existing call
 /// sites in this file don't need to be touched to gain the
@@ -44,9 +47,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var mascot: MenuBarMascot?
     private var hotkey: FnLeaderHotkey?
     #if MAS
-    /// MAS chat trigger — a Carbon global hotkey (⌘⌥C). Web uses the Fn-leader
-    /// chord instead, so this only exists in the App Store build.
-    private var chatHotkey: ChatHotkey?
+    /// MAS global hotkeys (Carbon `RegisterEventHotKey`). Web uses the Fn-leader
+    /// event tap instead, so these only exist in the App Store build.
+    /// `chatHotkey` = ⌘⌥C (open chat). `leaderHotkey` = ⌥A (command menu).
+    private var chatHotkey: CarbonHotkey?
+    private var leaderHotkey: CarbonHotkey?
     #endif
     /// Accessed from MemorySettingsSection's drill-in to reopen a popup for
     /// a stored memory event. Internal-not-private so other module code can
@@ -183,6 +188,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         dbg("MAS Services provider registered")
         installChatHotkey()
         dbg("MAS chat hotkey installed")
+        installLeaderHotkey()
+        dbg("MAS leader hotkey installed")
         #else
         installHotkey()
         dbg("installHotkey done")
@@ -518,11 +525,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     #else
-    /// MAS chat trigger. Carbon `RegisterEventHotKey` (⌘⌥C) — system-wide,
-    /// needs no Accessibility/Input-Monitoring permission, so it's App-Store
-    /// legal. Other actions (translate/explain/polish) come via NSServices.
+    /// MAS chat trigger: ⌘⌥C. Carbon `RegisterEventHotKey` — system-wide, no
+    /// Accessibility/Input-Monitoring permission, so it's App-Store legal.
     private func installChatHotkey() {
-        let hk = ChatHotkey()
+        let hk = CarbonHotkey(keyCode: kVK_ANSI_C, modifiers: cmdKey | optionKey,
+                              signature: 0x474C_5443 /* 'GLTC' */, id: 1)
         hk.onFire = { [weak self] in self?.handleFire(mode: .chat) }
         do {
             try hk.install()
@@ -531,6 +538,58 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
             dbg("chat hotkey install failed: \(error)")
         }
+    }
+
+    /// MAS leader: ⌥A. Opens a command menu (Translate / Explain / Polish /
+    /// Chat) — the App-Store-legal stand-in for the web build's Fn-leader HUD.
+    /// The chosen action runs on the CLIPBOARD, since the sandbox can't read
+    /// the live selection (no AX). Flow: select → ⌘C → ⌥A → tap a letter.
+    /// (Right-click → Services still acts on the true selection.)
+    private func installLeaderHotkey() {
+        let hk = CarbonHotkey(keyCode: kVK_ANSI_A, modifiers: optionKey,
+                              signature: 0x474C_544C /* 'GLTL' */, id: 2)
+        hk.onFire = { [weak self] in self?.showLeaderMenu() }
+        do {
+            try hk.install()
+            leaderHotkey = hk
+            dbg("leader hotkey (⌥A) installed")
+        } catch {
+            dbg("leader hotkey install failed: \(error)")
+        }
+    }
+
+    /// Native popup menu as the MAS "HUD". An `NSMenu` runs its own event loop
+    /// and captures the key/click selection itself — no focus steal, no global
+    /// key monitor (which would need permission + trip 2.4.5). Single letters
+    /// pick the command.
+    private func showLeaderMenu() {
+        let menu = NSMenu(title: "Glotty")
+        addLeaderItem(menu, String(localized: "Translate"), "t", #selector(leaderTranslate))
+        addLeaderItem(menu, String(localized: "Explain"),   "e", #selector(leaderExplain))
+        addLeaderItem(menu, String(localized: "Polish"),    "p", #selector(leaderPolish))
+        addLeaderItem(menu, String(localized: "Chat"),      "c", #selector(leaderChat))
+        menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+    }
+
+    private func addLeaderItem(_ menu: NSMenu, _ title: String, _ key: String, _ action: Selector) {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
+        item.keyEquivalentModifierMask = []   // bare letter selects
+        item.target = self
+        menu.addItem(item)
+    }
+
+    @objc private func leaderTranslate() { runLeader(.translate) }
+    @objc private func leaderExplain()   { runLeader(.explain) }
+    @objc private func leaderPolish()    { runLeader(.polish) }
+    @objc private func leaderChat()      { runLeader(.chat) }
+
+    /// Run a leader command on the current clipboard text (nil if empty, which
+    /// lets `handleFire` surface its own "nothing to act on" hint).
+    private func runLeader(_ mode: PopupMode) {
+        let clip = NSPasteboard.general.string(forType: .string)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = (clip?.isEmpty == false) ? clip : nil
+        handleFire(mode: mode, providedText: text)
     }
     #endif
 

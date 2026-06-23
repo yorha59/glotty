@@ -2703,6 +2703,7 @@ private struct PolishPromptsSection: View {
 }
 
 private struct HotkeySettingsSection: View {
+    #if !MAS
     @AppStorage(Keycode.translateDefaultsKey) private var translateKey: Int = Keycode.defaultTranslate
     @AppStorage(Keycode.explainDefaultsKey)   private var explainKey:   Int = Keycode.defaultExplain
     @AppStorage(Keycode.polishDefaultsKey)    private var polishKey:    Int = Keycode.defaultPolish
@@ -2723,8 +2724,12 @@ private struct HotkeySettingsSection: View {
         let codes = [translateKey, explainKey, polishKey, chatKey, replaceKey]
         return Set(codes).count < codes.count
     }
+    #endif
 
     var body: some View {
+        #if MAS
+        masBody
+        #else
         Section {
             LeaderRecorderRow(leader: leaderBinding,
                               defaultLeader: Keycode.defaultLeader)
@@ -2809,7 +2814,44 @@ private struct HotkeySettingsSection: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+        #endif
     }
+
+    #if MAS
+    /// App Store build: no Fn-leader and no hover. Translate / Explain / Polish
+    /// run on the selection through the macOS Services menu (right-click →
+    /// Services) with default ⌘⌥ shortcuts that macOS manages; chat is a
+    /// built-in ⌘⌥C global hotkey.
+    @ViewBuilder
+    private var masBody: some View {
+        Section {
+            LabeledContent("Translate") { shortcutTag("⌘⌥T") }
+            LabeledContent("Explain") { shortcutTag("⌘⌥E") }
+            LabeledContent("Polish") { shortcutTag("⌘⌥P") }
+            LabeledContent("Chat") { shortcutTag("⌘⌥C") }
+        } header: {
+            Text("Shortcuts")
+        } footer: {
+            Text("Translate, Explain, and Polish act on the selected text via the macOS Services menu (right-click → Services). Those shortcuts are managed by macOS — enable or rebind them in System Settings → Keyboard → Keyboard Shortcuts → Services. Chat (⌘⌥C) works anywhere and is built in.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+
+        Section {
+            Button("Open Keyboard Shortcuts…") {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+        }
+    }
+
+    private func shortcutTag(_ s: String) -> some View {
+        Text(verbatim: s)
+            .font(.system(.body, design: .monospaced))
+            .foregroundStyle(.secondary)
+    }
+    #endif
 }
 
 /// Row for picking the leader (modifier-only). Two modes: dropdown (instant pick)
