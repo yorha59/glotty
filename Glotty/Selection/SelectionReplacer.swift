@@ -23,7 +23,7 @@ final class SelectionReplacer {
     /// replacing the selection. There's no way to replace selected scrollback
     /// text in a terminal, so we must NOT paste there; the caller copies the
     /// correction to the clipboard instead.
-    private static let terminalBundleIDs: Set<String> = [
+    static let terminalBundleIDs: Set<String> = [
         "com.apple.Terminal",
         "com.googlecode.iterm2",
         "co.zeit.hyper",

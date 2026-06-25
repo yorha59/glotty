@@ -2,9 +2,12 @@ import Foundation
 import AppKit
 import ApplicationServices
 
-/// Two-stage selection grab. Tries the Accessibility API first (zero clipboard pollution,
-/// works in most native Cocoa apps). Falls back to synthesizing Cmd+C and reading the
-/// pasteboard for apps that don't expose AX (Electron, some Java).
+/// Three-stage selection grab. Tries the Accessibility API first (zero clipboard
+/// pollution, works in most native Cocoa apps). Falls back to synthesizing Cmd+C
+/// and reading the pasteboard for apps that don't expose AX (Electron, some
+/// Java). Finally, for apps with Secure Keyboard Entry that drop the synthetic
+/// Cmd+C (Warp and other terminals), falls back to whatever the user copied
+/// themselves with a real Cmd+C — there the flow is "⌘C, then trigger".
 final class SelectionGrabber {
     func grab() async -> String? {
         if let text = grabFromAccessibility(), !text.isEmpty {
@@ -186,14 +189,31 @@ final class SelectionGrabber {
         let changed = pasteboard.changeCount != savedChangeCount
         let grabbed = pasteboard.string(forType: .string)
 
-        // Restore the user's original clipboard
-        if let savedString {
-            pasteboard.clearContents()
-            pasteboard.setString(savedString, forType: .string)
+        if changed, let grabbed, !grabbed.isEmpty {
+            // The synthetic copy landed — restore the user's original clipboard
+            // so we don't pollute it.
+            if let savedString {
+                pasteboard.clearContents()
+                pasteboard.setString(savedString, forType: .string)
+            }
+            return grabbed
         }
 
-        guard changed, let grabbed, !grabbed.isEmpty else { return nil }
-        return grabbed
+        // The synthetic Cmd+C changed nothing. In a terminal the highlighted
+        // text isn't reachable: terminals expose no AX selected-text and they
+        // drop our injected keystroke (Warp, iTerm, etc.). Fall back to whatever
+        // the user already copied with a *real* Cmd+C — the terminal flow is
+        // "⌘C, then trigger". We leave the clipboard untouched: it's their own
+        // content. Gated on a terminal front-app so a plain "nothing selected"
+        // in a normal app still returns nil (callers show the hint) instead of
+        // silently acting on a stale clipboard.
+        let app = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? ""
+        if SelectionReplacer.terminalBundleIDs.contains(app),
+           let savedString,
+           !savedString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return savedString
+        }
+        return nil
     }
 
     /// Marker stamped on the CGEvents we synthesize for the clipboard
