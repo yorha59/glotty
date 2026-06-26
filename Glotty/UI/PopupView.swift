@@ -1997,7 +1997,6 @@ struct PopupView: View {
                 Button("Send") { submitTutor() }
                     .buttonStyle(.borderedProminent)
                     .disabled(tutorInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                              || tutorStatus.isWorking
                               || tutorThread.isEmpty)
             }
             // Key-shortcut hint. Uses the Return (⏎) and Shift (⇧)
@@ -2148,8 +2147,7 @@ struct PopupView: View {
                         }
                     Button("Send") { submitPolishChat() }
                         .buttonStyle(.borderedProminent)
-                        .disabled(polishChatInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                                  || polishChatStatus.isWorking)
+                        .disabled(polishChatInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
 
                 HStack {
@@ -2449,7 +2447,10 @@ struct PopupView: View {
 
     private func submitPolishChat() {
         let trimmed = polishChatInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, !polishChatStatus.isWorking else { return }
+        // Allow sending even while a turn is in flight: bumping the run counter
+        // below supersedes the in-flight (possibly stalled) turn via `.task(id:)`,
+        // so a hung stream can't leave Send permanently disabled.
+        guard !trimmed.isEmpty else { return }
         polishChatThread.append(PolishChatTurn(role: .user, text: trimmed))
         polishChatInput = ""
         polishChatRunCounter += 1
@@ -2627,6 +2628,9 @@ struct PopupView: View {
             // call the LLM.
             triggerMemoryExtractionIfApplicable()
         } catch {
+            // Superseded by a newer send (the run-counter task id changed and
+            // SwiftUI cancelled this turn) — the new run owns the thread/status.
+            if Task.isCancelled { return }
             // Drop the now-empty assistant placeholder on error so retry can
             // re-fire from the same user turn without an empty bubble in the
             // middle of the thread.
@@ -3358,7 +3362,11 @@ struct PopupView: View {
     /// in flight.
     private func submitTutor() {
         let trimmed = tutorInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, !tutorStatus.isWorking else { return }
+        // Allow sending even while a previous turn is in flight: bumping
+        // `tutorRunCounter` below changes the `.task(id:)` id, so SwiftUI
+        // cancels the in-flight (possibly stalled) turn and starts a fresh
+        // one. Without this, a hung/slow stream left Send permanently disabled.
+        guard !trimmed.isEmpty else { return }
         let userTurn = TutorTurn(role: .user, reply: trimmed)
         tutorThread.append(userTurn)
         persistTutorTurn(userTurn)
@@ -3715,9 +3723,13 @@ struct PopupView: View {
                 }
             }
         } catch {
+            // A newer Send superseded this turn (SwiftUI cancelled it when the
+            // run-counter task id changed) — don't clobber the new run's status.
+            if Task.isCancelled { return }
             tutorStatus = .failed(error.localizedDescription)
             return
         }
+        if Task.isCancelled { return }
         Self.dbg("tutor raw=\(raw.prefix(800))")
 
         guard let parsed = TutorPrompt.parse(raw) else {
