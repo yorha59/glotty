@@ -61,7 +61,7 @@ if [ "$REMOTE_SHA" = "$LAST_SHA" ]; then
     exit 0
 fi
 
-log "==> New commit ${REMOTE_SHA:0:8} (was ${LAST_SHA:0:8:-none}); building"
+log "==> New commit ${REMOTE_SHA:0:8} (was ${LAST_SHA:0:8}); building"
 gitea_status pending "Building ${REMOTE_SHA:0:8}"
 
 git fetch origin main >> "$LOG" 2>&1
