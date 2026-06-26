@@ -567,6 +567,52 @@
         }
       }
     },
+    "1. How Glotty works": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Wie Glotty funktioniert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Cómo funciona Glotty"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Comment fonctionne Glotty"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Glottyの仕組み"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Glotty 작동 방식"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Glotty 的工作原理"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1. Glotty 如何運作"
+          }
+        }
+      }
+    },
     "1. In System Settings → Accessibility, click the (–) minus button to remove every Glotty entry, then relaunch Glotty and grant fresh.": {
       "localizations": {
         "de": {
@@ -917,6 +963,52 @@
         }
       }
     },
+    "2.1 Translate (⌘⌥T)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.1 Übersetzen (⌘⌥T)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.1 Traducir (⌘⌥T)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.1 Traduire (⌘⌥T)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.1 翻訳 (⌘⌥T)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.1 번역 (⌘⌥T)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.1 翻译 (⌘⌥T)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.1 翻譯 (⌘⌥T)"
+          }
+        }
+      }
+    },
     "2.2 Refine your draft (Fn → P)": {
       "localizations": {
         "de": {
@@ -963,6 +1055,52 @@
         }
       }
     },
+    "2.2 Refine your draft (⌘⌥P)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.2 Entwurf verfeinern (⌘⌥P)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.2 Refinar tu borrador (⌘⌥P)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.2 Affiner votre brouillon (⌘⌥P)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.2 下書きを仕上げる (⌘⌥P)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.2 초안 다듬기 (⌘⌥P)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.2 优化文稿 (⌘⌥P)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.2 修訂草稿 (⌘⌥P)"
+          }
+        }
+      }
+    },
     "2.3 Explain a word or phrase (Fn → E)": {
       "localizations": {
         "de": {
@@ -1005,6 +1143,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "2.3 解釋單字或片語 (Fn → E)"
+          }
+        }
+      }
+    },
+    "2.3 Explain a word or phrase (⌘⌥E)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.3 Ein Wort oder eine Phrase erklären (⌘⌥E)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.3 Explicar una palabra o frase (⌘⌥E)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.3 Expliquer un mot ou une expression (⌘⌥E)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.3 単語や句を説明 (⌘⌥E)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.3 단어 또는 구 설명하기 (⌘⌥E)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.3 解释单词或短语 (⌘⌥E)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.3 解釋單字或片語 (⌘⌥E)"
           }
         }
       }
@@ -1702,6 +1886,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "使用中的記憶內容"
+          }
+        }
+      }
+    },
+    "Active — click to switch to Global only": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktiv — klicken, um nur auf Global umzuschalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activo — haz clic para cambiar a Solo global"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actif — cliquez pour passer en mode Global uniquement"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクティブ — クリックしてグローバルのみに切り替える"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "활성 — 클릭하여 전용 설정으로 전환"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已激活 — 点击切换至仅全局"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作用中 — 點擊切換僅為全域"
           }
         }
       }
@@ -5361,6 +5591,52 @@
         }
       }
     },
+    "Click to make this the active context": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klicken, um dies zum aktiven Kontext zu machen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haz clic para convertirlo en el contexto activo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cliquez pour définir ce contexte comme actif"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クリックしてアクティブなコンテキストにする"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클릭하여 이것을 활성 컨텍스트로 설정"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点击将其设为当前上下文"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點擊將此設定為作用中的內文"
+          }
+        }
+      }
+    },
     "Close": {
       "localizations": {
         "de": {
@@ -6242,6 +6518,52 @@
         }
       }
     },
+    "Decode foreign text into a chosen language. Select any text, then press ⌘⌥T (or right-click → Services → Translate with Glotty). A popup shows the translation; press Esc to dismiss. Runs locally via Apple's translation — no LLM required.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fremden Text in eine ausgewählte Sprache decodieren. Wählen Sie beliebigen Text aus, dann drücken Sie ⌘⌥T (oder Rechtsklick → Dienste → Übersetzen mit Glotty). Ein Popup zeigt die Übersetzung an; drücken Sie Esc, um es zu schließen. Läuft lokal über Apples Übersetzung — kein LLM erforderlich."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descodificar texto extranjero a un idioma elegido. Selecciona cualquier texto, luego presiona ⌘⌥T (o haz clic derecho → Servicios → Traducir con Glotty). Un popup muestra la traducción; presiona Esc para descartar. Se ejecuta localmente mediante la traducción de Apple — no se requiere LLM."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Décoder du texte étranger dans une langue choisie. Sélectionnez n'importe quel texte, puis appuyez sur ⌘⌥T (ou clic droit → Services → Traduire avec Glotty). Une fenêtre contextuelle affiche la traduction ; appuyez sur Esc pour la fermer. S'exécute localement via la traduction d'Apple — pas de LLM requis."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択した言語に外国語のテキストをデコードします。任意のテキストを選択し、⌘⌥Tを押す（または右クリック → サービス → Glottyで翻訳）。ポップアップが翻訳を表示します；Escを押して閉じます。Appleの翻訳をローカルで実行 — LLMは不要です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택한 언어로 외국 텍스트 해독. 모든 텍스트를 선택한 다음 ⌘⌥T를 누르거나(오른쪽 클릭 → 서비스 → Glotty로 번역) 실행합니다. 팝업이 번역을 표시하며, Esc를 누르면 닫힙니다. Apple 번역을 통해 로컬로 실행됩니다 — LLM이 필요하지 않습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将外语文本解码成所选语言。选择任意文本，然后按 ⌘⌥T（或右键单击 → 服务 → 使用 Glotty 翻译）。弹出窗口显示翻译；按 Esc 关闭。通过 Apple 的翻译本地运行 — 无需 LLM。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將外文解碼為選取的語言。選取任何文字，然後按下 ⌘⌥T (或右鍵 → 服務 → 使用 Glotty 翻譯)。彈出視窗會顯示翻譯結果；按下 Esc 關閉。透過 Apple 的翻譯技術在本地執行 — 不需要 LLM。"
+          }
+        }
+      }
+    },
     "Decrypt": {
       "localizations": {
         "de": {
@@ -6383,6 +6705,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "以你的母語深入解說 —— 含義、語氣、用法以及在不同語境下的變化。選取單字、慣用語或句子,按住 Fn,按 E。Glotty 會分四個段落串流回應。按 Esc 關閉。"
+          }
+        }
+      }
+    },
+    "Deeper explanation in your native language — meaning, tone, usage, and how it shifts across contexts. Select a word, idiom, or sentence, then press ⌘⌥E. Glotty streams a four-section explanation. Press Esc to dismiss.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiefere Erklärung in Ihrer Muttersprache — Bedeutung, Ton, Verwendung und wie sie sich über Kontexte verschiebt. Wählen Sie ein Wort, einen Idiom oder einen Satz aus, dann drücken Sie ⌘⌥E. Glotty streamt eine viergeteilte Erklärung. Drücken Sie Esc, um sie zu schließen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explicación más profunda en tu idioma nativo — significado, tono, uso y cómo varía en diferentes contextos. Selecciona una palabra, expresión o frase, luego presiona ⌘⌥E. Glotty transmite una explicación de cuatro secciones. Presiona Esc para descartar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explication approfondie dans votre langue native — signification, ton, utilisation, et comment cela varie selon les contextes. Sélectionnez un mot, une expression ou une phrase, puis appuyez sur ⌘⌥E. Glotty diffuse une explication en quatre parties. Appuyez sur Esc pour fermer."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "母国語でのより深い説明 — 意味、トーン、用法、そして文脈ごとの変化。単語、慣用句、または文を選択し、⌘⌥Eを押します。Glottyが4つのセクションで説明をストリーミング表示します。Escを押して閉じます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모국어로 더 깊은 설명 — 의미, 어조, 용법 및 컨텍스트 간 변화 방식. 단어, 관용구 또는 문장을 선택한 다음 ⌘⌥E를 누릅니다. Glotty가 네 부분으로 구성된 설명을 스트리밍합니다. Esc를 누르면 닫힙니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以您的母语提供更深入的解释 — 含义、语调、用法以及它在不同上下文中的变化。选择一个单词、习语或句子，然后按 ⌘⌥E。Glotty 会提供四个部分的解释。按 Esc 关闭。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以您的母語進行更深層的解釋 — 含義、語調、用法，以及在不同情境中的變化。選取單字、成語或句子，然後按下 ⌘⌥E。Glotty 會串流四個區段的解釋。按下 Esc 關閉。"
           }
         }
       }
@@ -7491,6 +7859,52 @@
         }
       }
     },
+    "Draft from the name (uses your AI provider)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entwurf aus dem Namen (verwendet Ihren KI-Anbieter)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Borrador desde el nombre (utiliza tu proveedor de IA)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brouillon à partir du nom (utilise votre fournisseur d'IA)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前からドラフトを作成（ご利用のAIプロバイダーを使用）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름에서 초안 생성 (사용자의 AI 제공자 사용)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "根据名称生成草稿 (使用您的 AI 提供商)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從名稱草擬 (使用您的 AI 供應商)"
+          }
+        }
+      }
+    },
     "Drag to reorder": {
       "localizations": {
         "de": {
@@ -7579,6 +7993,98 @@
           "stringUnit": {
             "state": "translated",
             "value": "編輯"
+          }
+        }
+      }
+    },
+    "Edit context": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontext bearbeiten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editar contexto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier le contexte"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンテキストを編集"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "맥락 편집"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编辑上下文"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯內容"
+          }
+        }
+      }
+    },
+    "Edit name & intro": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name & Einleitung bearbeiten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editar nombre e introducción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier le nom et l'introduction"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前と紹介文を編集"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름 & 소개 편집"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编辑名称和简介"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯名稱與介紹"
           }
         }
       }
@@ -9575,6 +10081,52 @@
         }
       }
     },
+    "Glotty adds Translate, Explain, and Polish to the system Services menu — no special permissions needed. Select text in any app, then right-click → Services, or press the matching ⌘⌥ shortcut. Chat opens anywhere with ⌘⌥C.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty fügt Übersetzen, Erklären und Optimieren zum Systemdienste-Menü hinzu — keine besonderen Berechtigungen erforderlich. Wählen Sie Text in einer beliebigen App aus, dann rechtsklicken → Dienste, oder drücken Sie die zugehörige ⌘⌥-Tastenkombination. Chat öffnet überall mit ⌘⌥C."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty agrega Traducir, Explicar y Pulir al menú Servicios del sistema — no se requieren permisos especiales. Seleccione texto en cualquier aplicación, luego haga clic con el botón derecho → Servicios, o presione el atajo ⌘⌥ correspondiente. El chat se abre en cualquier lugar con ⌘⌥C."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty ajoute Traduire, Expliquer et Corriger au menu Services du système — aucun droit d'accès spécial n'est nécessaire. Sélectionnez du texte dans n'importe quelle application, puis clic droit → Services, ou appuyez sur le raccourci correspondant ⌘⌥. Le chat s'ouvre n'importe où avec ⌘⌥C."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glottyはシステムの[サービス]メニューに翻訳、説明、校正を追加します — 特別な権限は不要です。任意のアプリでテキストを選択し、右クリック→[サービス]、または対応する⌘⌥ショートカットを押します。⌘⌥Cでどこでもチャットを開けます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty가 시스템 서비스 메뉴에 번역, 설명, 다듬기 기능을 추가합니다 — 특별한 권한이 필요하지 않습니다. 어떤 앱에서든 텍스트를 선택한 후 마우스 오른쪽 버튼 → 서비스를 클릭하거나 해당 ⌘⌥ 단축키를 누르세요. ⌘⌥C를 누르면 어디서나 채팅이 열립니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 将\"翻译\"、\"解释\"和\"润色\"添加到系统服务菜单中 — 无需特殊权限。在任何应用中选择文本，然后右键单击 → 服务，或按下对应的 ⌘⌥ 快捷键。使用 ⌘⌥C 可在任何位置打开聊天窗口。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 將「翻譯」、「解釋」與「潤色」新增至系統服務功能表中 — 無需特殊權限。在任何應用程式中選取文字，然後右鍵點擊 → 服務，或按下對應的 ⌘⌥ 快捷鍵。隨處開啟對話視窗：⌘⌥C。"
+          }
+        }
+      }
+    },
     "Glotty is a language tutor that lives in your menu bar. We'll quickly tour the three core actions, then have you set up an LLM, then chat briefly so I know how to address you.": {
       "extractionState": "manual",
       "localizations": {
@@ -9670,6 +10222,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "Glotty 是一個位於您選單列的語言學習軟體。我們將先設定 Glotty 所需的權限，然後介紹三個核心功能、設定 LLM，並簡短對話讓我知道如何稱呼您。"
+          }
+        }
+      }
+    },
+    "Glotty is a language tutor that lives in your menu bar. We'll tour the three core actions, set up an LLM, and chat briefly so I know how to address you.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty ist ein Sprachtutor, der in Ihrer Menüleiste lebt. Wir werden die drei Kernaktionen erkunden, ein LLM einrichten und kurz chatten, damit ich weiß, wie ich Sie ansprechen soll."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty es un tutor de idiomas que vive en tu barra de menús. Recorreremos las tres acciones principales, configuraremos un LLM y conversaremos brevemente para que sepa cómo dirigirme a usted."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty est un tuteur de langue qui vit dans votre barre de menus. Nous allons explorer les trois actions de base, configurer un LLM et discuter brièvement pour que je sache comment vous adresser."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glottyはメニューバーに常駐する言語学習ツールです。3つの主要機能、LLMの設定、そして簡潔なチャットを通して、あなたへの呼び方を理解します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty는 메뉴 바에 위치한 언어 튜터입니다. 세 가지 핵심 기능을 살펴보고, LLM을 설정하고, 간단한 채팅을 통해 당신을 어떻게 부를지 알아보겠습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 是一个位于菜单栏的语言导师。我们将介绍三个核心操作，设置一个 LLM，并短暂聊天，以便我了解如何称呼您。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glotty 是一個位於您功能列的語言學習工具。我們將介紹三個核心功能、設定 LLM，並進行簡短對話，讓我知道如何稱呼您。"
           }
         }
       }
@@ -15809,6 +16407,52 @@
         }
       }
     },
+    "Open Keyboard Shortcuts…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tastenkürzel öffnen…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir atajos de teclado…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir les raccourcis clavier…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーボードショートカットを開く…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "키보드 단축키 열기…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开键盘快捷键…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟鍵盤快捷鍵…"
+          }
+        }
+      }
+    },
     "Open Language Model settings": {
       "extractionState": "manual",
       "localizations": {
@@ -20090,6 +20734,52 @@
         }
       }
     },
+    "Rewrite your own writing in idiomatic form. Select a draft, then press ⌘⌥P. Glotty returns 1–3 polished rewrites plus a list of grammar / word-choice issues. Press Esc to dismiss.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schreiben Sie Ihren eigenen Text idiomatisch um. Wählen Sie einen Entwurf aus und drücken Sie dann ⌘⌥P. Glotty gibt 1–3 optimierte Neufassungen plus eine Liste mit Grammatik-/Wortwahlproblemen zurück. Drücken Sie Esc, um zu schließen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reescribe tu propio texto en forma idiomática. Selecciona un borrador, luego presiona ⌘⌥P. Glotty devuelve 1-3 reescrituras pulidas más una lista de problemas de gramática / elección de palabras. Presiona Esc para descartar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réécrivez votre propre écriture de manière idiomatique. Sélectionnez un brouillon, puis appuyez sur ⌘⌥P. Glotty renvoie 1 à 3 réécritures corrigées ainsi qu'une liste de problèmes de grammaire / choix de mots. Appuyez sur Esc pour fermer."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分の文章を自然な形で書き直します。ドラフトを選択し、⌘⌥Pを押します。Glottyは1〜3つの洗練された書き直し案と文法/単語選択の問題リストを返します。Escを押して閉じます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자신의 글을 자연스러운 형식으로 다시 씁니다. 초안을 선택한 후 ⌘⌥P를 누르세요. Glotty는 1-3개의 다듬된 재작성본과 문법/단어 선택 문제 목록을 반환합니다. Esc를 누르면 닫힙니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以地道的形式重写您自己的写作内容。选择一个草稿，然后按下 ⌘⌥P。Glotty 将返回 1-3 个润色后的重写版本，外加一份语法 / 用词问题清单。按 Esc 键关闭。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以地道的風格改寫您的文章。選取草稿，然後按下 ⌘⌥P。Glotty 將返回 1–3 個潤色後的版本，並附上文法 / 用詞問題清單。按下 Esc 關閉。"
+          }
+        }
+      }
+    },
     "Runs Apple's on-device foundation model. No API key, no network — your text never leaves the Mac, and it works offline. Requires an Apple Silicon Mac with Apple Intelligence enabled (macOS 26+). Output quality is lighter than the larger cloud models; switch providers above for the most demanding polish.": {
       "localizations": {
         "de": {
@@ -20504,6 +21194,52 @@
         }
       }
     },
+    "Select text in any app, then choose Glotty from the Services menu (right-click → Services) or press the shortcut. Translate / Explain / Polish shortcuts are rebindable in System Settings → Keyboard → Keyboard Shortcuts → Services.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen Sie Text in einer beliebigen App aus, dann wählen Sie Glotty aus dem Dienste-Menü (rechtsklicken → Dienste) oder drücken Sie die Tastenkombination. Übersetzen / Erklären / Optimieren-Tastenkürzel können in Systemeinstellungen → Tastatur → Tastenkürzel → Dienste neu zugewiesen werden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selecciona texto en cualquier aplicación, luego elige Glotty del menú Servicios (clic derecho → Servicios) o presiona el atajo. Los atajos de Traducir / Explicar / Pulir se pueden reasignar en Configuración del sistema → Teclado → Atajos de teclado → Servicios."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sélectionnez du texte dans n'importe quelle application, puis choisissez Glotty dans le menu Services (clic droit → Services) ou appuyez sur le raccourci. Les raccourcis Traduire / Expliquer / Corriger peuvent être reconfigurés dans Paramètres système → Clavier → Raccourcis clavier → Services."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任意のアプリでテキストを選択し、[サービス]メニューからGlottyを選択（右クリック→[サービス]）またはショートカットを押します。翻訳/説明/校正のショートカットは、システム環境設定→キーボード→キーボードショートカット→[サービス]で再割り当てできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어떤 앱에서든 텍스트를 선택한 후 서비스 메뉴에서 Glotty를 선택하거나(마우스 오른쪽 버튼 → 서비스) 단축키를 누르세요. 번역/설명/다듬기 단축키는 시스템 설정 → 키보드 → 키보드 단축키 → 서비스에서 재할당할 수 있습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在任何应用中选择文本，然后从服务菜单中选择 Glotty（右键单击 → 服务）或按下快捷键。翻译 / 解释 / 润色快捷键可在\"系统设置\" → \"键盘\" → \"键盘快捷键\" → \"服务\"中重新绑定。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在任何應用程式中選取文字，然後從服務功能表中選擇 Glotty (右鍵點擊 → 服務) 或按下快捷鍵。「翻譯」/「解釋」/「潤色」的快捷鍵可以在「系統設定」→「鍵盤」→「鍵盤快捷鍵」→「服務」中重新綁定。"
+          }
+        }
+      }
+    },
     "Selected provider, endpoints, models, custom providers.": {
       "localizations": {
         "de": {
@@ -20776,6 +21512,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "設定…"
+          }
+        }
+      }
+    },
+    "Short intro": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurze Einführung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Introducción breve"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Introduction rapide"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "短い紹介"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "간단한 소개"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "简短介绍"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "簡介"
           }
         }
       }
@@ -23490,6 +24272,52 @@
         }
       }
     },
+    "Translate, Explain, and Polish act on the selected text via the macOS Services menu (right-click → Services). Those shortcuts are managed by macOS — enable or rebind them in System Settings → Keyboard → Keyboard Shortcuts → Services. Chat (⌘⌥C) works anywhere and is built in.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übersetzen, Erklären und Verbessern wirken auf den ausgewählten Text über das macOS-Menü 'Dienste' (Rechtsklick → Dienste). Diese Tastenkürzel werden von macOS verwaltet – aktivieren Sie sie oder ordnen Sie sie in Systemeinstellungen → Tastatur → Tastenkürzel → Dienste neu zu. Chat (⌘⌥C) funktioniert überall und ist fest integriert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traducir, Explicar y Pulir actúan sobre el texto seleccionado a través del menú Servicios de macOS (clic derecho → Servicios). Esos accesos directos son gestionados por macOS — habilítalos o vuelve a asignarlos en Configuración del sistema → Teclado → Atajos de teclado → Servicios. Chat (⌘⌥C) funciona en cualquier lugar y está integrado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translate, Explain, and Polish agissent sur le texte sélectionné via le menu Services de macOS (clic droit → Services). Ces raccourcis sont gérés par macOS — activez ou réattribuez-les dans les Paramètres Système → Clavier → Raccourcis clavier → Services. Chat (⌘⌥C) fonctionne partout et est intégré."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻訳、説明、推敲は、macOS サービスメニュー（右クリック → サービス）から選択したテキストに対して実行されます。これらのショートカットは macOS によって管理されます — システム設定 → キーボード → キーボードショートカット → サービスで有効化または再バインドしてください。チャット (⌘⌥C) はどこでも動作し、組み込み機能です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "번역, 설명, 다듬기는 macOS 서비스 메뉴(마우스 오른쪽 클릭 → 서비스)에서 선택한 텍스트에 작동합니다. 해당 단축키는 macOS에서 관리되므로 시스템 설정 → 키보드 → 키보드 단축키 → 서비스에서 활성화하거나 다시 바인딩할 수 있습니다. 채팅(⌘⌥C)은 어디서나 작동하며 기본으로 제공됩니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译、解释和润色功能通过 macOS 服务菜单（右键点击 → 服务）对选定的文本执行操作。这些快捷键由 macOS 管理 — 在 系统设置 → 键盘 → 键盘快捷键 → 服务 中启用或重新绑定它们。聊天 (⌘⌥C) 可在任何地方使用且为内置功能。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻譯、解釋與潤飾功能透過 macOS 的功能表選項對所選文字進行操作 (右鍵點擊 → 功能)。這些快捷鍵由 macOS 管理，可於「系統設定」→「鍵盤」→「快捷鍵」→「服務」中啟用或重新設定。聊天功能 (⌘⌥C) 可在任何地方使用，為內建功能。"
+          }
+        }
+      }
+    },
     "Translating UI… %@ / %@": {
       "localizations": {
         "de": {
@@ -24286,6 +25114,52 @@
         }
       }
     },
+    "What this context is for (optional)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wozu dieser Kontext dient (optional)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para qué sirve este contexto (opcional)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À quoi ce contexte sert (facultatif)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このコンテキストの用途（オプション）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 컨텍스트의 용도 (선택 사항)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此上下文的用途（可选）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此用途的說明 (選填)"
+          }
+        }
+      }
+    },
     "What's in the bundle": {
       "localizations": {
         "de": {
@@ -24746,6 +25620,52 @@
         }
       }
     },
+    "c": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "C"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "c"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "c"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "c"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "c"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "c"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定"
+          }
+        }
+      }
+    },
     "checkmark": {
       "localizations": {
         "de": {
@@ -24926,6 +25846,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "天對話"
+          }
+        }
+      }
+    },
+    "e": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯"
           }
         }
       }
@@ -25528,6 +26494,52 @@
         }
       }
     },
+    "p": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "P"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "p"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "p"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "p"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "p"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "p"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "潤飾"
+          }
+        }
+      }
+    },
     "plus": {
       "localizations": {
         "de": {
@@ -25708,6 +26720,98 @@
           "stringUnit": {
             "state": "translated",
             "value": "專案"
+          }
+        }
+      }
+    },
+    "t": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "T"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "t"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "t"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "t"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "t"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "t"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻譯"
+          }
+        }
+      }
+    },
+    "textformat": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "textformat"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "textformat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "textformat"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "textformat"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "textformat"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "textformat"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "textformat"
           }
         }
       }
@@ -25899,6 +27003,190 @@
           "stringUnit": {
             "state": "translated",
             "value": "\"%@\" 的拼寫正確。"
+          }
+        }
+      }
+    },
+    "⌘⌥C": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥C"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥C"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥C"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥C"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥C"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥C"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥C"
+          }
+        }
+      }
+    },
+    "⌘⌥E": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥E"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥E"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥E"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥E"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥E"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥E"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥E"
+          }
+        }
+      }
+    },
+    "⌘⌥P": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥P"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥P"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥P"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥P"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥P"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥P"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥P"
+          }
+        }
+      }
+    },
+    "⌘⌥T": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥T"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥T"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥T"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥T"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥T"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥T"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⌥T"
           }
         }
       }

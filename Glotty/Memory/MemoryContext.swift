@@ -14,15 +14,22 @@ struct MemoryContext: Codable, Identifiable, Sendable, Hashable {
     /// `.chatOnly`. Optional so contexts saved before this field existed
     /// decode cleanly; read via `effectiveInjection`.
     var injection: MemoryInjectionScope?
+    /// Optional user-written description of what this context is for (shown
+    /// under its name in Settings). Optional so contexts saved before this
+    /// field existed decode cleanly. Empty/whitespace is normalized to nil.
+    var note: String?
 
     init(id: UUID = UUID(),
          name: String,
          createdAt: Date = Date(),
-         injection: MemoryInjectionScope? = nil) {
+         injection: MemoryInjectionScope? = nil,
+         note: String? = nil) {
         self.id = id
         self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         self.createdAt = createdAt
         self.injection = injection
+        let trimmedNote = note?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.note = (trimmedNote?.isEmpty == false) ? trimmedNote : nil
     }
 
     /// Resolved injection rule — legacy contexts (no `injection` field)
@@ -178,6 +185,15 @@ final class MemoryContextStore {
     func setInjection(id: UUID, _ injection: MemoryInjectionScope) {
         guard let idx = cache.firstIndex(where: { $0.id == id }) else { return }
         cache[idx].injection = injection
+        rewriteAll()
+    }
+
+    /// Set (or clear) a context's user-written description. Empty/whitespace
+    /// clears it back to nil.
+    func setNote(id: UUID, _ note: String) {
+        guard let idx = cache.firstIndex(where: { $0.id == id }) else { return }
+        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        cache[idx].note = trimmed.isEmpty ? nil : trimmed
         rewriteAll()
     }
 

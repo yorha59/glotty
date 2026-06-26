@@ -113,8 +113,10 @@ struct LearnedMemorySettingsSection: View {
     // MARK: - Contexts
 
     @State private var newContextName: String = ""
-    @State private var renamingContextID: UUID?
+    @State private var editingContext: MemoryContext?
     @State private var renameDraft: String = ""
+    @State private var noteDraft: String = ""
+    @State private var generatingIntro = false
 
     private var contextsSection: some View {
         let contexts = readContexts()
@@ -159,72 +161,138 @@ struct LearnedMemorySettingsSection: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+        .sheet(item: $editingContext) { ctx in
+            contextEditSheet(ctx)
+        }
     }
 
-    @ViewBuilder
     private func contextRow(_ ctx: MemoryContext, isActive: Bool) -> some View {
-        if renamingContextID == ctx.id {
-            HStack(spacing: 8) {
+        let count = countInContext(ctx.id)
+        return HStack(spacing: 8) {
+            // The whole name area is the switch — click to activate, or click
+            // the active one to drop back to Global only. (Top dropdown does
+            // the same thing.)
+            Button {
+                MemoryContextStore.shared.activeContextID = isActive ? nil : ctx.id
+                refreshToken &+= 1
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: isActive ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(isActive ? Color.green : Color.secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(ctx.name)
+                        if let note = ctx.note, !note.isEmpty {
+                            Text(note)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                        Text(String(format: "%d memories".t, count))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(isActive
+                  ? "Active — click to switch to Global only".t
+                  : "Click to make this the active context".t)
+            Spacer()
+            injectionPicker(current: ctx.effectiveInjection) { rule in
+                MemoryContextStore.shared.setInjection(id: ctx.id, rule)
+                refreshToken &+= 1
+            }
+            Button("Manage\u{2026}") {
+                MemoryItemsWindowController.shared.show(scope: .context(ctx.id))
+            }
+            .controlSize(.small)
+            .disabled(count == 0)
+
+            // Opens the edit pop-up (name + short intro).
+            Button {
+                renameDraft = ctx.name
+                noteDraft = ctx.note ?? ""
+                editingContext = ctx
+            } label: {
+                Image(systemName: "pencil")
+            }
+            .buttonStyle(.borderless)
+            .help("Edit name & intro")
+
+            Button {
+                MemoryContextStore.shared.delete(id: ctx.id)
+                refreshToken &+= 1
+            } label: {
+                Image(systemName: "trash")
+                    .foregroundStyle(.red)
+            }
+            .buttonStyle(.borderless)
+            .help("Delete — memories scoped to this context become orphaned and stop injecting.")
+        }
+    }
+
+    /// Pop-up editor for a context's name + short intro (with ✨ LLM draft).
+    private func contextEditSheet(_ ctx: MemoryContext) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Edit context".t)
+                .font(.headline)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Name".t).font(.caption).foregroundStyle(.secondary)
                 TextField("Name", text: $renameDraft)
                     .textFieldStyle(.roundedBorder)
+            }
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Short intro".t).font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    TextField("What this context is for (optional)",
+                              text: $noteDraft, axis: .vertical)
+                        .textFieldStyle(.roundedBorder)
+                        .lineLimit(2...5)
+                    // Draft the intro from the name with the user's AI provider.
+                    Button {
+                        let name = renameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !name.isEmpty else { return }
+                        generatingIntro = true
+                        Task {
+                            let intro = await generateIntro(forName: name)
+                            if let intro { noteDraft = intro }
+                            generatingIntro = false
+                        }
+                    } label: {
+                        if generatingIntro {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: "sparkles")
+                        }
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Draft from the name (uses your AI provider)")
+                    .disabled(generatingIntro
+                              || renameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                              || LLMRegistry.current() == nil)
+                }
+            }
+
+            HStack {
+                Spacer()
+                Button("Cancel") { editingContext = nil }
+                    .keyboardShortcut(.cancelAction)
                 Button("Save") {
                     MemoryContextStore.shared.rename(id: ctx.id, to: renameDraft)
-                    renamingContextID = nil
+                    MemoryContextStore.shared.setNote(id: ctx.id, noteDraft)
+                    editingContext = nil
                     refreshToken &+= 1
                 }
                 .buttonStyle(.borderedProminent)
-                .controlSize(.small)
+                .keyboardShortcut(.defaultAction)
                 .disabled(renameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                Button("Cancel") { renamingContextID = nil }
-                    .controlSize(.small)
-            }
-        } else {
-            let count = countInContext(ctx.id)
-            HStack(spacing: 8) {
-                if isActive {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                } else {
-                    Image(systemName: "circle")
-                        .foregroundStyle(.secondary)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(ctx.name)
-                    Text(String(format: "%d memories".t, count))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                injectionPicker(current: ctx.effectiveInjection) { rule in
-                    MemoryContextStore.shared.setInjection(id: ctx.id, rule)
-                    refreshToken &+= 1
-                }
-                Button("Manage\u{2026}") {
-                    MemoryItemsWindowController.shared.show(scope: .context(ctx.id))
-                }
-                .controlSize(.small)
-                .disabled(count == 0)
-
-                Button {
-                    renamingContextID = ctx.id
-                    renameDraft = ctx.name
-                } label: {
-                    Image(systemName: "pencil")
-                }
-                .buttonStyle(.borderless)
-                .help("Rename")
-
-                Button {
-                    MemoryContextStore.shared.delete(id: ctx.id)
-                    refreshToken &+= 1
-                } label: {
-                    Image(systemName: "trash")
-                        .foregroundStyle(.red)
-                }
-                .buttonStyle(.borderless)
-                .help("Delete — memories scoped to this context become orphaned and stop injecting.")
             }
         }
+        .padding(20)
+        .frame(width: 380)
     }
 
     private func countInContext(_ id: UUID) -> Int {
@@ -240,6 +308,34 @@ struct LearnedMemorySettingsSection: View {
         MemoryContextStore.shared.add(name: trimmed)
         newContextName = ""
         refreshToken &+= 1
+    }
+
+    /// Draft a one-line context intro from its name via the user's LLM.
+    /// Returns nil if no provider is configured or the call fails.
+    @MainActor
+    private func generateIntro(forName name: String) async -> String? {
+        guard let provider = LLMRegistry.current() else { return nil }
+        let prompt = """
+            Write a very short intro — one concise phrase, at most ~12 words — \
+            describing what a memory "context" named below is most likely about. \
+            Reply with ONLY the phrase: no quotes, no label, no trailing period.
+
+            Context name: \(name)
+            """
+        var raw = ""
+        do {
+            try await UsageContext.$mode.withValue(.polish) {
+                for try await chunk in provider.chatCompletionStream(prompt: prompt) {
+                    raw = chunk
+                }
+            }
+        } catch {
+            return nil
+        }
+        let cleaned = raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+        return cleaned.isEmpty ? nil : cleaned
     }
 
     private func readContexts() -> [MemoryContext] {

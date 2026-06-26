@@ -386,11 +386,29 @@ final class LearnedMemoryStore {
         let userNotes = (UserDefaults.standard.string(forKey: Self.userNotesKey) ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        if userNotes.isEmpty && lines.isEmpty { return "" }
+        // Active-context header: the context's name (+ short intro) so the LLM
+        // knows the domain this exchange is in — even when the context has no
+        // memories yet. Respects the context's chat-only rule the same way its
+        // memories do (no header in Translate/Explain/Polish for a chat-only set).
+        var contextHeader = ""
+        if let ctx = activeID.flatMap({ MemoryContextStore.shared.context(id: $0) }) {
+            if !(ctx.effectiveInjection == .chatOnly && purpose != .chat) {
+                contextHeader = "Active context: \(ctx.name)"
+                if let note = ctx.note, !note.isEmpty {
+                    contextHeader += " — \(note)"
+                }
+            }
+        }
 
-        var block = "About the user:\n"
-        if !userNotes.isEmpty { block += userNotes + "\n" }
-        if !lines.isEmpty { block += lines.joined(separator: "\n") }
+        if contextHeader.isEmpty && userNotes.isEmpty && lines.isEmpty { return "" }
+
+        var block = ""
+        if !contextHeader.isEmpty { block += contextHeader + "\n\n" }
+        if !userNotes.isEmpty || !lines.isEmpty {
+            block += "About the user:\n"
+            if !userNotes.isEmpty { block += userNotes + "\n" }
+            if !lines.isEmpty { block += lines.joined(separator: "\n") }
+        }
         return block.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
