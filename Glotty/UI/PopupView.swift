@@ -353,6 +353,8 @@ struct PopupView: View {
     /// `runTutorTurn` runs again. Also bumped once on appear to
     /// kick off the opening tutor turn.
     @State private var tutorRunCounter: Int = 0
+    /// Set by Stop; the re-fired `runTutorTurn` sees it and returns early.
+    @State private var tutorStopRequested = false
     /// Practice session only: the queue of agenda-item indices still to
     /// be drilled, front-first. The app presents the front item's
     /// scenario card (no LLM); the model only judges the attempt. On a
@@ -410,6 +412,9 @@ struct PopupView: View {
     /// never appear in our field.
     @FocusState private var polishChatInputFocused: Bool
     @State private var polishChatStatus: Status = .ready
+    /// Set by Stop; the re-fired `runPolishChat` sees it and returns early
+    /// instead of starting another reply.
+    @State private var polishChatStopRequested = false
     @State private var polishChatExpanded: Bool = false
     /// Bumped after the user accepts/rejects a suggestion card so
     /// SwiftUI re-reads the pending list from `LearnedMemoryStore`.
@@ -1994,10 +1999,15 @@ struct PopupView: View {
                         return .ignored
                     }
                     .onSubmit { submitTutor() }
-                Button("Send") { submitTutor() }
+                // While a reply streams the button becomes Stop (cancel the
+                // in-flight turn); otherwise it's Send.
+                Button(tutorStatus.isWorking ? "Stop" : "Send") {
+                    if tutorStatus.isWorking { stopTutor() } else { submitTutor() }
+                }
                     .buttonStyle(.borderedProminent)
-                    .disabled(tutorInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                              || tutorThread.isEmpty)
+                    .disabled(!tutorStatus.isWorking
+                              && (tutorInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                  || tutorThread.isEmpty))
             }
             // Key-shortcut hint. Uses the Return (⏎) and Shift (⇧)
             // glyphs so it reads compactly without prose, and sits
@@ -2145,9 +2155,15 @@ struct PopupView: View {
                             submitPolishChat()
                             return .handled
                         }
-                    Button("Send") { submitPolishChat() }
+                    // While a reply streams the button becomes Stop (cancel the
+                    // in-flight turn); otherwise it's Send.
+                    Button(polishChatStatus.isWorking ? "Stop" : "Send") {
+                        if polishChatStatus.isWorking { stopPolishChat() }
+                        else { submitPolishChat() }
+                    }
                         .buttonStyle(.borderedProminent)
-                        .disabled(polishChatInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .disabled(!polishChatStatus.isWorking
+                                  && polishChatInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
 
                 HStack {
@@ -2445,6 +2461,38 @@ struct PopupView: View {
         }
     }
 
+    /// Thrown by `withChatTimeout` when an LLM stream stalls (never terminates).
+    private struct ChatTimeoutError: Error {}
+
+    /// Run `operation`, throwing `ChatTimeoutError` if it hasn't finished within
+    /// `seconds`. Breaks a stalled stream that never closes; the caller turns the
+    /// throw into a "stalled — tap Retry" state. Cancelling the surrounding task
+    /// (e.g. a new Send bumping the `.task(id:)`) also tears the stream down.
+    @MainActor
+    private static func withChatTimeout<T: Sendable>(
+        seconds: Double,
+        _ operation: @escaping @MainActor () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask { try await operation() }
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw ChatTimeoutError()
+            }
+            guard let result = try await group.next() else { throw ChatTimeoutError() }
+            group.cancelAll()
+            return result
+        }
+    }
+
+    /// Stop the in-flight polish-chat reply: cancels the stream (via the
+    /// `.task(id:)` counter bump) and the re-fired `runPolishChat` returns early.
+    private func stopPolishChat() {
+        guard polishChatStatus.isWorking else { return }
+        polishChatStopRequested = true
+        polishChatRunCounter += 1
+    }
+
     private func submitPolishChat() {
         let trimmed = polishChatInput.trimmingCharacters(in: .whitespacesAndNewlines)
         // Allow sending even while a turn is in flight: bumping the run counter
@@ -2513,6 +2561,13 @@ struct PopupView: View {
     /// Glotty already produced — plus the full conversation so far,
     /// then streams the reply into the trailing assistant turn.
     private func runPolishChat() async {
+        // Stop was tapped (or a new turn superseded this one) → don't start
+        // another reply; just settle back to ready.
+        if polishChatStopRequested {
+            polishChatStopRequested = false
+            polishChatStatus = .ready
+            return
+        }
         guard let provider = LLMRegistry.current() else {
             polishChatStatus = .failed("No LLM provider configured. Add one in Settings → Language Model.")
             return
@@ -2608,14 +2663,17 @@ struct PopupView: View {
         let prompt = PolishPrompt.prependedWithUserContext(body, sourceText: sourceText)
 
         do {
-            var raw = ""
-            try await UsageContext.$mode.withValue(.chat) {
-                for try await chunk in provider.chatCompletionStream(prompt: prompt) {
-                    raw = chunk
-                    // Hide the trailing <phrases> block (even partially typed)
-                    // while streaming; it turns into copy chips once finished.
-                    polishChatThread[assistantIndex].text = Self.proseForStreaming(chunk)
+            let raw = try await Self.withChatTimeout(seconds: 90) { @MainActor in
+                var local = ""
+                try await UsageContext.$mode.withValue(.chat) {
+                    for try await chunk in provider.chatCompletionStream(prompt: prompt) {
+                        local = chunk
+                        // Hide the trailing <phrases> block (even partially typed)
+                        // while streaming; it turns into copy chips once finished.
+                        polishChatThread[assistantIndex].text = Self.proseForStreaming(chunk)
+                    }
                 }
+                return local
             }
             let (prose, phrases) = Self.splitPhrases(raw)
             polishChatThread[assistantIndex].text = prose
@@ -2627,6 +2685,15 @@ struct PopupView: View {
             // its own cooldown so back-to-back replies won't all
             // call the LLM.
             triggerMemoryExtractionIfApplicable()
+        } catch is ChatTimeoutError {
+            // No chunks within the timeout window — the stream stalled. Drop the
+            // empty/partial placeholder and show the failed banner so the user
+            // can Retry.
+            if polishChatThread.indices.contains(assistantIndex),
+               polishChatThread[assistantIndex].text.isEmpty {
+                polishChatThread.remove(at: assistantIndex)
+            }
+            polishChatStatus = .failed("The response stalled. Tap Retry.")
         } catch {
             // Superseded by a newer send (the run-counter task id changed and
             // SwiftUI cancelled this turn) — the new run owns the thread/status.
@@ -3360,6 +3427,14 @@ struct PopupView: View {
     /// Submit the user's typed message and kick off the next tutor
     /// turn. No-op if the input is empty or a turn is already
     /// in flight.
+    /// Stop the in-flight tutor reply: cancels the stream (via the `.task(id:)`
+    /// counter bump) and the re-fired `runTutorTurn` returns early.
+    private func stopTutor() {
+        guard tutorStatus.isWorking else { return }
+        tutorStopRequested = true
+        tutorRunCounter &+= 1
+    }
+
     private func submitTutor() {
         let trimmed = tutorInput.trimmingCharacters(in: .whitespacesAndNewlines)
         // Allow sending even while a previous turn is in flight: bumping
@@ -3656,6 +3731,12 @@ struct PopupView: View {
     /// turn — no user message yet. Subsequent calls produce a tutor
     /// reply to whatever the user just sent.
     private func runTutorTurn() async {
+        // Stop tapped (or superseded) → don't start another reply.
+        if tutorStopRequested {
+            tutorStopRequested = false
+            tutorStatus = .ready
+            return
+        }
         guard let provider = LLMRegistry.current() else {
             tutorStatus = .failed("No LLM provider configured. Add one in Settings → Language Model.")
             return
@@ -3715,13 +3796,20 @@ struct PopupView: View {
             practiceItems: practiceItems
         )
 
-        var raw = ""
+        let raw: String
         do {
-            try await UsageContext.$mode.withValue(.chat) {
-                for try await chunk in provider.chatCompletionStream(prompt: prompt) {
-                    raw = chunk
+            raw = try await Self.withChatTimeout(seconds: 90) { @MainActor in
+                var local = ""
+                try await UsageContext.$mode.withValue(.chat) {
+                    for try await chunk in provider.chatCompletionStream(prompt: prompt) {
+                        local = chunk
+                    }
                 }
+                return local
             }
+        } catch is ChatTimeoutError {
+            tutorStatus = .failed("The response stalled. Tap Retry.")
+            return
         } catch {
             // A newer Send superseded this turn (SwiftUI cancelled it when the
             // run-counter task id changed) — don't clobber the new run's status.
