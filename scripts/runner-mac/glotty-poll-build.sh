@@ -64,8 +64,13 @@ if [ "$BUILD_STATUS" != "0" ]; then
     exit 1
 fi
 
-PKG_FILE=$(ls "$REPO"/dist/*.pkg 2>/dev/null | head -1)
-[ -z "$PKG_FILE" ] && { log "ERROR no PKG produced"; exit 1; }
+# Pick the main-app pkg by version. dist/ accumulates every past build plus
+# the GlottyLab pkg (Glotty-0.1.0.pkg), so the old `ls | head -1` grabbed the
+# alphabetically-first one (the 0.1.0 lab) instead of the release. The Glotty
+# target's MARKETING_VERSION is the first one in project.yml.
+APP_VERSION=$(grep -m1 'MARKETING_VERSION:' "$REPO/project.yml" | sed -E 's/.*"([^"]+)".*/\1/')
+PKG_FILE="$REPO/dist/Glotty-$APP_VERSION.pkg"
+[ -f "$PKG_FILE" ] || { log "ERROR no PKG for version '$APP_VERSION' at $PKG_FILE"; exit 1; }
 PKG_NAME=$(basename "$PKG_FILE")
 log "Built $PKG_NAME ($(du -h "$PKG_FILE" | cut -f1))"
 
