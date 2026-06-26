@@ -35,6 +35,18 @@ log() { echo "$(ts) $*" >> "$LOG"; }
 # Rotate big log
 [ -f "$LOG" ] && [ $(wc -c < "$LOG") -gt 524288 ] && tail -c 262144 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
 
+# Post a Gitea commit-status for the commit being built, so the CD shows a
+# green check (or red X) on the commit in Gitea — without act_runner. $1=state
+# (pending|success|failure|error), $2=description. Best-effort; never fails the build.
+gitea_status() {
+    local tok; tok=$(cat "$GITEA_TOKEN_FILE" 2>/dev/null)
+    [ -z "${tok:-}" ] && return 0
+    [ -z "${REMOTE_SHA:-}" ] && return 0
+    curl -sf --ipv4 -X POST -H "Authorization: token $tok" -H "Content-Type: application/json" \
+        -d "{\"state\":\"$1\",\"context\":\"poll-build\",\"description\":\"$2\"}" \
+        "$GITEA_API/statuses/$REMOTE_SHA" >/dev/null 2>&1 || true
+}
+
 cd "$REPO" || { log "ERROR repo missing"; exit 1; }
 
 REMOTE_SHA=$(git ls-remote origin main 2>/dev/null | awk "NR==1 {print \$1}")
@@ -50,17 +62,19 @@ if [ "$REMOTE_SHA" = "$LAST_SHA" ]; then
 fi
 
 log "==> New commit ${REMOTE_SHA:0:8} (was ${LAST_SHA:0:8:-none}); building"
+gitea_status pending "Building ${REMOTE_SHA:0:8}"
 
 git fetch origin main >> "$LOG" 2>&1
 git reset --hard origin/main >> "$LOG" 2>&1
 
-xcodegen generate >> "$LOG" 2>&1 || { log "ERROR xcodegen failed"; exit 1; }
+xcodegen generate >> "$LOG" 2>&1 || { log "ERROR xcodegen failed"; gitea_status error "xcodegen failed"; exit 1; }
 
 # Build + sign + notarize + staple (app + pkg)
 KEYCHAIN_PASS_FILE="$KEYCHAIN_PASS_FILE" bash scripts/make-pkg-signed.sh >> "$LOG" 2>&1
 BUILD_STATUS=$?
 if [ "$BUILD_STATUS" != "0" ]; then
     log "ERROR build/sign/notarize failed status=$BUILD_STATUS"
+    gitea_status failure "build/sign/notarize failed"
     exit 1
 fi
 
@@ -70,7 +84,7 @@ fi
 # target's MARKETING_VERSION is the first one in project.yml.
 APP_VERSION=$(grep -m1 'MARKETING_VERSION:' "$REPO/project.yml" | sed -E 's/.*"([^"]+)".*/\1/')
 PKG_FILE="$REPO/dist/Glotty-$APP_VERSION.pkg"
-[ -f "$PKG_FILE" ] || { log "ERROR no PKG for version '$APP_VERSION' at $PKG_FILE"; exit 1; }
+[ -f "$PKG_FILE" ] || { log "ERROR no PKG for version '$APP_VERSION' at $PKG_FILE"; gitea_status error "no pkg for $APP_VERSION"; exit 1; }
 PKG_NAME=$(basename "$PKG_FILE")
 log "Built $PKG_NAME ($(du -h "$PKG_FILE" | cut -f1))"
 
@@ -85,4 +99,5 @@ curl -sf --ipv4 -X POST -H "Authorization: token $GITEA_TOKEN" -F "attachment=@$
     "$GITEA_API/releases/$RELEASE_ID/assets?name=$PKG_NAME" >> "$LOG" 2>&1
 
 log "==> Published release ${REMOTE_SHA:0:8} $PKG_NAME"
+gitea_status success "Built + published $PKG_NAME"
 echo "$REMOTE_SHA" > "$STATE"
