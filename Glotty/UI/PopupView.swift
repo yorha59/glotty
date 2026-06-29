@@ -1149,14 +1149,20 @@ struct PopupView: View {
         // selection must be fully visible. Overflow scrolls via the
         // outer ScrollView in `scrollableContent`.
         let limit: Int? = ((mode == .translate || mode == .explain) && isSingleWord) ? 2 : nil
-        return Text(sourceText)
-            .font(.system(size: size, weight: .bold))
-            .foregroundStyle(PopupTokens.primaryText)
-            .textSelection(.enabled)
-            .lineLimit(limit)
-            .fixedSize(horizontal: false, vertical: true)
-            .minimumScaleFactor(0.82)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        return HStack(alignment: .lastTextBaseline, spacing: 10) {
+            Text(sourceText)
+                .font(.system(size: size, weight: .bold))
+                .foregroundStyle(PopupTokens.primaryText)
+                .textSelection(.enabled)
+                .lineLimit(limit)
+                .fixedSize(horizontal: false, vertical: true)
+                .minimumScaleFactor(0.82)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            // Speak the source aloud (system voice, or ElevenLabs if configured).
+            speakButton(text: sourceText, language: detectedSource?.rawValue)
+                .font(.system(size: 17))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var translationBlock: some View {
@@ -4435,7 +4441,21 @@ final class Speaker {
     static let shared = Speaker()
     private let synthesizer = AVSpeechSynthesizer()
 
+    /// Speak `text`. Uses ElevenLabs cloud TTS when the user has configured it
+    /// (Settings → Voice); otherwise — or if the ElevenLabs request fails —
+    /// the on-device system voice, so it always works offline and out of the box.
     func speak(_ text: String, language: String?) {
+        if ElevenLabsTTS.isConfigured {
+            synthesizer.stopSpeaking(at: .immediate)
+            ElevenLabsTTS.shared.speak(text) { [weak self] in
+                self?.speakSystem(text, language: language)
+            }
+        } else {
+            speakSystem(text, language: language)
+        }
+    }
+
+    private func speakSystem(_ text: String, language: String?) {
         if synthesizer.isSpeaking {
             synthesizer.stopSpeaking(at: .immediate)
         }

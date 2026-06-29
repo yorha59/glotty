@@ -4066,6 +4066,52 @@
         }
       }
     },
+    "Cached clips": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zwischengespeicherte Clips"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clips en caché"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Éléments mis en cache"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャッシュ済みクリップ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "캐시된 클립들"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缓存片段"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已快取剪貼板"
+          }
+        }
+      }
+    },
     "Calls": {
       "localizations": {
         "de": {
@@ -5407,6 +5453,52 @@
         }
       }
     },
+    "Clear voice cache (%@)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprachcache leeren (%@)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vaciar caché de voz (%@)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer le cache vocal (%@)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音声キャッシュをクリア(%@)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음성 캐시 지우기 (%@)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除语音缓存 (%@)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除語音快取 (%@)"
+          }
+        }
+      }
+    },
     "Click a row to reopen the most recent polish run that flagged this category.": {
       "localizations": {
         "de": {
@@ -6327,6 +6419,52 @@
         }
       }
     },
+    "Couldn't load voices: %@": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stimmen konnten nicht geladen werden: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudieron cargar las voces: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de charger les voix : %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ボイスを読み込めませんでした: %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목소리를 불러올 수 없습니다: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法加载语音：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法載入語音：%@"
+          }
+        }
+      }
+    },
     "Couldn't translate any strings (LLM unavailable?). Relaunching anyway.": {
       "localizations": {
         "de": {
@@ -6797,6 +6935,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "以您的母語進行更深層的解釋 — 含義、語調、用法，以及在不同情境中的變化。選取單字、成語或句子，然後按下 ⌘⌥E。Glotty 會串流四個區段的解釋。按下 Esc 關閉。"
+          }
+        }
+      }
+    },
+    "Default (Rachel)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard (Rachel)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Predeterminada (Rachel)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Défaut (Rachel)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デフォルト (Rachel)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 (Rachel)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "默认 (Rachel)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "預設 (Rachel)"
           }
         }
       }
@@ -8131,6 +8315,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "編輯名稱與介紹"
+          }
+        }
+      }
+    },
+    "ElevenLabs API key": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs-API-Schlüssel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clave API de ElevenLabs"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clé API ElevenLabs"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs APIキー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs API 키"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs API key"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs API金鑰"
           }
         }
       }
@@ -9805,6 +10035,52 @@
         }
       }
     },
+    "Generating…": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erstellen…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generando…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Génération…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生成中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "생성 중…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在生成…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "產生中…"
+          }
+        }
+      }
+    },
     "Get an API key →": {
       "localizations": {
         "de": {
@@ -9847,6 +10123,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "取得 API 金鑰 →"
+          }
+        }
+      }
+    },
+    "Get an ElevenLabs API key →": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs-API-Schlüssel erhalten →"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtener una clave API de ElevenLabs →"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtenir une clé API ElevenLabs →"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs APIキーを取得 →"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs API 키 받기 →"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "获取 ElevenLabs API key →"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取得ElevenLabs API金鑰 →"
           }
         }
       }
@@ -12494,6 +12816,98 @@
         }
       }
     },
+    "Key saved to Keychain.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlüssel im Schlüsselbund gespeichert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clave guardada en Keychain."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clé enregistrée dans la Keychain."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーをキーチェーンに保存しました。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "키가 Keychain에 저장되었습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密钥已保存到钥匙串。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "金鑰匙已儲存到鑰匙圈。"
+          }
+        }
+      }
+    },
+    "Key saved — paste to replace": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schlüssel gespeichert — einfügen zum Ersetzen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clave guardada — pega para reemplazar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clé enregistrée — coller pour remplacer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーが保存されました — 置き換えするために貼り付け"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "키가 저장되었습니다 — 붙여넣어서 바꾸기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密钥已保存 — 粘贴以替换"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "金鑰已儲存 — 貼上以取代"
+          }
+        }
+      }
+    },
     "LLM provider": {
       "localizations": {
         "de": {
@@ -13279,6 +13693,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "即時狀態如下。您可以從對應的系統設定面板中撤銷或重新授予任何權限 — 該列會自動更新。"
+          }
+        }
+      }
+    },
+    "Load your ElevenLabs voices": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laden Sie Ihre ElevenLabs-Stimmen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carga tus voces de ElevenLabs"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charger vos voix ElevenLabs"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabsのボイスを読み込む"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs 목소리 불러오기"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加载您的 ElevenLabs 语音"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "載入您的 ElevenLabs 語音"
           }
         }
       }
@@ -16269,6 +16729,52 @@
         }
       }
     },
+    "Off → Fn+V uses the built-in macOS voice (offline, free). On (with a key) → Fn+V and the popup speak buttons use ElevenLabs: higher quality, but a network call billed to your own ElevenLabs plan. Falls back to the system voice if a request fails.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus → Fn+V verwendet die eingebaute macOS-Stimme (offline, kostenlos). Ein (mit Schlüssel) → Fn+V und die Popupsprechknöpfe verwenden ElevenLabs: höhere Qualität, aber ein Netzwerkauftrag, der auf Ihrem eigenen ElevenLabs-Plan abgerechnet wird. Fällt zurück zur Systemsprache, wenn eine Anfrage fehlschlägt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desactivado → Fn+V utiliza la voz integrada de macOS (sin conexión, gratuita). Activado (con clave) → Fn+V y los botones de popup de habla usan ElevenLabs: mayor calidad, pero es una llamada de red facturada en tu propio plan de ElevenLabs. Recurre a la voz del sistema si falla una solicitud."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Désactivé → Fn+V utilise la voix intégrée de macOS (hors ligne, gratuite). Activé (avec une clé) → Fn+V et les boutons de parole contextuels utilisent ElevenLabs : qualité supérieure, mais un appel réseau facturé à votre propre plan ElevenLabs. Retombe sur la voix système si une requête échoue."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オフ → Fn+Vは組み込みのmacOS音声を使用します（オフライン、無料）。オン（キーあり）→ Fn+Vとポップアップの音声ボタンはElevenLabsを使用：より高品質ですが、ご自身のElevenLabsプランに課金されるネットワーク呼び出しです。リクエストが失敗した場合は、システム音声にフォールバックします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "꺼짐 → Fn+V는 macOS 내장 음성을 사용합니다(오프라인, 무료). 켜짐(키 있음) → Fn+V와 팝업 음성 버튼은 ElevenLabs를 사용합니다: 더 높은 품질이지만, 네트워크 호출은 본인의 ElevenLabs 플랜에서 청구됩니다. 요청 실패 시 시스템 음성으로 대체됩니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关 → Fn+V 使用内置的 macOS 语音（离线，免费）。开（需输入密钥）→ Fn+V 和弹出的说话按钮使用 ElevenLabs：更高质量的语音，但会调用网络并根据您的 ElevenLabs 计划计费。如果请求失败，则回退到系统语音。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉 → Fn+V 使用內建的 macOS 語音 (離線，免費)。開啟 (需設定金鑰) → Fn+V 和彈出式語音按鈕使用 ElevenLabs：品質更高，但會向您的 ElevenLabs 計劃收費網路通話。如果請求失敗，則會回退到系統語音。"
+          }
+        }
+      }
+    },
     "Older flagship — slower and pricier than 2.0 Flash but slightly stronger on long, nuanced rewrites.": {
       "localizations": {
         "de": {
@@ -17192,6 +17698,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "貼上您的 DeepSeek API 金鑰"
+          }
+        }
+      }
+    },
+    "Paste your ElevenLabs API key": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge deinen ElevenLabs API-Schlüssel ein"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pega tu ElevenLabs API key"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collez votre clé API ElevenLabs"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs APIキーを貼り付け"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs API 키를 붙여넣으세요"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴您的 ElevenLabs API 密钥"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "貼上您的 ElevenLabs API 金鑰"
           }
         }
       }
@@ -22648,6 +23200,52 @@
         }
       }
     },
+    "Speak with ElevenLabs (cloud voice)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit ElevenLabs sprechen (Cloud-Sprache)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hablar con ElevenLabs (voz en la nube)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parler avec ElevenLabs (voix cloud)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabsで読み上げ（クラウド音声）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs로 말하기 (클라우드 음성)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 ElevenLabs 说话（云语音）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 ElevenLabs 語音 (雲端語音)"
+          }
+        }
+      }
+    },
     "Speaking style": {
       "localizations": {
         "de": {
@@ -22690,6 +23288,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "說話風格"
+          }
+        }
+      }
+    },
+    "Speech": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprache"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voz"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parole"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音声"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음성"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语音"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "語音"
           }
         }
       }
@@ -22789,6 +23433,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "狀態更新為即時狀態。請在「系統設定」中授權 — 此視窗會自動重新整理。"
+          }
+        }
+      }
+    },
+    "Stop": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopp"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detener"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrêter"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "중지"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止"
           }
         }
       }
@@ -25103,6 +25793,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "用於 %@ → %@"
+          }
+        }
+      }
+    },
+    "Voice": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprache"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voz"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voix"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音声"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음성"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语音"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "語音"
           }
         }
       }

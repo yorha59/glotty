@@ -11,6 +11,7 @@ enum SettingsTab: String, Hashable, CaseIterable, Identifiable {
     case languageModel
     case polish
     case hotkey
+    case voice
     case history
     case memory
     case chat
@@ -29,6 +30,7 @@ enum SettingsTab: String, Hashable, CaseIterable, Identifiable {
         case .languageModel: return "Language Model"
         case .polish:        return "Polish"
         case .hotkey:        return "Hotkey"
+        case .voice:         return "Voice"
         case .history:       return "History"
         case .memory:        return "Memory"
         case .chat:          return "Chat"
@@ -50,6 +52,7 @@ enum SettingsTab: String, Hashable, CaseIterable, Identifiable {
         case .languageModel: return "sparkles"
         case .polish:        return "wand.and.stars"
         case .hotkey:        return "keyboard"
+        case .voice:         return "speaker.wave.2"
         case .history:       return "clock.arrow.circlepath"
         case .memory:        return "brain"
         case .chat:          return "bubble.left.and.bubble.right"
@@ -100,6 +103,7 @@ struct SettingsView: View {
         case .languageModel: languageModelTab
         case .polish:        polishTab
         case .hotkey:        hotkeyTab
+        case .voice:         voiceTab
         case .history:       memoryTab
         case .memory:        memoryDetailTab
         case .chat:          chatTab
@@ -156,6 +160,11 @@ struct SettingsView: View {
 
     private var hotkeyTab: some View {
         Form { HotkeySettingsSection() }
+            .formStyle(.grouped)
+    }
+
+    private var voiceTab: some View {
+        Form { VoiceSettingsSection() }
             .formStyle(.grouped)
     }
 
@@ -2699,6 +2708,133 @@ private struct PolishPromptsSection: View {
                 override.wrappedValue = (new == defaultTemplate) ? "" : new
             }
         )
+    }
+}
+
+/// Text-to-speech backend — the optional ElevenLabs cloud voice for Fn+V and
+/// the popup speak buttons. Off by default (uses the on-device system voice).
+private struct VoiceSettingsSection: View {
+    @AppStorage(ElevenLabsTTS.enabledDefaultsKey) private var ttsEnabled: Bool = false
+    @AppStorage(ElevenLabsTTS.voiceDefaultsKey)   private var voiceID: String = ElevenLabsTTS.defaultVoiceID
+    @State private var elevenKey: String = ""
+    @State private var elevenKeyStored: Bool = false
+    @State private var voices: [ElevenLabsTTS.Voice] = []
+    @State private var voicesLoading: Bool = false
+    @State private var voicesError: String?
+    @State private var cacheSize: Int = 0
+    @State private var cachedItems: [VoiceCache.Entry] = []
+
+    private func loadVoices() async {
+        guard let key = Keychain.read(account: ElevenLabsTTS.keychainAccount), !key.isEmpty else { return }
+        voicesLoading = true
+        voicesError = nil
+        do {
+            voices = try await ElevenLabsTTS.listVoices(apiKey: key)
+        } catch {
+            voicesError = String(format: String(localized: "Couldn't load voices: %@"),
+                                 error.localizedDescription)
+        }
+        voicesLoading = false
+    }
+
+    var body: some View {
+        Section {
+            Toggle("Speak with ElevenLabs (cloud voice)", isOn: $ttsEnabled)
+            HStack {
+                SecureField("ElevenLabs API key", text: $elevenKey,
+                            prompt: Text(elevenKeyStored
+                                         ? "Key saved — paste to replace"
+                                         : "Paste your ElevenLabs API key"))
+                Button("Save") {
+                    if Keychain.write(elevenKey, account: ElevenLabsTTS.keychainAccount) {
+                        elevenKey = ""
+                        elevenKeyStored = true
+                        Task { await loadVoices() }
+                    }
+                }
+                .disabled(elevenKey.isEmpty)
+                if elevenKeyStored {
+                    Button("Clear", role: .destructive) {
+                        Keychain.delete(account: ElevenLabsTTS.keychainAccount)
+                        elevenKey = ""
+                        elevenKeyStored = false
+                        voices = []
+                    }
+                }
+            }
+            if elevenKeyStored {
+                Label("Key saved to Keychain.", systemImage: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+                HStack {
+                    Picker("Voice", selection: $voiceID) {
+                        if !voices.contains(where: { $0.id == voiceID }) {
+                            Text(voiceID == ElevenLabsTTS.defaultVoiceID ? "Default (Rachel)" : voiceID)
+                                .tag(voiceID)
+                        }
+                        ForEach(voices) { v in Text(v.name).tag(v.id) }
+                    }
+                    Button {
+                        Task { await loadVoices() }
+                    } label: {
+                        if voicesLoading { ProgressView().controlSize(.small) }
+                        else { Image(systemName: "arrow.clockwise") }
+                    }
+                    .disabled(voicesLoading)
+                    .help("Load your ElevenLabs voices")
+                }
+                if let voicesError {
+                    Text(voicesError).font(.caption).foregroundStyle(.red)
+                }
+            }
+            if let url = URL(string: "https://elevenlabs.io/app/settings/api-keys") {
+                Link("Get an ElevenLabs API key →", destination: url)
+                    .font(.caption)
+            }
+            Button(role: .destructive) {
+                VoiceCache.clear()
+                cacheSize = 0
+                cachedItems = []
+            } label: {
+                Text(String(format: String(localized: "Clear voice cache (%@)"),
+                            ByteCountFormatter.string(fromByteCount: Int64(cacheSize), countStyle: .file)))
+            }
+            .disabled(cacheSize == 0)
+        } header: {
+            Text("Speech")
+        } footer: {
+            Text("Off → Fn+V uses the built-in macOS voice (offline, free). On (with a key) → Fn+V and the popup speak buttons use ElevenLabs: higher quality, but a network call billed to your own ElevenLabs plan. Falls back to the system voice if a request fails.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .onAppear {
+            elevenKeyStored = (Keychain.read(account: ElevenLabsTTS.keychainAccount).map { !$0.isEmpty } ?? false)
+            cacheSize = VoiceCache.sizeBytes()
+            cachedItems = VoiceCache.entries()
+            if elevenKeyStored { Task { await loadVoices() } }
+        }
+
+        if !cachedItems.isEmpty {
+            Section {
+                ForEach(cachedItems) { item in
+                    Button {
+                        if let d = VoiceCache.data(for: item) { ElevenLabsTTS.shared.playCached(d) }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "play.circle")
+                                .foregroundStyle(.secondary)
+                            Text(item.text)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                            Spacer(minLength: 0)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            } header: {
+                Text("Cached clips")
+            }
+        }
     }
 }
 
