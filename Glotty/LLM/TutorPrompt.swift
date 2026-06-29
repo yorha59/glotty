@@ -30,20 +30,35 @@ struct TutorTurn: Identifiable, Equatable, Sendable {
     /// `.tutor` turns. After the user confirms / declines, `outcome`
     /// flips and the turn re-renders as a collapsed badge.
     var toolCall: PendingToolCall?
+    /// When non-nil, this `.tutor` turn is an app-built practice scenario
+    /// and renders as a structured card (not a text bubble). `reply` still
+    /// holds the equivalent "You wrote… / You meant…" text for the LLM.
+    var practice: PracticeCardInfo?
 
     init(id: UUID = UUID(),
          role: Role,
          reply: String,
          correctedText: String? = nil,
          correctionNote: String? = nil,
-         toolCall: PendingToolCall? = nil) {
+         toolCall: PendingToolCall? = nil,
+         practice: PracticeCardInfo? = nil) {
         self.id = id
         self.role = role
         self.reply = reply
         self.correctedText = correctedText
         self.correctionNote = correctionNote
         self.toolCall = toolCall
+        self.practice = practice
     }
+}
+
+/// What the app needs to render a practice scenario as a card (a `.tutor`
+/// turn built with no LLM call): the user's draft and what they meant, plus
+/// the queue count. The reference answer is deliberately NOT carried here.
+struct PracticeCardInfo: Equatable, Sendable {
+    let draft: String
+    let meaning: String?
+    let remaining: Int
 }
 
 /// One pending / resolved tool invocation attached to a tutor turn.
@@ -118,6 +133,7 @@ enum TutorPrompt {
         allowToolCalls: Bool = false,
         onboarding: Bool = false,
         practiceItems: [PracticeItem] = [],
+        practiceAwaitingAdvance: Bool = false,
         persona: GlottyPersona = .current()
     ) -> String {
         // Onboarding chat (launched from the Welcome window's final
@@ -142,6 +158,7 @@ enum TutorPrompt {
                 items: practiceItems,
                 targetLanguage: targetLanguage,
                 nativeLanguage: nativeLanguage,
+                awaitingAdvance: practiceAwaitingAdvance,
                 persona: persona
             )
         }
@@ -510,6 +527,7 @@ enum TutorPrompt {
         items: [PracticeItem],
         targetLanguage: String,
         nativeLanguage: String,
+        awaitingAdvance: Bool,
         persona: GlottyPersona
     ) -> String {
         let nativeName = PolishPrompt.englishName(for: nativeLanguage)
@@ -528,13 +546,23 @@ enum TutorPrompt {
             ? "(no messages yet)"
             : history.map { "\($0.role.capitalized): \($0.text)" }.joined(separator: "\n\n")
 
+        // Two modes within a session: AWAITING the user's attempt (judge it),
+        // or BETWEEN items after a verdict (the app paused on a "Next" button —
+        // just field follow-up questions, never judge).
+        let modeBlock = awaitingAdvance ? """
+        - The user already answered the previous item and you gave your verdict. They have NOT started the next one — a "Next" button is waiting for their tap. You are BETWEEN items: treat every message as a follow-up question about what they just practiced (or small talk), answer it helpfully, and ALWAYS set practice_outcomes to []. Do NOT judge, do NOT present or restate any scenario, do NOT tell them to move on — they tap Next when ready.
+        """ : """
+        - When the user replies with their attempt, judge whether it correctly and naturally expresses the intended meaning. An equally natural phrasing that differs from the reference still counts as correct — judge meaning + naturalness, not an exact match; be lenient on typos/tiny slips.
+        - Give a brief verdict (1-2 sentences). If they were off, show the natural answer and the key fix. After a CORRECT attempt you may add one short, warm line inviting a follow-up question or moving on — a "Next" button takes them onward, so never present the next scenario, restate the next draft/meaning, or say which item is next.
+        """
+
         return """
         \(persona.systemDescription) Right now you are running a short PRACTICE SESSION — not free chat. The user previously polished some phrases that needed fixing; now they re-attempt them so the corrections stick. Speak in \(nativeName) so your feedback is clear, but the phrases they practice stay in the language of the "Natural answer".
 
         How the drill works:
         - The app ITSELF presents each scenario card (what they wrote + what they meant) — that is NOT your job. Do NOT present, re-present, or repeat a scenario's draft/meaning back.
-        - When the user replies with their attempt, judge whether it correctly and naturally expresses the intended meaning. An equally natural phrasing that differs from the reference still counts as correct — judge meaning + naturalness, not an exact match; be lenient on typos/tiny slips.
-        - Give a brief verdict (1-2 sentences) and STOP. If they were off, show the natural answer and the key fix. Do NOT add "ready for the next one?" or any transition, and do NOT congratulate them on finishing — the app shows the next scenario card (or the wrap-up) on its own. A missed item comes back around later in the session, so don't treat any item as the last.
+        \(modeBlock)
+        - A missed item comes back around later in the session, so don't treat any item as the last, and never congratulate them on "finishing" — the app handles the wrap-up.
 
         AGENDA (\(items.count) item\(items.count == 1 ? "" : "s")):
         \(agenda)

@@ -362,6 +362,10 @@ struct PopupView: View {
     /// recycled to the BOTTOM so the session keeps cycling until every
     /// item has been answered correctly. Seeded once when the session opens.
     @State private var practiceQueue: [Int] = []
+    /// Practice pause: after a verdict the app stops auto-advancing and
+    /// waits on a "Next" button, so the user can ask follow-ups about the
+    /// item they just did before the next scenario appears.
+    @State private var practiceAwaitingAdvance = false
     @State private var tutorProviderName: String = ""
     /// User-controlled toggle in the chat header. When ON, the
     /// tutor prompt includes the SettingsRegistry capability block
@@ -611,9 +615,14 @@ struct PopupView: View {
                         // replies, to judge it (see TutorPrompt.practicePrompt).
                         practiceQueue = Array(practiceItems.indices)
                         if let front = practiceQueue.first {
+                            let item = practiceItems[front]
                             let card = practicePresentation(
-                                practiceItems[front], remaining: practiceQueue.count)
-                            tutorThread.append(TutorTurn(role: .tutor, reply: card))
+                                item, remaining: practiceQueue.count)
+                            tutorThread.append(TutorTurn(
+                                role: .tutor, reply: card,
+                                practice: PracticeCardInfo(
+                                    draft: item.draft, meaning: item.meaning,
+                                    remaining: practiceQueue.count)))
                         }
                         tutorStatus = .ready
                     } else if tutorThread.isEmpty {
@@ -1494,6 +1503,9 @@ struct PopupView: View {
                         ForEach(tutorThread) { turn in
                             tutorBubble(turn)
                         }
+                        if practiceAwaitingAdvance, !tutorStatus.isWorking {
+                            practiceAdvanceButton
+                        }
                         if case .working = tutorStatus, !tutorThread.isEmpty {
                             HStack(spacing: 6) {
                                 ProgressView().controlSize(.small)
@@ -1526,6 +1538,9 @@ struct PopupView: View {
     private func tutorBubble(_ turn: TutorTurn) -> some View {
         if turn.role == .system {
             tutorSystemBubble(turn)
+        } else if let practice = turn.practice {
+            practiceCard(practice)
+                .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             VStack(alignment: turn.role == .user ? .trailing : .leading, spacing: 4) {
                 HStack {
@@ -1557,6 +1572,97 @@ struct PopupView: View {
             }
             .frame(maxWidth: .infinity, alignment: turn.role == .user ? .trailing : .leading)
         }
+    }
+
+    /// The practice scenario rendered as a structured card — far more
+    /// scannable than the plain-text bubble. Count pill in the header, the
+    /// draft and meaning in separate labelled inset boxes, and an accent
+    /// footer prompting the re-attempt. The same info still lives in
+    /// `turn.reply` as text for the LLM's context.
+    @ViewBuilder
+    private func practiceCard(_ info: PracticeCardInfo) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 7) {
+                Image(systemName: "graduationcap.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(PopupTokens.accent)
+                Text("Practice".t)
+                    .font(.system(size: PopupTokens.bodySize, weight: .semibold))
+                    .foregroundStyle(PopupTokens.primaryText)
+                Spacer(minLength: 8)
+                Text(String(format: "%d left".t, info.remaining))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(PopupTokens.accent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(PopupTokens.accent.opacity(0.14)))
+            }
+            practiceField("You wrote".t, info.draft)
+            if let meaning = info.meaning, !meaning.isEmpty {
+                practiceField("You meant".t, meaning)
+            }
+            HStack(spacing: 6) {
+                Image(systemName: "pencil.line")
+                    .font(.system(size: 11, weight: .semibold))
+                Text("Say it naturally — type your version below".t)
+                    .font(.system(size: 12, weight: .medium))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(PopupTokens.accent)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(PopupTokens.variantTint)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(PopupTokens.accent.opacity(0.20), lineWidth: 1)
+        )
+    }
+
+    /// One labelled field inside the practice card — small uppercase label
+    /// over the value in its own inset box.
+    private func practiceField(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label.uppercased())
+                .font(.system(size: 10, weight: .semibold))
+                .tracking(0.6)
+                .foregroundStyle(PopupTokens.secondaryText)
+            Text(value)
+                .font(.system(size: PopupTokens.bodySize))
+                .foregroundStyle(PopupTokens.primaryText)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(PopupTokens.variantSurface.opacity(0.75))
+        )
+    }
+
+    /// "Next question" affordance shown while a practice session is paused
+    /// after a verdict — the user advances when they've finished asking
+    /// follow-ups. Replaces the old auto-jump to the next scenario.
+    private var practiceAdvanceButton: some View {
+        Button(action: advancePractice) {
+            HStack(spacing: 6) {
+                Text("Next question".t)
+                    .font(.system(size: 13, weight: .semibold))
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .foregroundStyle(PopupTokens.accent)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(Capsule().fill(PopupTokens.accent.opacity(0.12)))
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 2)
     }
 
     /// System bubble — app-injected status (tool-call outcomes etc.).
@@ -1956,7 +2062,14 @@ struct PopupView: View {
                 if chatAllowSettingsChanges || onboarding {
                     tutorAutoApproveToggle
                 }
-                tutorLanguagePicker
+                // Practice has fixed languages — you reply in the item's
+                // language and the tutor's feedback is always in your native
+                // language — so the "reply in" picker does nothing here and
+                // only confuses (it showed e.g. English beside Chinese
+                // feedback). Hide it during a practice session.
+                if practiceItems.isEmpty {
+                    tutorLanguagePicker
+                }
                 Spacer()
             }
             HStack(spacing: 8) {
@@ -3726,6 +3839,21 @@ struct PopupView: View {
         return lines.joined(separator: "\n")
     }
 
+    /// Present the next practice scenario after the user taps "Next" — the
+    /// deferred advance that replaces the old auto-jump, so they control when
+    /// to move on. No LLM call (the app drives presentation).
+    private func advancePractice() {
+        practiceAwaitingAdvance = false
+        guard let front = practiceQueue.first else { return }
+        let item = practiceItems[front]
+        let card = practicePresentation(item, remaining: practiceQueue.count)
+        tutorThread.append(TutorTurn(
+            role: .tutor, reply: card,
+            practice: PracticeCardInfo(
+                draft: item.draft, meaning: item.meaning,
+                remaining: practiceQueue.count)))
+    }
+
     /// Drive one round of the tutor conversation. On the very first
     /// call (counter == 0, thread empty), this produces the opening
     /// turn — no user message yet. Subsequent calls produce a tutor
@@ -3793,7 +3921,8 @@ struct PopupView: View {
             recentTopics: recentTopics,
             allowToolCalls: chatAllowSettingsChanges || onboarding,
             onboarding: onboarding,
-            practiceItems: practiceItems
+            practiceItems: practiceItems,
+            practiceAwaitingAdvance: practiceAwaitingAdvance
         )
 
         let raw: String
@@ -3850,7 +3979,7 @@ struct PopupView: View {
         // the new front card (again, no LLM). A turn with no verdict (e.g. the
         // user asked a question instead of attempting) leaves the queue as-is
         // so the same card stays up.
-        if !practiceItems.isEmpty,
+        if !practiceItems.isEmpty, !practiceAwaitingAdvance,
            let verdict = parsed.practiceOutcomes.first,
            let front = practiceQueue.first {
             PracticeStore.shared.recordOutcome(
@@ -3861,16 +3990,20 @@ struct PopupView: View {
                 // Missed — send it to the bottom to re-attempt later.
                 practiceQueue.append(front)
             }
-            if let next = practiceQueue.first {
-                let card = practicePresentation(
-                    practiceItems[next], remaining: practiceQueue.count)
-                tutorThread.append(TutorTurn(role: .tutor, reply: card))
-            } else {
+            if practiceQueue.isEmpty {
                 // Queue cleared — every item answered correctly. The model
                 // can't see the queue, so the app posts the wrap-up itself.
                 tutorThread.append(TutorTurn(
                     role: .tutor,
                     reply: "All done — you cleared every practice item. Nice work! 🎉".t))
+            } else {
+                // Don't jump straight to the next card. Pause on a "Next"
+                // button so the user can ask follow-ups about what they just
+                // did; advancePractice() presents the next scenario on tap.
+                // While paused the prompt switches to "between items" mode and
+                // this block is gated off (no judging), so questions just get
+                // answered.
+                practiceAwaitingAdvance = true
             }
         }
         // If the tool call resolved as immediately rejected (unknown
