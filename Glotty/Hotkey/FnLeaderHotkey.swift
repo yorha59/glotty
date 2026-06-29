@@ -16,6 +16,8 @@ final class FnLeaderHotkey {
     /// Fn → R — polishes the current selection and writes the result
     /// straight back over it, in place, with no popup.
     var onReplaceFire: (() -> Void)?
+    /// Fn → V — speaks the current selection aloud (text-to-speech), no popup.
+    var onSpeakFire: (() -> Void)?
     var onShowHUD: (() -> Void)?
     var onHideHUD: (() -> Void)?
 
@@ -134,6 +136,7 @@ final class FnLeaderHotkey {
             let polishKey    = Int64(Keycode.currentPolish())
             let chatKey      = Int64(Keycode.currentChat())
             let replaceKey   = Int64(Keycode.currentReplace())
+            let speakKey     = Int64(Keycode.currentSpeak())
 
             if keycode == translateKey, active {
                 FnLeaderHotkey.debug("FIRE Fn→translate (key \(keycode))")
@@ -176,6 +179,16 @@ final class FnLeaderHotkey {
                 firedDuringCurrentHold = true
                 cancelHUD()
                 let cb = onReplaceFire
+                DispatchQueue.main.async { cb?() }
+                return nil
+            }
+            if keycode == speakKey, active,
+               speakKey != translateKey, speakKey != explainKey,
+               speakKey != polishKey, speakKey != chatKey, speakKey != replaceKey {
+                FnLeaderHotkey.debug("FIRE Fn→speak (key \(keycode))")
+                firedDuringCurrentHold = true
+                cancelHUD()
+                let cb = onSpeakFire
                 DispatchQueue.main.async { cb?() }
                 return nil
             }

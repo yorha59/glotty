@@ -2709,6 +2709,7 @@ private struct HotkeySettingsSection: View {
     @AppStorage(Keycode.polishDefaultsKey)    private var polishKey:    Int = Keycode.defaultPolish
     @AppStorage(Keycode.chatDefaultsKey)      private var chatKey:      Int = Keycode.defaultChat
     @AppStorage(Keycode.replaceDefaultsKey)   private var replaceKey:   Int = Keycode.defaultReplace
+    @AppStorage(Keycode.speakDefaultsKey)     private var speakKey:     Int = Keycode.defaultSpeak
     @AppStorage(Keycode.leaderDefaultsKey)    private var leaderRaw:    String = Keycode.defaultLeader.rawValue
     @AppStorage(SelectionHoverWatcher.enabledKey) private var hoverEnabled: Bool = true
     @AppStorage(SelectionHoverWatcher.dwellKey)   private var hoverDwell: Double = SelectionHoverWatcher.defaultDwell
@@ -2721,7 +2722,7 @@ private struct HotkeySettingsSection: View {
     }
 
     private var hasCollision: Bool {
-        let codes = [translateKey, explainKey, polishKey, chatKey, replaceKey]
+        let codes = [translateKey, explainKey, polishKey, chatKey, replaceKey, speakKey]
         return Set(codes).count < codes.count
     }
     #endif
@@ -2775,6 +2776,13 @@ private struct HotkeySettingsSection: View {
                 prefix: "\(leaderBinding.wrappedValue.label) →",
                 keycode: $replaceKey,
                 defaultKeycode: Keycode.defaultReplace
+            )
+
+            KeyRecorderRow(
+                title: "Speak the selection aloud",
+                prefix: "\(leaderBinding.wrappedValue.label) →",
+                keycode: $speakKey,
+                defaultKeycode: Keycode.defaultSpeak
             )
 
             if hasCollision {

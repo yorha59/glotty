@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import UserNotifications
+import NaturalLanguage
 #if MAS
 import Carbon.HIToolbox
 #endif
@@ -514,6 +515,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hk.onPolishFire = { [weak self] in self?.handleFire(mode: .polish) }
         hk.onChatFire = { [weak self] in self?.handleFire(mode: .chat) }
         hk.onReplaceFire = { [weak self] in self?.handleReplace() }
+        hk.onSpeakFire = { [weak self] in self?.handleSpeak() }
         hk.onShowHUD = { [weak self] in self?.hud.show() }
         hk.onHideHUD = { [weak self] in self?.hud.hide() }
         do {
@@ -712,6 +714,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// `NSSpellChecker` (no LLM). Single suggestion → replace directly; multiple
     /// → float a clickable candidate list at the word and replace on pick.
     /// Word-scoped: a multi-word selection is rejected with a hint.
+    /// Fn → V — speak the current selection aloud (text-to-speech). No popup:
+    /// grabs the selection, detects its language for the right voice, and hands
+    /// it to the shared synthesizer. Empty selection → a hint, not silence.
+    func handleSpeak(providedText: String? = nil) {
+        Task { @MainActor in
+            let grabbed: String?
+            if let providedText { grabbed = providedText } else { grabbed = await grabber.grab() }
+            let text = (grabbed ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else {
+                dbg("speak — no selection available")
+                HUDController.shared.showHint(
+                    String(
+                        format: String(localized: "Select some text first, then press %@."),
+                        Keycode.currentLeader().label)
+                )
+                return
+            }
+            Speaker.shared.speak(text, language: Self.speakVoiceLanguage(for: text))
+        }
+    }
+
+    /// Map the detected language to a BCP-47 voice locale that
+    /// `AVSpeechSynthesisVoice` resolves. Most NLLanguage codes (en, ja, ko,
+    /// es…) match directly; the script-tagged Chinese ones need a region.
+    private static func speakVoiceLanguage(for text: String) -> String? {
+        guard let raw = LanguagePolicy.detectSourceLanguage(text)?.rawValue else { return nil }
+        switch raw {
+        case "zh-Hans": return "zh-CN"
+        case "zh-Hant": return "zh-TW"
+        default:        return raw
+        }
+    }
+
     func handleReplace(providedText: String? = nil) {
         SpellCandidateController.shared.dismiss()
         AppActivation.dismissAllRegistered()

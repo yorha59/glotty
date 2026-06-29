@@ -277,6 +277,8 @@ private struct HUDView: View {
                                      HUDView.nativeLangName))
             commandRow(key: Keycode.label(for: Keycode.currentReplace()),
                        label: String(localized: "Correct the selected word's spelling"))
+            commandRow(key: Keycode.label(for: Keycode.currentSpeak()),
+                       label: String(localized: "Speak the selection aloud"))
             if let hint {
                 Divider().background(dividerColor)
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
