@@ -327,6 +327,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         handleFire(mode: .chat)
     }
 
+    @objc private func openReader() {
+        dbg("openReader invoked (menu bar)")
+        ReaderWindowController.shared.openBook()
+    }
+
     /// Open the chat as a spaced-repetition practice session over the due
     /// polish mistakes. No selection involved — the agenda comes from
     /// PracticeStore.
@@ -413,6 +418,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         practice.image = NSImage(
             systemSymbolName: "checkmark.rectangle.stack", accessibilityDescription: nil)
         menu.addItem(practice)
+
+        // Reader — open a (DRM-free) EPUB in Glotty's own reader, where tapping
+        // a word runs the explain popup and looked-up words get underlined.
+        let reader = NSMenuItem(
+            title: "Read a book…".t, action: #selector(openReader), keyEquivalent: "")
+        reader.target = self
+        reader.image = NSImage(systemSymbolName: "book", accessibilityDescription: nil)
+        menu.addItem(reader)
 
         // Model submenu — switch the active provider's model inline (built from
         // the same registry the chat's set_setting uses). Omitted when the
