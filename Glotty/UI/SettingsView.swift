@@ -2723,6 +2723,7 @@ private struct VoiceSettingsSection: View {
     @State private var voicesError: String?
     @State private var cacheSize: Int = 0
     @State private var cachedItems: [VoiceCache.Entry] = []
+    @State private var selectedClip: VoiceCache.Entry?
 
     private func loadVoices() async {
         guard let key = Keychain.read(account: ElevenLabsTTS.keychainAccount), !key.isEmpty else { return }
@@ -2818,7 +2819,7 @@ private struct VoiceSettingsSection: View {
             Section {
                 ForEach(cachedItems) { item in
                     Button {
-                        if let d = VoiceCache.data(for: item) { ElevenLabsTTS.shared.playCached(d) }
+                        selectedClip = item
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "play.circle")
@@ -2827,12 +2828,19 @@ private struct VoiceSettingsSection: View {
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                             Spacer(minLength: 0)
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
                         }
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
             } header: {
                 Text("Cached clips")
+            }
+            .sheet(item: $selectedClip) { entry in
+                ClipPlaybackView(entry: entry)
             }
         }
     }
