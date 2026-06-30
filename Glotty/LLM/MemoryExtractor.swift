@@ -273,11 +273,26 @@ enum MemoryExtractor {
         translation / writing assistant) and propose new memories about
         the user worth persisting for future LLM calls.
 
-        Only propose a memory if the user volunteered something that
-        will help future runs — domain terminology they use, stable
-        preferences, projects they're working on, language-learning
-        background. Do NOT propose generic, transient, or trivial
-        observations ("user asked a question", "user wanted help").
+        Apply a strict durability test before proposing anything: would
+        injecting this memory into a DIFFERENT conversation weeks from now
+        make Glotty meaningfully more helpful? If the statement only
+        describes what happened in THIS conversation, it fails — skip it.
+
+        Do NOT propose:
+        - One-off events, errors, or slips: "user confused X with Y",
+          "user misspelled Z", "user forgot a word", "user didn't know how
+          to say W". A single mistake is not a durable trait — the user
+          fixing it here does not need to be remembered forever.
+        - Generic or trivial observations: "user asked a question", "user
+          wanted help", "user is learning English".
+        - Anything already obvious from the user's profile or the target
+          language.
+
+        ONLY propose when the user VOLUNTEERED something durable and
+        reusable: domain terminology with a non-obvious meaning, a stable
+        preference for how Glotty should respond, a project whose
+        vocabulary will recur, or a lasting background fact (profession,
+        native language, a concrete long-term goal).
 
         Each memory has a `kind`:
         - "glossary": term used by the user with a non-obvious meaning.
@@ -285,7 +300,8 @@ enum MemoryExtractor {
         - "preference": a stable preference about how Glotty should
           behave (tone, brevity, formality, etc.).
         - "fact": durable background fact about the user (native
-          language, profession, goals).
+          language, profession, long-term goals). NOT a record of a
+          one-off mistake, question, or momentary state.
         - "project": something the user is actively working on whose
           terminology may recur.
 
