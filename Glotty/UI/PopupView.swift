@@ -355,6 +355,8 @@ struct PopupView: View {
     @State private var tutorRunCounter: Int = 0
     /// Set by Stop; the re-fired `runTutorTurn` sees it and returns early.
     @State private var tutorStopRequested = false
+    /// User tapped Stop on a tutor reply — shows a neutral Retry banner.
+    @State private var tutorStopped = false
     /// Practice session only: the queue of agenda-item indices still to
     /// be drilled, front-first. The app presents the front item's
     /// scenario card (no LLM); the model only judges the attempt. On a
@@ -419,6 +421,9 @@ struct PopupView: View {
     /// Set by Stop; the re-fired `runPolishChat` sees it and returns early
     /// instead of starting another reply.
     @State private var polishChatStopRequested = false
+    /// User tapped Stop on a chat reply — surfaces a neutral Retry under the
+    /// last user turn (distinct from a `.failed` error retry).
+    @State private var polishChatStopped = false
     @State private var polishChatExpanded: Bool = false
     /// Bumped after the user accepts/rejects a suggestion card so
     /// SwiftUI re-reads the pending list from `LearnedMemoryStore`.
@@ -1503,6 +1508,8 @@ struct PopupView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else if case .failed(let message) = tutorStatus, tutorThread.isEmpty {
                 tutorErrorBanner(message)
+            } else if tutorStopped, tutorThread.isEmpty {
+                tutorStoppedBanner()
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 10) {
@@ -1523,6 +1530,9 @@ struct PopupView: View {
                         }
                         if case .failed(let message) = tutorStatus, !tutorThread.isEmpty {
                             tutorErrorBanner(message)
+                        }
+                        if tutorStopped, !tutorThread.isEmpty {
+                            tutorStoppedBanner()
                         }
                     }
                     .padding(.vertical, 4)
@@ -2048,6 +2058,30 @@ struct PopupView: View {
         )
     }
 
+    /// Neutral counterpart to `tutorErrorBanner` — shown after the user stops a
+    /// reply, with a Retry that re-runs the last user turn.
+    private func tutorStoppedBanner() -> some View {
+        HStack(spacing: 8) {
+            Text("Stopped.")
+                .font(.system(size: 12))
+                .foregroundStyle(PopupTokens.secondaryText)
+            Spacer()
+            Button("Retry") { retryTutor() }
+                .controlSize(.small)
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(PopupTokens.variantSurface)
+        )
+    }
+
+    private func retryTutor() {
+        tutorStopped = false
+        tutorStatus = .working
+        tutorRunCounter &+= 1
+    }
+
     private var tutorComposer: some View {
         VStack(alignment: .leading, spacing: 4) {
             // Tools toggle + reply-language picker float just above
@@ -2508,7 +2542,7 @@ struct PopupView: View {
                     turn,
                     showRetry: turn.role == .user
                         && idx == polishChatThread.count - 1
-                        && polishChatFailed
+                        && (polishChatFailed || polishChatStopped)
                 )
             }
         }
@@ -2563,6 +2597,10 @@ struct PopupView: View {
                             .foregroundStyle(.red)
                             .lineLimit(1)
                             .truncationMode(.tail)
+                    } else if polishChatStopped {
+                        Text("Stopped.")
+                            .font(.caption2)
+                            .foregroundStyle(PopupTokens.tertiaryText)
                     }
                     Button {
                         retryPolishChat()
@@ -2574,7 +2612,7 @@ struct PopupView: View {
                         .font(.caption)
                     }
                     .buttonStyle(.borderless)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(polishChatStopped ? PopupTokens.accent : .red)
                 }
             }
         }
@@ -2618,6 +2656,7 @@ struct PopupView: View {
         // below supersedes the in-flight (possibly stalled) turn via `.task(id:)`,
         // so a hung stream can't leave Send permanently disabled.
         guard !trimmed.isEmpty else { return }
+        polishChatStopped = false
         polishChatThread.append(PolishChatTurn(role: .user, text: trimmed))
         polishChatInput = ""
         polishChatRunCounter += 1
@@ -2684,6 +2723,13 @@ struct PopupView: View {
         // another reply; just settle back to ready.
         if polishChatStopRequested {
             polishChatStopRequested = false
+            // The cancelled run left its in-flight assistant placeholder (empty
+            // or partially streamed) at the tail — drop it so the thread ends on
+            // the user's turn and the neutral Retry affordance shows.
+            if let last = polishChatThread.last, last.role == .assistant {
+                polishChatThread.removeLast()
+            }
+            polishChatStopped = true
             polishChatStatus = .ready
             return
         }
@@ -2691,6 +2737,7 @@ struct PopupView: View {
             polishChatStatus = .failed("No LLM provider configured. Add one in Settings → Language Model.")
             return
         }
+        polishChatStopped = false
         polishChatStatus = .working
         // Reserve an empty assistant turn that the stream will fill in. The
         // bubble renderer shows "Thinking…" until the first chunk lands.
@@ -2864,7 +2911,8 @@ struct PopupView: View {
     /// off a fresh `runPolishChat` against the existing user turn (which
     /// stayed in the thread).
     private func retryPolishChat() {
-        guard case .failed = polishChatStatus else { return }
+        guard polishChatFailed || polishChatStopped else { return }
+        polishChatStopped = false
         polishChatStatus = .ready
         polishChatRunCounter += 1
     }
@@ -3561,6 +3609,7 @@ struct PopupView: View {
         // cancels the in-flight (possibly stalled) turn and starts a fresh
         // one. Without this, a hung/slow stream left Send permanently disabled.
         guard !trimmed.isEmpty else { return }
+        tutorStopped = false
         let userTurn = TutorTurn(role: .user, reply: trimmed)
         tutorThread.append(userTurn)
         persistTutorTurn(userTurn)
@@ -3868,6 +3917,10 @@ struct PopupView: View {
         // Stop tapped (or superseded) → don't start another reply.
         if tutorStopRequested {
             tutorStopRequested = false
+            // The tutor appends its turn only after a full parse, so a cancelled
+            // stream leaves no orphan bubble — the thread already ends on the
+            // user's turn. Just surface the neutral Retry banner.
+            tutorStopped = true
             tutorStatus = .ready
             return
         }
@@ -3875,6 +3928,7 @@ struct PopupView: View {
             tutorStatus = .failed("No LLM provider configured. Add one in Settings → Language Model.")
             return
         }
+        tutorStopped = false
         tutorStatus = .working
         tutorProviderName = provider.displayName
 
