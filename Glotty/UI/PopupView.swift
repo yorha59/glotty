@@ -463,6 +463,10 @@ struct PopupView: View {
     @State private var measuredContentHeight: CGFloat = 0
     @State private var measuredFooterHeight: CGFloat = 0
     @State private var detectedSource: NLLanguage?
+    // Reader "Mark word": true when this lookup came from the EPUB reader (source
+    // matches ReaderMark.pending), so the header offers a deliberate Mark button.
+    @State private var readerLookup = false
+    @State private var readerMarked = false
     @State private var targetLang: String = "en"
     /// All dict entries that returned content, in the user's configured priority
     /// order (Settings → Dictionaries). Each rendered as its own region so the
@@ -1166,8 +1170,13 @@ struct PopupView: View {
             // Speak the source aloud (system voice, or ElevenLabs if configured).
             speakButton(text: sourceText, language: detectedSource?.rawValue)
                 .font(.system(size: 17))
+            if readerLookup {
+                markButton(word: sourceText)
+                    .font(.system(size: 17))
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear { readerLookup = (ReaderMark.pending == sourceText) }
     }
 
     private var translationBlock: some View {
@@ -3288,6 +3297,21 @@ struct PopupView: View {
         }
         .buttonStyle(.plain)
         .help("Pronounce")
+    }
+
+    /// Reader-only: underline this word in the EPUB reader (deliberate marking).
+    private func markButton(word: String) -> some View {
+        Button {
+            ReaderWindowController.shared.state.markLookedUp(word)
+            ReaderMark.pending = nil
+            readerMarked = true
+        } label: {
+            Image(systemName: readerMarked ? "bookmark.fill" : "bookmark")
+                .foregroundStyle(readerMarked ? PopupTokens.accent : .secondary)
+        }
+        .buttonStyle(.plain)
+        .help(readerMarked ? "Marked — underlined in the reader"
+                           : "Mark word — underline it in the reader")
     }
 
     private func setupConfiguration() {

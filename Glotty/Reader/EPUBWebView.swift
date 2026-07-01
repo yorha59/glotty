@@ -155,7 +155,7 @@ struct EPUBWebView: NSViewRepresentable {
         while (s > 0 && isWord(text[s - 1])) s--;
         while (en < text.length && isWord(text[en])) en++;
         var word = text.slice(s, en).trim();
-        if (word.length < 1) return;
+        if (!/\p{L}/u.test(word)) return;   // need a letter — ignore lone punctuation
         window.webkit.messageHandlers.glotty.postMessage({ word: word });
       }, true);
     })();

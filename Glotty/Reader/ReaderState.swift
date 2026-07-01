@@ -177,32 +177,12 @@ final class ReaderState: ObservableObject {
         fontScale = min(2.5, max(0.7, (fontScale + delta * 100).rounded() / 100))
     }
 
-    /// Function words / small numbers not worth underlining even when tapped —
-    /// marking every "the" / "I" / "nine" is visual noise, not learned
-    /// vocabulary. The lookup popup still fires on tap; these just aren't marked.
-    private static let stopwords: Set<String> = [
-        "a", "an", "the", "and", "or", "but", "nor", "so", "yet", "for",
-        "i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us", "them",
-        "my", "your", "his", "its", "our", "their", "mine", "yours", "hers", "ours", "theirs",
-        "this", "that", "these", "those", "who", "whom", "whose", "which", "what",
-        "of", "in", "on", "at", "to", "from", "by", "with", "as", "into", "onto", "upon",
-        "about", "over", "under", "after", "before", "between", "through", "during",
-        "against", "among", "around", "without", "within", "off", "out", "up", "down",
-        "is", "are", "was", "were", "be", "been", "being", "am", "do", "does", "did",
-        "have", "has", "had", "having", "will", "would", "can", "could", "may", "might",
-        "must", "shall", "should", "not", "no", "yes",
-        "all", "any", "some", "each", "every", "few", "more", "most", "other", "such",
-        "only", "own", "same", "than", "too", "very", "just", "then", "else", "if",
-        "because", "while", "again", "once", "here", "there", "when", "where", "why", "how",
-        "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
-        "eleven", "twelve",
-    ]
-
-    /// Record a looked-up word (lowercased) so it gets underlined; persists.
-    /// Skips stopwords so the underline marks real vocabulary, not "the".
+    /// Underline a word the user deliberately marked (the popup's Mark button);
+    /// persists per book. Requires a letter so a stray punctuation tap (a lone
+    /// quote) can't be marked.
     func markLookedUp(_ word: String) {
         let w = word.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !w.isEmpty, !Self.stopwords.contains(w), let b = book else { return }
+        guard !w.isEmpty, w.contains(where: \.isLetter), let b = book else { return }
         guard !lookedUp.contains(w) else { return }
         lookedUp.insert(w)
         UserDefaults.standard.set(Array(lookedUp), forKey: Self.wordsKey(b.identifier))
@@ -211,12 +191,11 @@ final class ReaderState: ObservableObject {
     // MARK: - Persistence keys
 
     private static func progressKey(_ id: String) -> String { "glotty.reader.progress.\(id)" }
-    private static func wordsKey(_ id: String) -> String { "glotty.reader.words.\(id)" }
+    // New key namespace (was ".words.") — abandons the old auto-marked flood so
+    // only deliberately-marked words underline going forward.
+    private static func wordsKey(_ id: String) -> String { "glotty.reader.marks.\(id)" }
     private static func loadWords(_ id: String) -> Set<String> {
-        // Also drop any stopwords a previous build persisted, so the underline
-        // clears up for books opened before this fix.
         Set((UserDefaults.standard.array(forKey: wordsKey(id)) as? [String]) ?? [])
-            .subtracting(stopwords)
     }
     private func saveProgress() {
         guard let b = book else { return }

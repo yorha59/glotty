@@ -37,7 +37,9 @@ struct ReaderView: View {
                     fontCSS: state.font.css ?? "",
                     lookedUp: state.lookedUp,
                     onLookup: { word in
-                        state.markLookedUp(word)
+                        // Tapping only looks up the meaning; marking is deliberate
+                        // (the popup's Mark button). Arm it for this word.
+                        ReaderMark.pending = word
                         (NSApp.delegate as? AppDelegate)?.handleFire(mode: .explain, providedText: word)
                     }
                 )
