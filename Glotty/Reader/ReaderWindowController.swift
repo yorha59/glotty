@@ -17,6 +17,12 @@ final class ReaderWindowController: NSObject, NSWindowDelegate {
         window?.makeKeyAndOrderFront(nil)
     }
 
+    /// Open a specific EPUB (Finder "Open With", a dropped file, etc.).
+    func open(url: URL) {
+        show()
+        state.open(url)
+    }
+
     /// Bring up the reader and prompt for an `.epub` to open.
     func openBook() {
         show()

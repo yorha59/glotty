@@ -332,6 +332,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ReaderWindowController.shared.openBook()
     }
 
+    /// Finder "Open With → Glotty" (or opening / dropping a .epub) routes here.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard let epub = urls.first(where: { $0.pathExtension.lowercased() == "epub" }) else { return }
+        dbg("application(open:) — \(epub.lastPathComponent)")
+        ReaderWindowController.shared.open(url: epub)
+    }
+
     /// Open the chat as a spaced-repetition practice session over the due
     /// polish mistakes. No selection involved — the agenda comes from
     /// PracticeStore.
