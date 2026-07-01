@@ -47,6 +47,10 @@ final class ReaderWindowController: NSObject, NSWindowDelegate {
             backing: .buffered, defer: false)
         w.title = String(localized: "Glotty Reader")
         w.center()
+        // Enable the green button → Full Screen (immersive reading). Without a
+        // fullscreen collection behavior an agent app's green button is a no-op;
+        // ⌥-click still zooms. Managed so it appears in Mission Control.
+        w.collectionBehavior = [.fullScreenPrimary, .managed]
         w.setFrameAutosaveName("GlottyReaderWindow")
         w.isReleasedWhenClosed = false
         w.delegate = self
