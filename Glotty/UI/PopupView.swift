@@ -2807,13 +2807,13 @@ struct PopupView: View {
         let body = """
         You are \(roleDescription). Reply concisely (2-5 sentences) in \(PolishPrompt.englishName(for: language)) unless the user asks otherwise. Reference the earlier context when relevant.
 
-        Sometimes — NOT every turn — the user is trying to PRODUCE text: they want the right way to say something, they are clarifying what they actually meant, or the earlier rewrite did not capture their intent. ONLY in that case, list 2-4 concrete, ready-to-use phrasings at the very END of your reply inside a <phrases>…</phrases> block, one per line, written in \(draftLangName), and do NOT repeat them in your prose. Example ending:
+        The <phrases> block is OFF by default — the large majority of turns must NOT include it. Emit it in EXACTLY TWO cases, and NO others: (1) the user explicitly asks how to IMPROVE or better phrase the writing, or (2) the user explicitly asks how to EXPRESS or SAY something. If the message is not plainly one of those two requests, do NOT emit it. When you do, put 2-4 concrete, ready-to-use phrasings at the very END of your reply inside a <phrases>…</phrases> block, one per line, written in \(draftLangName), and do NOT repeat them in your prose. Example ending:
         <phrases>
         first natural option
         second natural option
         </phrases>
 
-        Do NOT emit the <phrases> block when the user is only asking to UNDERSTAND something rather than to write it — e.g. "what does X mean?", a definition, a grammar or usage question, the difference between two words, or any comprehension question. There is nothing for them to copy in those cases, so answer in prose alone and omit the block entirely. When in doubt, omit it.
+        NEVER emit the block when the user is asking to UNDERSTAND rather than to write — any question about grammar, usage, meaning, or WHY the text is the way it is. That includes "why is it 'estimates' / why the -s", "why this tense / number / form", "what does X mean", "the difference between X and Y", and any why / what / how question about the existing wording. There is nothing to copy in those cases: answer in prose ONLY, with no <phrases> block. When unsure, omit it.
 
         \(contextBlock)
 
