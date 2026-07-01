@@ -6,6 +6,7 @@ import SwiftUI
 struct ReaderView: View {
     @ObservedObject var state: ReaderState
     @State private var showTOC = true
+    @State private var showCustomize = false
 
     var body: some View {
         if let book = state.book {
@@ -23,7 +24,10 @@ struct ReaderView: View {
                         book: book,
                         chapterIndex: state.chapterIndex,
                         fontScale: state.fontScale,
-                        theme: state.theme,
+                        bg: state.bgColorHex,
+                        fg: state.fgColorHex,
+                        lineHeight: state.lineHeight,
+                        letterSpacing: state.letterSpacing,
                         fontCSS: state.font.css ?? "",
                         lookedUp: state.lookedUp,
                         onLookup: { word in
@@ -80,28 +84,68 @@ struct ReaderView: View {
 
             Spacer()
 
-            Button { state.adjustFont(-0.1) } label: { Text("A").font(.system(size: 12)) }
-                .help("Smaller text")
-            Button { state.adjustFont(0.1) } label: { Text("A").font(.system(size: 18)) }
-                .help("Larger text")
-            Picker("", selection: $state.font) {
-                ForEach(ReaderState.ReaderFont.allCases) { Text($0.label).tag($0) }
+            Button { showCustomize.toggle() } label: {
+                Text("Aa").font(.system(size: 16, weight: .medium))
             }
-            .labelsHidden()
-            .pickerStyle(.menu)
-            .fixedSize()
-            .help("Font")
-            Picker("", selection: $state.theme) {
-                ForEach(ReaderState.Theme.allCases) { Text($0.label).tag($0) }
-            }
-            .labelsHidden()
-            .pickerStyle(.menu)
-            .fixedSize()
-            .help("Background")
+            .help("Text & colors")
+            .popover(isPresented: $showCustomize, arrowEdge: .bottom) { customizePanel }
         }
         .buttonStyle(.borderless)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    private var customizePanel: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Text").font(.headline)
+            Picker("Font", selection: $state.font) {
+                ForEach(ReaderState.ReaderFont.allCases) { Text($0.label).tag($0) }
+            }
+            slider("Text size", $state.fontScale, 0.7...2.5) { "\(Int(($0 * 100).rounded()))%" }
+            slider("Line spacing", $state.lineHeight, 1.0...2.4) { String(format: "%.2f", $0) }
+            slider("Letter spacing", $state.letterSpacing, -0.02...0.15) { String(format: "%.2f em", $0) }
+
+            Divider()
+
+            Text("Background & Text").font(.headline)
+            Picker("Theme", selection: $state.theme) {
+                ForEach(ReaderState.Theme.allCases) { Text($0.label).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            HStack(spacing: 16) {
+                ColorPicker("Background", selection: bgBinding, supportsOpacity: false)
+                ColorPicker("Text", selection: fgBinding, supportsOpacity: false)
+            }
+
+            Divider()
+            HStack {
+                Spacer()
+                Button("Reset", role: .destructive) { state.resetTypography() }
+            }
+        }
+        .padding(18)
+        .frame(width: 340)
+    }
+
+    private var bgBinding: Binding<Color> {
+        Binding(get: { Color(readerHex: state.bgColorHex) }, set: { state.bgColorHex = $0.readerHex })
+    }
+    private var fgBinding: Binding<Color> {
+        Binding(get: { Color(readerHex: state.fgColorHex) }, set: { state.fgColorHex = $0.readerHex })
+    }
+
+    /// One labeled slider row: title, live value readout, and the slider.
+    private func slider(_ title: LocalizedStringKey, _ value: Binding<Double>,
+                        _ range: ClosedRange<Double>, _ fmt: @escaping (Double) -> String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(title).font(.subheadline)
+                Spacer()
+                Text(fmt(value.wrappedValue)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            }
+            Slider(value: value, in: range)
+        }
     }
 
     private var emptyState: some View {

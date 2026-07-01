@@ -10,7 +10,10 @@ struct EPUBWebView: NSViewRepresentable {
     let book: EPUBBook
     let chapterIndex: Int
     let fontScale: Double
-    let theme: ReaderState.Theme
+    let bg: String
+    let fg: String
+    let lineHeight: Double
+    let letterSpacing: Double
     let fontCSS: String
     let lookedUp: Set<String>
     let onLookup: (String) -> Void
@@ -34,7 +37,8 @@ struct EPUBWebView: NSViewRepresentable {
     func updateNSView(_ web: WKWebView, context: Context) {
         let c = context.coordinator
         c.onLookup = onLookup
-        c.style = (fontScale, theme.rawValue, fontCSS)
+        c.style = Coordinator.Style(scale: fontScale, lineHeight: lineHeight,
+                                    letterSpacing: letterSpacing, bg: bg, fg: fg, font: fontCSS)
         c.words = Array(lookedUp)
         if c.loadedChapter != chapterIndex, book.chapters.indices.contains(chapterIndex) {
             c.loadedChapter = chapterIndex
@@ -50,7 +54,11 @@ struct EPUBWebView: NSViewRepresentable {
         weak var webView: WKWebView?
         var onLookup: (String) -> Void
         var loadedChapter = -1
-        var style: (Double, String, String) = (1.0, "light", "")
+        struct Style {
+            var scale = 1.0, lineHeight = 1.65, letterSpacing = 0.0
+            var bg = "#ffffff", fg = "#111111", font = ""
+        }
+        var style = Style()
         var words: [String] = []
 
         init(onLookup: @escaping (String) -> Void) { self.onLookup = onLookup }
@@ -60,8 +68,9 @@ struct EPUBWebView: NSViewRepresentable {
         }
 
         func applyStyle() {
+            let s = style
             webView?.evaluateJavaScript(
-                "window.__glottyStyle && __glottyStyle(\(style.0), \(Self.jsString(style.1)), \(Self.jsString(style.2)))",
+                "window.__glottyStyle && __glottyStyle(\(s.scale), \(Self.jsString(s.bg)), \(Self.jsString(s.fg)), \(s.lineHeight), \(s.letterSpacing), \(Self.jsString(s.font)))",
                 completionHandler: nil)
         }
         /// Double-quoted, escaped JS string literal (the font stack contains
@@ -89,17 +98,14 @@ struct EPUBWebView: NSViewRepresentable {
     (function () {
       if (window.__glottyReady) return; window.__glottyReady = true;
 
-      window.__glottyStyle = function (scale, theme, font) {
+      window.__glottyStyle = function (scale, bg, fg, lineHeight, letterSpacing, font) {
         var st = document.getElementById('glotty-style');
         if (!st) { st = document.createElement('style'); st.id = 'glotty-style'; (document.head || document.documentElement).appendChild(st); }
-        var bg = '', fg = '';
-        if (theme === 'dark')  { bg = '#1c1c1e'; fg = '#d8d8d8'; }
-        else if (theme === 'sepia') { bg = '#f4ecd8'; fg = '#5b4636'; }
-        else { bg = '#ffffff'; fg = '#111111'; }
         var ff = font ? ('font-family:' + font + ' !important;') : '';
         st.textContent =
           'html,body{background:' + bg + ' !important; color:' + fg + ' !important;' + ff +
-          'font-size:' + (scale * 100) + '% !important; line-height:1.65; -webkit-text-size-adjust:none;}' +
+          'font-size:' + (scale * 100) + '% !important; line-height:' + lineHeight + ' !important;' +
+          'letter-spacing:' + letterSpacing + 'em !important; -webkit-text-size-adjust:none;}' +
           'body{max-width:42em; margin:0 auto; padding:28px 24px 64px;}' +
           'img{max-width:100% !important; height:auto !important;}' +
           'a{color:#3b82f6;}' +

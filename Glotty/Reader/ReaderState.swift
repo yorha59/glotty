@@ -16,6 +16,14 @@ final class ReaderState: ObservableObject {
             case .dark:  return String(localized: "Dark")
             }
         }
+        /// Preset background / text colors. Selecting a theme applies these to
+        /// the color wells (which the user can then fine-tune).
+        var bg: String {
+            switch self { case .light: return "#ffffff"; case .sepia: return "#f4ecd8"; case .dark: return "#1c1c1e" }
+        }
+        var fg: String {
+            switch self { case .light: return "#111111"; case .sepia: return "#5b4636"; case .dark: return "#d8d8d8" }
+        }
     }
 
     enum ReaderFont: String, CaseIterable, Identifiable {
@@ -56,22 +64,61 @@ final class ReaderState: ObservableObject {
         didSet { UserDefaults.standard.set(fontScale, forKey: Self.fontKey) }
     }
     @Published var theme: Theme {
-        didSet { UserDefaults.standard.set(theme.rawValue, forKey: Self.themeKey) }
+        didSet {
+            UserDefaults.standard.set(theme.rawValue, forKey: Self.themeKey)
+            // A theme IS its palette — picking one drives the color wells (the
+            // color pickers are bound to bgColorHex/fgColorHex, so they update
+            // in step). The user can still fine-tune either color afterward.
+            bgColorHex = theme.bg
+            fgColorHex = theme.fg
+        }
     }
     @Published var font: ReaderFont {
         didSet { UserDefaults.standard.set(font.rawValue, forKey: Self.fontFamilyKey) }
+    }
+    @Published var lineHeight: Double {
+        didSet { UserDefaults.standard.set(lineHeight, forKey: Self.lineKey) }
+    }
+    @Published var letterSpacing: Double {
+        didSet { UserDefaults.standard.set(letterSpacing, forKey: Self.letterKey) }
+    }
+    @Published var bgColorHex: String {
+        didSet { UserDefaults.standard.set(bgColorHex, forKey: Self.bgKey) }
+    }
+    @Published var fgColorHex: String {
+        didSet { UserDefaults.standard.set(fgColorHex, forKey: Self.fgKey) }
     }
     @Published private(set) var lookedUp: Set<String> = []
 
     private static let fontKey = "glotty.reader.fontScale"
     private static let themeKey = "glotty.reader.theme"
     private static let fontFamilyKey = "glotty.reader.fontFamily"
+    private static let lineKey = "glotty.reader.lineHeight"
+    private static let letterKey = "glotty.reader.letterSpacing"
+    private static let bgKey = "glotty.reader.bgColor"
+    private static let fgKey = "glotty.reader.fgColor"
 
     init() {
-        let f = UserDefaults.standard.double(forKey: Self.fontKey)
+        let d = UserDefaults.standard
+        let f = d.double(forKey: Self.fontKey)
         fontScale = f > 0 ? f : 1.0
-        theme = Theme(rawValue: UserDefaults.standard.string(forKey: Self.themeKey) ?? "") ?? .light
-        font = ReaderFont(rawValue: UserDefaults.standard.string(forKey: Self.fontFamilyKey) ?? "") ?? .bookDefault
+        let t = Theme(rawValue: d.string(forKey: Self.themeKey) ?? "") ?? .light
+        theme = t   // didSet doesn't run in init, so the stored colors below stand
+        font = ReaderFont(rawValue: d.string(forKey: Self.fontFamilyKey) ?? "") ?? .bookDefault
+        let lh = d.double(forKey: Self.lineKey)
+        lineHeight = lh > 0 ? lh : 1.65
+        letterSpacing = d.object(forKey: Self.letterKey) as? Double ?? 0
+        bgColorHex = d.string(forKey: Self.bgKey) ?? t.bg
+        fgColorHex = d.string(forKey: Self.fgKey) ?? t.fg
+    }
+
+    /// Restore all typography + colors to defaults (Light theme).
+    func resetTypography() {
+        fontScale = 1.0
+        lineHeight = 1.65
+        letterSpacing = 0
+        font = .bookDefault
+        theme = .light   // didSet resets bg/fg to the Light palette
     }
 
     func open(_ url: URL) {
