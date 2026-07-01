@@ -1,4 +1,5 @@
 import SwiftUI
+import PDFKit
 
 /// Observable state for the EPUB reader window: the open book, current chapter,
 /// type settings, and the per-book set of looked-up words (underlined in the
@@ -59,6 +60,15 @@ final class ReaderState: ObservableObject {
     @Published private(set) var book: EPUBBook?
     @Published var chapterIndex: Int = 0 { didSet { saveProgress() } }
     @Published var openError: String?
+
+    // PDF backend — books are EPUB (reflowable, WKWebView); PDFs render fixed via
+    // PDFKit, so font / theme / spacing don't apply, but tap-to-look-up + the
+    // outline TOC + page position do.
+    struct PDFTOCItem: Identifiable { let id = UUID(); let label: String; let pageIndex: Int; let level: Int }
+    @Published var pdf: PDFDocument?
+    @Published var pdfTOC: [PDFTOCItem] = []
+    @Published var pdfPage: Int = 0 { didSet { savePDFPage() } }
+    private var pdfURL: URL?
 
     @Published var fontScale: Double {
         didSet { UserDefaults.standard.set(fontScale, forKey: Self.fontKey) }
@@ -122,8 +132,13 @@ final class ReaderState: ObservableObject {
     }
 
     func open(_ url: URL) {
+        if url.pathExtension.lowercased() == "pdf" { openPDF(url) } else { openEPUB(url) }
+    }
+
+    private func openEPUB(_ url: URL) {
         do {
             let b = try EPUBBook.open(url)
+            pdf = nil; pdfTOC = []
             book = b
             openError = nil
             lookedUp = Self.loadWords(b.identifier)
@@ -134,6 +149,21 @@ final class ReaderState: ObservableObject {
             openError = String(format: String(localized: "Couldn't open this book: %@"),
                                String(describing: error))
         }
+    }
+
+    private func openPDF(_ url: URL) {
+        guard let doc = PDFDocument(url: url) else {
+            pdf = nil
+            openError = String(localized: "Couldn't open this PDF.")
+            return
+        }
+        book = nil
+        pdfURL = url
+        pdf = doc
+        openError = nil
+        pdfTOC = Self.buildPDFTOC(doc)
+        pdfPage = min(max(0, UserDefaults.standard.integer(forKey: Self.pdfPageKey(url))),
+                      max(0, doc.pageCount - 1))
     }
 
     var chapterCount: Int { book?.chapters.count ?? 0 }
@@ -191,5 +221,28 @@ final class ReaderState: ObservableObject {
     private func saveProgress() {
         guard let b = book else { return }
         UserDefaults.standard.set(chapterIndex, forKey: Self.progressKey(b.identifier))
+    }
+
+    // MARK: - PDF helpers
+
+    private static func pdfPageKey(_ url: URL) -> String { "glotty.reader.pdfpage.\(url.lastPathComponent)" }
+    private func savePDFPage() {
+        guard let u = pdfURL else { return }
+        UserDefaults.standard.set(pdfPage, forKey: Self.pdfPageKey(u))
+    }
+    private static func buildPDFTOC(_ doc: PDFDocument) -> [PDFTOCItem] {
+        guard let root = doc.outlineRoot else { return [] }
+        var out: [PDFTOCItem] = []
+        func walk(_ node: PDFOutline, _ level: Int) {
+            for i in 0..<node.numberOfChildren {
+                guard let child = node.child(at: i) else { continue }
+                if let label = child.label, !label.isEmpty, let page = child.destination?.page {
+                    out.append(PDFTOCItem(label: label, pageIndex: doc.index(for: page), level: level))
+                }
+                walk(child, level + 1)
+            }
+        }
+        walk(root, 0)
+        return out
     }
 }

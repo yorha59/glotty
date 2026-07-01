@@ -27,10 +27,10 @@ final class ReaderWindowController: NSObject, NSWindowDelegate {
     func openBook() {
         show()
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.epub]
+        panel.allowedContentTypes = [.epub, .pdf]
         panel.allowsMultipleSelection = false
         panel.prompt = String(localized: "Open")
-        panel.message = String(localized: "Choose an EPUB book")
+        panel.message = String(localized: "Choose an EPUB or PDF")
         let complete: (NSApplication.ModalResponse) -> Void = { [weak self] resp in
             guard resp == .OK, let url = panel.url else { return }
             self?.state.open(url)

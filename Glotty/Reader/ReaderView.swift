@@ -1,4 +1,5 @@
 import SwiftUI
+import PDFKit
 
 /// The reader UI: a toggleable table-of-contents sidebar, a control bar
 /// (chapter nav, font size, theme), and the chapter web view. A tap on any word
@@ -9,38 +10,99 @@ struct ReaderView: View {
     @State private var showCustomize = false
 
     var body: some View {
-        if let book = state.book {
-            HStack(spacing: 0) {
-                if showTOC {
-                    tocSidebar(book)
-                        .frame(width: 260)
-                        .transition(.move(edge: .leading))
-                    Divider()
-                }
-                VStack(spacing: 0) {
-                    controlBar(book)
-                    Divider()
-                    EPUBWebView(
-                        book: book,
-                        chapterIndex: state.chapterIndex,
-                        fontScale: state.fontScale,
-                        bg: state.bgColorHex,
-                        fg: state.fgColorHex,
-                        lineHeight: state.lineHeight,
-                        letterSpacing: state.letterSpacing,
-                        fontCSS: state.font.css ?? "",
-                        lookedUp: state.lookedUp,
-                        onLookup: { word in
-                            state.markLookedUp(word)
-                            (NSApp.delegate as? AppDelegate)?.handleFire(mode: .explain, providedText: word)
-                        }
-                    )
-                    .id(book.identifier)   // fresh web view per book
-                }
+        if let book = state.book { epubBody(book) }
+        else if let pdf = state.pdf { pdfBody(pdf) }
+        else { emptyState }
+    }
+
+    private func epubBody(_ book: EPUBBook) -> some View {
+        HStack(spacing: 0) {
+            if showTOC {
+                tocSidebar(book)
+                    .frame(width: 260)
+                    .transition(.move(edge: .leading))
+                Divider()
             }
-        } else {
-            emptyState
+            VStack(spacing: 0) {
+                controlBar(book)
+                Divider()
+                EPUBWebView(
+                    book: book,
+                    chapterIndex: state.chapterIndex,
+                    fontScale: state.fontScale,
+                    bg: state.bgColorHex,
+                    fg: state.fgColorHex,
+                    lineHeight: state.lineHeight,
+                    letterSpacing: state.letterSpacing,
+                    fontCSS: state.font.css ?? "",
+                    lookedUp: state.lookedUp,
+                    onLookup: { word in
+                        state.markLookedUp(word)
+                        (NSApp.delegate as? AppDelegate)?.handleFire(mode: .explain, providedText: word)
+                    }
+                )
+                .id(book.identifier)   // fresh web view per book
+            }
         }
+    }
+
+    private func pdfBody(_ pdf: PDFDocument) -> some View {
+        HStack(spacing: 0) {
+            if showTOC, !state.pdfTOC.isEmpty {
+                pdfTOCSidebar
+                    .frame(width: 260)
+                    .transition(.move(edge: .leading))
+                Divider()
+            }
+            VStack(spacing: 0) {
+                pdfControlBar(pdf)
+                Divider()
+                PDFReaderView(doc: pdf, page: $state.pdfPage, onLookup: { word in
+                    (NSApp.delegate as? AppDelegate)?.handleFire(mode: .explain, providedText: word)
+                })
+            }
+        }
+    }
+
+    private var pdfTOCSidebar: some View {
+        List {
+            ForEach(state.pdfTOC) { item in
+                Button { state.pdfPage = item.pageIndex } label: {
+                    HStack {
+                        Text(item.label).lineLimit(2).multilineTextAlignment(.leading)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.leading, CGFloat(item.level) * 10)
+                    .contentShape(Rectangle())
+                    .foregroundStyle(item.pageIndex == state.pdfPage ? Color.accentColor : .primary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .listStyle(.sidebar)
+    }
+
+    private func pdfControlBar(_ pdf: PDFDocument) -> some View {
+        HStack(spacing: 12) {
+            if !state.pdfTOC.isEmpty {
+                Button { withAnimation(.easeInOut(duration: 0.18)) { showTOC.toggle() } } label: {
+                    Image(systemName: "sidebar.left")
+                }
+                .help("Toggle contents")
+            }
+            Spacer()
+            Button { if state.pdfPage > 0 { state.pdfPage -= 1 } } label: { Image(systemName: "chevron.left") }
+                .disabled(state.pdfPage <= 0)
+            Text("\(state.pdfPage + 1) / \(pdf.pageCount)")
+                .font(.system(.body, design: .monospaced))
+                .foregroundStyle(.secondary)
+            Button { if state.pdfPage < pdf.pageCount - 1 { state.pdfPage += 1 } } label: { Image(systemName: "chevron.right") }
+                .disabled(state.pdfPage >= pdf.pageCount - 1)
+            Spacer()
+        }
+        .buttonStyle(.borderless)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 
     private func tocSidebar(_ book: EPUBBook) -> some View {
@@ -147,7 +209,7 @@ struct ReaderView: View {
             Image(systemName: "book")
                 .font(.system(size: 40))
                 .foregroundStyle(.tertiary)
-            Text("Open an EPUB to start reading.")
+            Text("Open an EPUB or PDF to start reading.")
                 .foregroundStyle(.secondary)
             Button("Open Book…") { ReaderWindowController.shared.openBook() }
                 .buttonStyle(.borderedProminent)
