@@ -113,10 +113,8 @@ struct ReaderView: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            HStack(spacing: 16) {
-                ColorPicker("Background", selection: bgBinding, supportsOpacity: false)
-                ColorPicker("Text", selection: fgBinding, supportsOpacity: false)
-            }
+            ColorField(title: "Background", hex: $state.bgColorHex, presets: Self.bgPresets)
+            ColorField(title: "Text", hex: $state.fgColorHex, presets: Self.fgPresets)
 
             Divider()
             HStack {
@@ -128,12 +126,8 @@ struct ReaderView: View {
         .frame(width: 340)
     }
 
-    private var bgBinding: Binding<Color> {
-        Binding(get: { Color(readerHex: state.bgColorHex) }, set: { state.bgColorHex = $0.readerHex })
-    }
-    private var fgBinding: Binding<Color> {
-        Binding(get: { Color(readerHex: state.fgColorHex) }, set: { state.fgColorHex = $0.readerHex })
-    }
+    static let bgPresets = ["#ffffff", "#f4ecd8", "#e9e6df", "#1c1c1e", "#000000"]
+    static let fgPresets = ["#111111", "#333333", "#5b4636", "#d8d8d8", "#ffffff"]
 
     /// One labeled slider row: title, live value readout, and the slider.
     private func slider(_ title: LocalizedStringKey, _ value: Binding<Double>,
@@ -163,5 +157,68 @@ struct ReaderView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(40)
+    }
+}
+
+/// A lightweight color control: current-color swatch, a hex field you can type
+/// or paste a code into, and a row of preset swatches — no full system color
+/// panel. Accepts `#rgb` / `#rrggbb` (with or without the `#`); invalid input
+/// reverts on commit.
+private struct ColorField: View {
+    let title: LocalizedStringKey
+    @Binding var hex: String
+    let presets: [String]
+
+    @State private var draft = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text(title).font(.subheadline)
+                Spacer()
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color(readerHex: hex))
+                    .frame(width: 26, height: 18)
+                    .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(.secondary.opacity(0.4)))
+                TextField("#RRGGBB", text: $draft)
+                    .focused($focused)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(.caption, design: .monospaced))
+                    .frame(width: 92)
+                    .onSubmit(commit)
+                    .onChange(of: focused) { _, f in if !f { commit() } }
+            }
+            HStack(spacing: 6) {
+                ForEach(presets, id: \.self) { p in
+                    Button { hex = p } label: {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color(readerHex: p))
+                            .frame(width: 28, height: 22)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .strokeBorder(p.lowercased() == hex.lowercased()
+                                                  ? Color.accentColor : Color.secondary.opacity(0.3),
+                                                  lineWidth: p.lowercased() == hex.lowercased() ? 2 : 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .onAppear { draft = hex }
+        .onChange(of: hex) { _, new in if !focused { draft = new } }
+    }
+
+    private func commit() {
+        if let n = Self.normalize(draft) { hex = n; draft = n } else { draft = hex }
+    }
+
+    private static func normalize(_ s: String) -> String? {
+        var t = s.trimmingCharacters(in: .whitespaces)
+        if t.hasPrefix("#") { t.removeFirst() }
+        if t.count == 3 { t = t.map { "\($0)\($0)" }.joined() }
+        guard t.count == 6, t.allSatisfy(\.isHexDigit) else { return nil }
+        return "#" + t.lowercased()
     }
 }
