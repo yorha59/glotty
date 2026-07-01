@@ -11,6 +11,7 @@ struct EPUBWebView: NSViewRepresentable {
     let chapterIndex: Int
     let fontScale: Double
     let theme: ReaderState.Theme
+    let fontCSS: String
     let lookedUp: Set<String>
     let onLookup: (String) -> Void
 
@@ -33,7 +34,7 @@ struct EPUBWebView: NSViewRepresentable {
     func updateNSView(_ web: WKWebView, context: Context) {
         let c = context.coordinator
         c.onLookup = onLookup
-        c.style = (fontScale, theme.rawValue)
+        c.style = (fontScale, theme.rawValue, fontCSS)
         c.words = Array(lookedUp)
         if c.loadedChapter != chapterIndex, book.chapters.indices.contains(chapterIndex) {
             c.loadedChapter = chapterIndex
@@ -49,7 +50,7 @@ struct EPUBWebView: NSViewRepresentable {
         weak var webView: WKWebView?
         var onLookup: (String) -> Void
         var loadedChapter = -1
-        var style: (Double, String) = (1.0, "light")
+        var style: (Double, String, String) = (1.0, "light", "")
         var words: [String] = []
 
         init(onLookup: @escaping (String) -> Void) { self.onLookup = onLookup }
@@ -60,7 +61,13 @@ struct EPUBWebView: NSViewRepresentable {
 
         func applyStyle() {
             webView?.evaluateJavaScript(
-                "window.__glottyStyle && __glottyStyle(\(style.0), '\(style.1)')", completionHandler: nil)
+                "window.__glottyStyle && __glottyStyle(\(style.0), \(Self.jsString(style.1)), \(Self.jsString(style.2)))",
+                completionHandler: nil)
+        }
+        /// Double-quoted, escaped JS string literal (the font stack contains
+        /// commas/quotes, so it can't be interpolated raw).
+        private static func jsString(_ s: String) -> String {
+            "\"" + s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
         }
         func applyMarks() {
             let json = (try? JSONSerialization.data(withJSONObject: words))
@@ -82,15 +89,16 @@ struct EPUBWebView: NSViewRepresentable {
     (function () {
       if (window.__glottyReady) return; window.__glottyReady = true;
 
-      window.__glottyStyle = function (scale, theme) {
+      window.__glottyStyle = function (scale, theme, font) {
         var st = document.getElementById('glotty-style');
         if (!st) { st = document.createElement('style'); st.id = 'glotty-style'; (document.head || document.documentElement).appendChild(st); }
         var bg = '', fg = '';
         if (theme === 'dark')  { bg = '#1c1c1e'; fg = '#d8d8d8'; }
         else if (theme === 'sepia') { bg = '#f4ecd8'; fg = '#5b4636'; }
         else { bg = '#ffffff'; fg = '#111111'; }
+        var ff = font ? ('font-family:' + font + ' !important;') : '';
         st.textContent =
-          'html,body{background:' + bg + ' !important; color:' + fg + ' !important;' +
+          'html,body{background:' + bg + ' !important; color:' + fg + ' !important;' + ff +
           'font-size:' + (scale * 100) + '% !important; line-height:1.65; -webkit-text-size-adjust:none;}' +
           'body{max-width:42em; margin:0 auto; padding:28px 24px 64px;}' +
           'img{max-width:100% !important; height:auto !important;}' +

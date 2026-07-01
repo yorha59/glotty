@@ -24,6 +24,7 @@ struct ReaderView: View {
                         chapterIndex: state.chapterIndex,
                         fontScale: state.fontScale,
                         theme: state.theme,
+                        fontCSS: state.font.css ?? "",
                         lookedUp: state.lookedUp,
                         onLookup: { word in
                             state.markLookedUp(word)
@@ -83,12 +84,20 @@ struct ReaderView: View {
                 .help("Smaller text")
             Button { state.adjustFont(0.1) } label: { Text("A").font(.system(size: 18)) }
                 .help("Larger text")
+            Picker("", selection: $state.font) {
+                ForEach(ReaderState.ReaderFont.allCases) { Text($0.label).tag($0) }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .fixedSize()
+            .help("Font")
             Picker("", selection: $state.theme) {
                 ForEach(ReaderState.Theme.allCases) { Text($0.label).tag($0) }
             }
             .labelsHidden()
             .pickerStyle(.menu)
             .fixedSize()
+            .help("Background")
         }
         .buttonStyle(.borderless)
         .padding(.horizontal, 12)

@@ -18,6 +18,36 @@ final class ReaderState: ObservableObject {
         }
     }
 
+    enum ReaderFont: String, CaseIterable, Identifiable {
+        case bookDefault, system, newYork, georgia, palatino, charter, times, helvetica
+        var id: String { rawValue }
+        var label: String {
+            switch self {
+            case .bookDefault: return String(localized: "Book Default")
+            case .system:      return String(localized: "System")
+            case .newYork:     return "New York"
+            case .georgia:     return "Georgia"
+            case .palatino:    return "Palatino"
+            case .charter:     return "Charter"
+            case .times:       return "Times"
+            case .helvetica:   return "Helvetica"
+            }
+        }
+        /// CSS font-family stack, or nil to keep the book's own font.
+        var css: String? {
+            switch self {
+            case .bookDefault: return nil
+            case .system:      return "-apple-system, system-ui, sans-serif"
+            case .newYork:     return "'New York', ui-serif, Georgia, serif"
+            case .georgia:     return "Georgia, 'Times New Roman', serif"
+            case .palatino:    return "'Palatino', 'Palatino Linotype', 'Book Antiqua', serif"
+            case .charter:     return "'Charter', Georgia, serif"
+            case .times:       return "'Times New Roman', Times, serif"
+            case .helvetica:   return "'Helvetica Neue', Helvetica, Arial, sans-serif"
+            }
+        }
+    }
+
     @Published private(set) var book: EPUBBook?
     @Published var chapterIndex: Int = 0 { didSet { saveProgress() } }
     @Published var openError: String?
@@ -28,15 +58,20 @@ final class ReaderState: ObservableObject {
     @Published var theme: Theme {
         didSet { UserDefaults.standard.set(theme.rawValue, forKey: Self.themeKey) }
     }
+    @Published var font: ReaderFont {
+        didSet { UserDefaults.standard.set(font.rawValue, forKey: Self.fontFamilyKey) }
+    }
     @Published private(set) var lookedUp: Set<String> = []
 
     private static let fontKey = "glotty.reader.fontScale"
     private static let themeKey = "glotty.reader.theme"
+    private static let fontFamilyKey = "glotty.reader.fontFamily"
 
     init() {
         let f = UserDefaults.standard.double(forKey: Self.fontKey)
         fontScale = f > 0 ? f : 1.0
         theme = Theme(rawValue: UserDefaults.standard.string(forKey: Self.themeKey) ?? "") ?? .light
+        font = ReaderFont(rawValue: UserDefaults.standard.string(forKey: Self.fontFamilyKey) ?? "") ?? .bookDefault
     }
 
     func open(_ url: URL) {
