@@ -105,6 +105,10 @@ final class SelectionGrabber {
     /// selection bounds nor the element frame (so we can't know the pointer is
     /// over it) — hover just won't trigger there.
     func hoverSelection() -> HoverSelection? {
+        // Chromium/Electron withhold their AX tree (incl. selected text) until an
+        // assistive client opts in. Nudge the front app before reading, so hover
+        // works in Chrome, VS Code, Slack, etc. — not just native Cocoa apps.
+        enableManualAccessibility()
         let systemWide = AXUIElementCreateSystemWide()
 
         var focusedAny: AnyObject?
@@ -128,6 +132,18 @@ final class SelectionGrabber {
         let elemFrame = frame(of: focused)
         guard selRect != nil || elemFrame != nil else { return nil }
         return HoverSelection(text: text, selectionRect: selRect, elementFrame: elemFrame)
+    }
+
+    /// Opt the frontmost app into exposing its Accessibility tree. Chromium /
+    /// Electron apps (Chrome, VS Code, Slack, Discord…) return no selected text
+    /// until a client sets `AXManualAccessibility`; native Cocoa apps ignore it.
+    /// Idempotent — the app enables its AX engine on the first set, so repeated
+    /// calls are cheap. Skip our own process.
+    func enableManualAccessibility() {
+        guard let app = NSWorkspace.shared.frontmostApplication,
+              app.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return }
+        let axApp = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetAttributeValue(axApp, "AXManualAccessibility" as CFString, kCFBooleanTrue)
     }
 
     /// Precise selection bounds via `kAXBoundsForRangeParameterizedAttribute`.

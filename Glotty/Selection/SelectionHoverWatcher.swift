@@ -79,6 +79,10 @@ final class SelectionHoverWatcher {
                     let now = CFAbsoluteTimeGetCurrent()
                     self.lastMouseUpPos = pos
                     self.lastMouseUpAt = now
+                    // Enable AX on the app the user just selected in, early — a
+                    // Chromium app needs a beat to build its tree before the
+                    // dwell probe reads the selection.
+                    self.grabber.enableManualAccessibility()
                     // Re-arm the dwell from the release. A long selection often
                     // holds the cursor still mid-drag (a pause or auto-scroll),
                     // which fires a probe and sets restChecked=true; without
