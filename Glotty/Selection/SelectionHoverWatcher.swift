@@ -8,7 +8,7 @@ import AppKit
 /// a selection. Opt-out via Settings (`glotty.hover.enabled`).
 @MainActor
 final class SelectionHoverWatcher {
-    enum Kind { case translate, explain, polish, chat, replace }
+    enum Kind { case translate, explain, polish, chat, speak }
 
     /// Set by AppDelegate to run the chosen command (same handlers the hotkeys
     /// use). The selection is still live because the menu is non-activating.
@@ -180,7 +180,7 @@ final class SelectionHoverWatcher {
             item("lightbulb", String(localized: "Explain"), .explain),
             item("wand.and.stars", String(localized: "Polish"), .polish),
             item("bubble.left.and.bubble.right", String(localized: "Chat"), .chat),
-            item("textformat.abc", String(localized: "Correct spelling"), .replace),
+            item("speaker.wave.2.fill", String(localized: "Speak aloud"), .speak),
         ]
     }
 

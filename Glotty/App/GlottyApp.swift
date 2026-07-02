@@ -208,7 +208,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case .explain:   self?.handleFire(mode: .explain)
             case .polish:    self?.handleFire(mode: .polish)
             case .chat:      self?.handleFire(mode: .chat)
-            case .replace:   self?.handleReplace()
+            case .speak:     self?.handleSpeak()
             }
         }
         watcher.start()
