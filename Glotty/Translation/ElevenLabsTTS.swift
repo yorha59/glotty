@@ -61,6 +61,27 @@ final class ElevenLabsTTS: NSObject, ObservableObject {
                 Log.debug(.app, "ElevenLabs TTS failed (\(error.localizedDescription)) — falling back to the system voice")
                 self?.phase = .idle
                 SpeechHUDController.shared.hide()
+                // Don't fail silently: the user turned on the cloud voice and
+                // hears the system one instead. Surface why, then fall back.
+                // The common case is HTTP 402 — the default voice is a Voice-
+                // Library voice free plans can't call; give an actionable hint
+                // instead of ElevenLabs's misleading "upgrade your subscription".
+                // NB: keep each String(localized:) as a standalone binding —
+                // extract-strings.sh doesn't catch it when nested in a "\(…)".
+                let ns = error as NSError
+                let isPlanBlock = ns.code == 402
+                    || ns.localizedDescription.contains("payment_required")
+                    || ns.localizedDescription.contains("library voices")
+                let toastMsg: String
+                if isPlanBlock {
+                    toastMsg = String(localized: "That ElevenLabs voice needs a paid plan. Open Settings → Voice and pick one of your own voices (Glotty will do this for you), or clear the key to use the free system voice.")
+                } else {
+                    let head = String(localized: "ElevenLabs voice failed — using the system voice.")
+                    toastMsg = "\(head) \(ns.localizedDescription.prefix(160))"
+                }
+                HUDController.shared.toast(
+                    toastMsg,
+                    systemImage: "exclamationmark.triangle", duration: 5)
                 onFailure()
             }
         }

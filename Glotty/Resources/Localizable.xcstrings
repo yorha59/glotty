@@ -8595,6 +8595,98 @@
         }
       }
     },
+    "ElevenLabs is on but no API key is saved — using the system voice. Add your key in Settings → Voice.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs ist aktiv, aber kein API-Schlüssel gespeichert — verwende die Systemstimme. Füge deinen Schlüssel unter Einstellungen → Sprache hinzu."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs está activado pero no se ha guardado ninguna clave API — usando la voz del sistema. Añade tu clave en Configuración → Voz."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs est activé mais aucune clé API n'est enregistrée — en utilisant la voix système. Ajoutez votre clé dans Paramètres → Voix."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs は有効ですが、API キーが保存されていません — システム音声を使用しています。設定 → 音声でキーを追加してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs가 켜져 있지만 API 키가 저장되지 않았습니다 — 시스템 음성을 사용합니다. 설정 → 음성에서 키를 추가하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs 已开启，但未保存 API 密钥 — 使用系统语音。在 设置 → 语音 中添加您的密钥。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs 已開啟但未儲存 API 金鑰 — 正在使用系統語音。在「設定」→「語音」中新增您的金鑰。"
+          }
+        }
+      }
+    },
+    "ElevenLabs voice failed — using the system voice.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs-Stimme fehlgeschlagen — verwende die Systemstimme."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La voz de ElevenLabs ha fallado — usando la voz del sistema."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La voix ElevenLabs a échoué — en utilisant la voix système."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs 音声の読み込みに失敗しました — システム音声を使用しています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs 음성에 실패했습니다 — 시스템 음성을 사용합니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs 语音无法使用 — 使用系统语音。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ElevenLabs 語音失敗 — 正在使用系統語音。"
+          }
+        }
+      }
+    },
     "Enable in System Settings → Apple Intelligence & Siri.": {
       "localizations": {
         "de": {
@@ -24445,6 +24537,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "測試連接"
+          }
+        }
+      }
+    },
+    "That ElevenLabs voice needs a paid plan. Open Settings → Voice and pick one of your own voices (Glotty will do this for you), or clear the key to use the free system voice.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese ElevenLabs-Stimme erfordert ein bezahltes Abo. Öffne Einstellungen → Sprache und wähle eine deiner eigenen Stimmen (Glotty wird dies für dich übernehmen), oder lösche den Schlüssel, um die kostenlose Systemstimme zu verwenden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esa voz de ElevenLabs requiere un plan de pago. Abre Configuración → Voz y elige una de tus propias voces (Glotty lo hará por ti), o borra la clave para usar la voz gratuita del sistema."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette voix ElevenLabs nécessite un plan payant. Ouvrez Paramètres → Voix et choisissez l'une de vos propres voix (Glotty le fera pour vous), ou effacez la clé pour utiliser la voix système gratuite."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その ElevenLabs 音声には有料プランが必要です。設定 → 音声で自分の音声のいずれかを選択してください (Glotty がこれを自動で行います)、またはキーをクリアして無料のシステム音声を使用してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해당 ElevenLabs 음성은 유료 플랜이 필요합니다. 설정 → 음성을 열고 자신의 음성 중 하나를 선택하세요(Glotty가 자동으로 선택해 드립니다), 또는 키를 지워서 무료 시스템 음성을 사용하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该 ElevenLabs 语音需要付费计划。打开 设置 → 语音 并选择您自己的语音（Glotty 会为您执行此操作），或清除密钥以使用免费的系统语音。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "該 ElevenLabs 語音需要付費方案。開啟「設定」→「語音」並選擇您自己的其中一個語音（Glotty 將為您處理），或清除金鑰以使用免費的系統語音。"
           }
         }
       }

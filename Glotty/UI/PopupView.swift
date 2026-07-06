@@ -4505,6 +4505,15 @@ final class Speaker {
                 self?.speakSystem(text, language: language)
             }
         } else {
+            // Enabled but no key saved → the user expects the cloud voice and
+            // would otherwise silently get the system one. Say so once.
+            if UserDefaults.standard.bool(forKey: ElevenLabsTTS.enabledDefaultsKey) {
+                Task { @MainActor in
+                    HUDController.shared.toast(
+                        String(localized: "ElevenLabs is on but no API key is saved — using the system voice. Add your key in Settings → Voice."),
+                        systemImage: "key", duration: 4)
+                }
+            }
             speakSystem(text, language: language)
         }
     }

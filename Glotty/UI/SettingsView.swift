@@ -2807,6 +2807,14 @@ private struct VoiceSettingsSection: View {
         voicesError = nil
         do {
             voices = try await ElevenLabsTTS.listVoices(apiKey: key)
+            // The hardcoded default (Rachel, 21m00Tcm4TlvDq8ikWAM) is a Voice-
+            // Library voice that free plans can't call via the API — every
+            // Speak then 402s "payment_required". `listVoices` returns exactly
+            // the voices THIS account/plan can use, so if the saved voice isn't
+            // among them, switch to the first usable one automatically.
+            if !voices.isEmpty, !voices.contains(where: { $0.id == voiceID }) {
+                voiceID = voices[0].id
+            }
         } catch {
             voicesError = String(format: String(localized: "Couldn't load voices: %@"),
                                  error.localizedDescription)
