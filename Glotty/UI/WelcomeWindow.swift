@@ -309,12 +309,30 @@ private struct WelcomeView: View {
     /// SwiftUI re-renders the current demo step with the result
     /// card showing under the source.
     @ObservedObject private var controller = WelcomeWindowController.shared
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var step: Int = 0
 
     private static let contentWidth: CGFloat = 460
 
-    private var stepCount: Int { 7 }
+    private var stepCount: Int {
+        #if MAS
+        7
+        #else
+        // welcome, permissions, Translate, Refine, Explain, Speak, Correct,
+        // AI setup, get-to-know.
+        9
+        #endif
+    }
+
+    /// The inline LLM-provider step, which embeds a Form (tighter spacing).
+    private var isLLMStep: Bool {
+        #if MAS
+        step == 5
+        #else
+        step == 7
+        #endif
+    }
 
     /// Ticks every second while the welcome window is up so the
     /// permissions step re-renders as the user grants access in
@@ -381,6 +399,10 @@ private struct WelcomeView: View {
         // a mid-display-cycle resize crash; see the controller's
         // `host.sizingOptions` comment.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // Onboarding canvas follows the theme: pure white in light mode (the
+        // black mascot sits straight on it, no tile), the window background
+        // in dark mode (where the mascot picks up a white tile below).
+        .background(colorScheme == .dark ? Color(nsColor: .windowBackgroundColor) : .white)
         // Re-render when `LocalizationCache` lands new translations.
         // OSLocalizer queues missing OS-language translations into
         // the LLM filler; once the filler returns and posts
@@ -400,11 +422,11 @@ private struct WelcomeView: View {
     // brings the config flush with the explanation above.
 
     private var titleBodySpacing: CGFloat {
-        step == 4 ? 5 : 10
+        isLLMStep ? 5 : 10
     }
 
     private var extraTopPadding: CGFloat {
-        step == 4 ? 0 : 4
+        isLLMStep ? 0 : 4
     }
 
     // MARK: - Header
@@ -415,19 +437,44 @@ private struct WelcomeView: View {
     private var mascotHeader: some View {
         HStack {
             Spacer()
-            if let mascot = NSImage(named: "StatusItemIcon") {
-                Image(nsImage: mascot)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 56, height: 56)
-            } else {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 44))
-                    .foregroundStyle(.tint)
+            Group {
+                if let mascot = Self.mascotArtwork {
+                    Image(nsImage: mascot)
+                        .resizable()
+                        .scaledToFit()
+                } else {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 44))
+                        .foregroundStyle(.tint)
+                }
+            }
+            // Black-on-transparent artwork. In light mode it sits straight on
+            // the white canvas (no tile). In dark mode the black body would
+            // vanish, so seat it on a white squircle.
+            .frame(width: colorScheme == .dark ? 60 : 72,
+                   height: colorScheme == .dark ? 60 : 72)
+            .padding(colorScheme == .dark ? 11 : 0)
+            .background {
+                if colorScheme == .dark {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(.white)
+                }
             }
             Spacer()
         }
     }
+
+    /// The mascot as its real black+white artwork rather than a tinted
+    /// template mask. `StatusItemIcon` is flagged `template-rendering-intent
+    /// = template` for the menu bar, which makes SwiftUI flatten it to a
+    /// single-colour silhouette (losing the eyes / fangs and reading as a
+    /// soft blob). We copy the cached image — never mutate the shared named
+    /// instance the menu bar relies on — and clear the template flag.
+    private static let mascotArtwork: NSImage? = {
+        guard let copy = NSImage(named: "StatusItemIcon")?.copy() as? NSImage else { return nil }
+        copy.isTemplate = false
+        return copy
+    }()
 
     // MARK: - Step content
 
@@ -474,7 +521,18 @@ private struct WelcomeView: View {
             #else
             return OSLocalizer.string("2.3 Explain a word or phrase (Fn → E)")
             #endif
-        case 5: return OSLocalizer.string("3. Set up your AI provider")
+        case 5:
+            #if MAS
+            return OSLocalizer.string("3. Set up your AI provider")
+            #else
+            return OSLocalizer.string("2.4 Hear it aloud (Fn → V)")
+            #endif
+        #if !MAS
+        case 6:
+            return OSLocalizer.string("2.5 Correct spelling (Fn → R)")
+        case 7:
+            return OSLocalizer.string("3. Set up your AI provider")
+        #endif
         default: return OSLocalizer.string("4. Let's get to know each other")
         }
     }
@@ -512,18 +570,29 @@ private struct WelcomeView: View {
             return OSLocalizer.string("Deeper explanation in your native language — meaning, tone, usage, and how it shifts across contexts. Highlight a word, idiom, or sentence, hold Fn, tap E. Glotty streams a four-section explanation. Press Esc to dismiss.")
             #endif
         case 5:
+            #if MAS
             return OSLocalizer.string("Polish, Explain, and Chat call out to an LLM, so Glotty needs at least one provider configured before they work. Pick a stock provider — OpenAI, Google Gemini, Z.AI, DeepSeek, Kimi — or paste any OpenAI-compatible endpoint and API key. Come back when you're done.")
+            #else
+            return OSLocalizer.string("Hear any text read aloud — great for checking pronunciation. Highlight a word or sentence, hold Fn, tap V. Glotty reads it with the built-in macOS voice: offline, free, no LLM required. Add an ElevenLabs key in Voice settings for a more natural voice.")
+            #endif
+        #if !MAS
+        case 6:
+            return OSLocalizer.string("Fix spelling and typos without leaving your document. Highlight the text, hold Fn, tap R. Glotty replaces it in place with the corrected spelling — no popup. Runs on-device — no LLM required.")
+        case 7:
+            return OSLocalizer.string("Polish, Explain, and Chat call out to an LLM, so Glotty needs at least one provider configured before they work. Pick a stock provider — OpenAI, Google Gemini, Z.AI, DeepSeek, Kimi — or paste any OpenAI-compatible endpoint and API key. Come back when you're done.")
+        #endif
         default:
             return OSLocalizer.string("Last step — Glotty will open a short chat to learn how you'd like to be addressed. Your answers automatically configure the relevant settings; you can change anything later from the menu bar.")
         }
     }
 
     /// Step-specific embedded content. Step 1 shows the permissions
-    /// checklist; steps 2-4 show pre-prepared input → result demos so
-    /// the user understands what each action produces without having
-    /// to actually invoke the chord (which also wouldn't work yet
-    /// since they haven't configured an LLM for Polish / Explain).
-    /// Step 5 has the LLM-setup form. Step 6 has the chat-handoff.
+    /// checklist; the feature steps show pre-prepared input → result demos
+    /// so the user understands what each action produces. Translate / Refine
+    /// / Explain reveal live on the Fn chord; Speak and Correct are
+    /// illustrative (they play audio / replace in place, so there's no popup
+    /// to reveal). The last two steps are the LLM-setup form and the
+    /// chat-handoff button (see `llmSetupForm` / `getToKnowButton`).
     @ViewBuilder
     private var currentExtra: some View {
         switch step {
@@ -556,33 +625,51 @@ private struct WelcomeView: View {
             explainDemo
             #endif
         case 5:
-            // Embed the real Language Model section inline so the user
-            // configures their provider inside onboarding — no detour
-            // to a separate Settings window.
-            //
-            // `.columns` style (instead of `.grouped`) aligns labels
-            // flush to the leading edge so they sit on the same x
-            // coordinate as the step title above the form. Grouped
-            // style adds its own left inset which threw the title
-            // and section content out of alignment.
-            Form {
-                LanguageModelSettingsSection(showChrome: false)
-            }
-            .formStyle(.columns)
-            .scrollContentBackground(.hidden)
-            .frame(maxHeight: 320)
+            #if MAS
+            llmSetupForm
+            #else
+            // Web: Speak (Fn → V). No live result to reveal (it plays audio),
+            // so show an illustrative popup card.
+            speakDemo
+            #endif
+        #if !MAS
         case 6:
-            Button {
-                onStartOnboardingChat()
-            } label: {
-                Label(OSLocalizer.string("Hi, I'm Glotty. Nice to meet you!"),
-                      systemImage: "bubble.left.and.text.bubble.right")
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
+            // Web: Correct spelling (Fn → R). Replaces in place with no popup,
+            // so this is an illustrative before → after card.
+            correctDemo
+        case 7:
+            llmSetupForm
+        #endif
         default:
-            EmptyView()
+            getToKnowButton
         }
+    }
+
+    /// Inline LLM provider setup embedded in the welcome flow so the user
+    /// configures a provider without a detour to Settings.
+    ///
+    /// `.columns` style (instead of `.grouped`) aligns labels flush to the
+    /// leading edge so they sit on the same x coordinate as the step title
+    /// above the form.
+    private var llmSetupForm: some View {
+        Form {
+            LanguageModelSettingsSection(showChrome: false)
+        }
+        .formStyle(.columns)
+        .scrollContentBackground(.hidden)
+        .frame(maxHeight: 320)
+    }
+
+    /// Final step's primary action: open the get-to-know chat.
+    private var getToKnowButton: some View {
+        Button {
+            onStartOnboardingChat()
+        } label: {
+            Label(OSLocalizer.string("Hi, I'm Glotty. Nice to meet you!"),
+                  systemImage: "bubble.left.and.text.bubble.right")
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
     }
 
     /// Step 0 affordance: returning users who already configured
@@ -857,6 +944,51 @@ private struct WelcomeView: View {
         }
     }
 
+    // Speak + Correct are illustrative (auto-revealed): Speak plays audio with
+    // no result popup, and Correct replaces text in place with no popup — so
+    // neither fits the press-chord-to-reveal model the three core demos use.
+    // Both still teach the Fn-leader gesture through the step body copy.
+
+    private var speakDemo: some View {
+        demoStep(
+            sourceLabel: OSLocalizer.string("Source"),
+            source: "aurora borealis",
+            chord: "Fn → V",
+            revealed: true,
+            headerIcon: "speaker.wave.2.fill"
+        ) {
+            HStack(spacing: 3) {
+                ForEach(0..<20, id: \.self) { i in
+                    Capsule().fill(Color.accentColor)
+                        .frame(width: 3, height: CGFloat(5 + (i % 5) * 4))
+                }
+                Spacer(minLength: 6)
+                Image(systemName: "waveform").foregroundStyle(.tint)
+            }
+        }
+    }
+
+    private var correctDemo: some View {
+        demoStep(
+            sourceLabel: OSLocalizer.string("Source (with typos)"),
+            source: "definately recieve",
+            chord: "Fn → R",
+            revealed: true,
+            headerIcon: "pencil"
+        ) {
+            HStack(spacing: 8) {
+                Text(verbatim: "definately recieve")
+                    .font(.system(size: 14)).strikethrough()
+                    .foregroundStyle(.secondary)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 11)).foregroundStyle(.tertiary)
+                Text(verbatim: "definitely receive")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(.green)
+            }
+        }
+    }
+
     /// One tutorial step: shows the source + a "press Fn → X" prompt
     /// when result isn't revealed yet, swaps to source + caller-
     /// supplied `resultContent` once the user has pressed the chord.
@@ -869,22 +1001,43 @@ private struct WelcomeView: View {
         source: String,
         chord: String,
         revealed: Bool,
+        headerIcon: String = "speaker.wave.2.fill",
         @ViewBuilder resultContent: () -> Result
     ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            demoCard(label: sourceLabel,
-                     text: source,
-                     tint: Color.accentColor.opacity(0.08),
-                     border: Color.accentColor.opacity(0.25))
-            if revealed {
-                Image(systemName: "arrow.down")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .frame(maxWidth: .infinity)
-                resultContent()
-            } else {
-                chordPrompt(chord: chord)
+        VStack(alignment: .leading, spacing: 6) {
+            Text(sourceLabel)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .textCase(.uppercase)
+            // The popup Glotty shows for that selection — same chrome as the
+            // real popup (rounded material card, source header + speak glyph,
+            // divider, then the result once the chord is pressed).
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .top) {
+                    Text(source)
+                        .font(.system(size: 13, weight: .semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 8)
+                    Image(systemName: headerIcon)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                Divider()
+                if revealed {
+                    resultContent()
+                } else {
+                    chordPrompt(chord: chord)
+                }
             }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(.regularMaterial))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(.quaternary, lineWidth: 0.5))
+            .shadow(radius: 10, y: 3)
         }
         .animation(.easeInOut(duration: 0.2), value: revealed)
     }
@@ -1145,38 +1298,6 @@ private struct WelcomeView: View {
             Text(OSLocalizer.string("to see the result"))
                 .font(.callout)
                 .foregroundStyle(.secondary)
-        }
-    }
-
-    /// Tutorial cell: shows the sample "selection" + a prominent
-    /// instruction telling the user to press the chord. Result
-    /// appears in a real popup launched by the Fn-leader intercept
-    /// (see `AppDelegate.handleFire` → `WelcomeWindowController
-    /// .showTutorialPopup(for:)`) — never inline here, because we
-    private func demoCard(label: String,
-                          text: String,
-                          tint: Color,
-                          border: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
-                .textCase(.uppercase)
-            Text(text)
-                .font(.system(.body, design: .rounded))
-                .foregroundStyle(.primary)
-                .textSelection(.enabled)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(tint)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .strokeBorder(border, lineWidth: 1)
-                        )
-                )
         }
     }
 

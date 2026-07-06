@@ -3,6 +3,81 @@ import Translation
 import UniformTypeIdentifiers
 import AppKit
 
+/// User-selectable app appearance. Glotty is a menu-bar agent whose only
+/// real surfaces are the Welcome / Settings / popup / chat windows, so we
+/// drive the whole app's look from a single `NSApp.appearance` override
+/// rather than per-window flags. `.system` clears the override and follows
+/// the OS setting.
+enum AppearanceMode: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .system: return "System".t
+        case .light:  return "Light".t
+        case .dark:   return "Dark".t
+        }
+    }
+
+    /// nil = follow the system (no override).
+    var nsAppearance: NSAppearance? {
+        switch self {
+        case .system: return nil
+        case .light:  return NSAppearance(named: .aqua)
+        case .dark:   return NSAppearance(named: .darkAqua)
+        }
+    }
+}
+
+/// Central appearance control. The mode is persisted under a single
+/// UserDefaults key (also bound by `@AppStorage` in the Appearance picker)
+/// so launch and live changes read the same source of truth.
+enum Theme {
+    static let defaultsKey = "glotty.appearance"
+
+    /// Current mode. Defaults to `.system` — the web build has always
+    /// followed the OS appearance, so keep that unless the user opts in.
+    static var mode: AppearanceMode {
+        AppearanceMode(rawValue: UserDefaults.standard.string(forKey: defaultsKey) ?? "")
+            ?? .system
+    }
+
+    /// Push the stored mode onto `NSApp`. Safe to call repeatedly; call once
+    /// at launch and again whenever the picker changes.
+    @MainActor
+    static func apply() {
+        NSApp.appearance = mode.nsAppearance
+    }
+}
+
+/// Settings → System: Light / Dark / follow-System appearance. Bound to the
+/// same key `Theme` reads at launch, so a change applies live.
+struct AppearanceSection: View {
+    @AppStorage(Theme.defaultsKey) private var mode: String = AppearanceMode.system.rawValue
+
+    var body: some View {
+        Section {
+            Picker("Appearance".t, selection: $mode) {
+                ForEach(AppearanceMode.allCases) { m in
+                    Text(m.label).tag(m.rawValue)
+                }
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: mode) { Theme.apply() }
+        } header: {
+            Text("Appearance".t)
+        } footer: {
+            Text("Pick Light, Dark, or follow the system setting.".t)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
 /// One row in the Settings sidebar. Order here = display order in the list.
 enum SettingsTab: String, Hashable, CaseIterable, Identifiable {
     case profile
@@ -124,6 +199,7 @@ struct SettingsView: View {
     /// Profile) and the dev-mode debug helpers (were under Backup).
     private var systemTab: some View {
         Form {
+            AppearanceSection()
             SystemLanguageSection()
             SystemDebugSection()
         }

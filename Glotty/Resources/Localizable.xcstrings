@@ -1239,6 +1239,98 @@
         }
       }
     },
+    "2.4 Hear it aloud (Fn → V)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.4 Laut vorlesen (Fn → V)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.4 Escuchar en voz alta (Fn → V)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.4 Entendre à voix haute (Fn → V)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.4 読み上げ (Fn → V)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.4 소리 내어 듣기 (Fn → V)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.4 听到朗读 (Fn → V)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.4 聽取朗讀 (Fn → V)"
+          }
+        }
+      }
+    },
+    "2.5 Correct spelling (Fn → R)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.5 Rechtschreibung korrigieren (Fn → R)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.5 Corregir ortografía (Fn → R)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.5 Corriger l'orthographe (Fn → R)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.5 拼字修正 (Fn → R)"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.5 맞춤법 검사 (Fn → R)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.5 纠正拼写 (Fn → R)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2.5 校正拼寫 (Fn → R)"
+          }
+        }
+      }
+    },
     "3. Let's get to know each other": {
       "extractionState": "manual",
       "localizations": {
@@ -2576,6 +2668,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "任何支援 OpenAI 聊天完成格式的服務都可以使用。儲存後，API 金鑰會出現在主要的語言模型面板中。"
+          }
+        }
+      }
+    },
+    "Appearance": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aussehen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apariencia"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apparence"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外観"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모양"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外观"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外觀"
           }
         }
       }
@@ -4072,6 +4210,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zwischengespeicherter Clip"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fragmento en caché"
           }
         },
         "fr": {
@@ -6639,6 +6783,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "每日"
+          }
+        }
+      }
+    },
+    "Dark": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dunkel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oscuro"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foncé"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダーク"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어두운"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "深色"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "深色"
           }
         }
       }
@@ -9707,6 +9897,52 @@
         }
       }
     },
+    "Fix spelling and typos without leaving your document. Highlight the text, hold Fn, tap R. Glotty replaces it in place with the corrected spelling — no popup. Runs on-device — no LLM required.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Korrigieren Sie Rechtschreibung und Tippfehler, ohne Ihr Dokument zu verlassen. Markieren Sie den Text, halten Sie Fn und tippen Sie auf R. Glotty ersetzt ihn direkt mit der korrigierten Rechtschreibung — ohne Pop-up. Funktioniert auf dem Gerät — kein LLM erforderlich."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corregir errores ortográficos y de tipeo sin salir de tu documento. Selecciona el texto, mantén presionada Fn, toca R. Glotty lo reemplaza en el lugar con la ortografía corregida — sin emergente. Se ejecuta localmente — no se requiere LLM."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corrigez l'orthographe et les fautes de frappe sans quitter votre document. Mettez en surbrillance le texte, maintenez Fn, appuyez sur R. Glotty le remplace sur place avec l'orthographe corrigée — sans popup. Fonctionne sur l'appareil — pas de LLM requis."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文書から離れることなく拼字やタイプミスを修正します。テキストをハイライトして、Fnを押しながらRをタップします。Glottyは修正された拼字でその場に置き換えます — ポップアップはありません。端末上で実行されます — LLMは不要です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문서를 떠나지 않고 맞춤법과 오탈자를 수정하세요. 텍스트를 강조하고, Fn을 누른 후 R을 탭하면, Glotty가 팝업 없이 바로 위치에서 교정된 맞춤법으로 교체합니다. 기기에서 실행됩니다 — LLM이 필요하지 않습니다."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无需离开文档即可修正拼写和错字。突出显示文本，按住 Fn，轻点 R。Glotty 会在原地替换为修正后的拼写 — 不弹出提示窗口。在设备上运行 — 不需要 LLM。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無需離開文件即可修正拼寫和錯字。標示文字，按住 Fn，點擊 R。Glotty 會直接以校正後的拼寫取代 — 不會彈出對話方塊。在裝置上執行 — 不需 LLM。"
+          }
+        }
+      }
+    },
     "Flagship multimodal model. Higher quality, ~10x the cost.": {
       "localizations": {
         "de": {
@@ -11791,6 +12027,52 @@
         }
       }
     },
+    "Hear any text read aloud — great for checking pronunciation. Highlight a word or sentence, hold Fn, tap V. Glotty reads it with the built-in macOS voice: offline, free, no LLM required. Add an ElevenLabs key in Voice settings for a more natural voice.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeden Text vorlesen lassen — ideal zur Überprüfung der Aussprache. Markieren Sie ein Wort oder einen Satz, halten Sie Fn und tippen Sie auf V. Glotty liest ihn mit der integrierten macOS-Stimme vor: offline, kostenlos, kein LLM erforderlich. Fügen Sie in den Stimmeneinstellungen einen ElevenLabs-Schlüssel hinzu, für eine natürlichere Stimme."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escuchar cualquier texto en voz alta — ideal para verificar la pronunciación. Selecciona una palabra o frase, mantén presionada Fn, toca V. Glotty lo lee con la voz integrada de macOS: sin conexión, gratis, no se requiere LLM. Agrega una clave de ElevenLabs en Configuración de voz para una voz más natural."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entendre n'importe quel texte lu à voix haute — idéal pour vérifier la prononciation. Mettez en surbrillance un mot ou une phrase, maintenez Fn, appuyez sur V. Glotty le lit avec la voix intégrée de macOS : hors ligne, gratuit, pas de LLM requis. Ajoutez une clé ElevenLabs dans les paramètres Voix pour une voix plus naturelle."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任意のテキストを読み上げます — 発音チェックに最適です。単語や文章をハイライトして、Fnを押しながらVをタップします。Glottyは組み込みのmacOS音声で読み上げます：オフライン、無料、LLMは不要です。より自然な音声には、音声設定でElevenLabsキーを追加してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 텍스트를 소리 내어 듣기 — 발음 확인에 탁월합니다. 단어나 문장을 강조하고, Fn을 누른 후 V를 탭하면, Glotty가 기본 macOS 목소리로 읽어줍니다: 오프라인에서 무료로, LLM이 필요하지 않습니다. 더 자연스러운 목소리를 위해 음성 설정에 ElevenLabs 키를 추가하세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "听到任何文本的朗读 — 非常适合检查发音。突出显示一个单词或句子，按住 Fn，轻点 V。Glotty 使用内置的 macOS 语音朗读：离线，免费，不需要 LLM。在语音设置中添加 ElevenLabs 密钥以获得更自然的语音。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聽取任何文字的朗讀 — 對檢查發音很有幫助。標示一個詞或句子，按住 Fn，點擊 V。Glotty 使用內建的 macOS 語音朗讀：離線、免費，不需 LLM。在語音設定中加入 ElevenLabs 金鑰以獲得更自然的語音。"
+          }
+        }
+      }
+    },
     "Hi, I'm Glotty. Nice to meet you!": {
       "extractionState": "manual",
       "localizations": {
@@ -13549,6 +13831,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "傳統快速等級。如果 2.0 在您所在區域有可用性問題，請保留作為後備。"
+          }
+        }
+      }
+    },
+    "Light": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hell"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claro"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clair"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "밝은"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浅色"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "淺色"
           }
         }
       }
@@ -18060,6 +18388,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "發音"
+          }
+        }
+      }
+    },
+    "Pick Light, Dark, or follow the system setting.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen Sie Hell, Dunkel oder folgen Sie den Systemeinstellungen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elegir Claro, Oscuro, o seguir la configuración del sistema."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez Clair, Foncé ou suivez le paramètre système."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライト、ダーク、またはシステム設定に従って選択します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "밝은 모드, 어두운 모드 또는 시스템 설정을 따르세요."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择浅色、深色，或跟随系统设置。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇淺色、深色，或跟隨系統設定。"
           }
         }
       }
@@ -23052,6 +23426,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "原文(草稿)"
+          }
+        }
+      }
+    },
+    "Source (with typos)": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelle (mit Tippfehlern)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Origen (con errores)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source (avec des fautes)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソース（タイプミスあり）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원본 (오타 포함)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来源（有拼写错误）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "來源 (含拼字錯誤)"
           }
         }
       }

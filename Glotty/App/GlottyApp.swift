@@ -122,6 +122,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         dbg("applicationDidFinishLaunching START")
+        // Apply the saved appearance (Light / Dark / System) before any
+        // window renders so onboarding + popups open in the chosen theme.
+        Theme.apply()
         // Write the user's UI-language preference into AppleLanguages
         // before any view renders — Foundation reads it once during
         // bundle resolution on launch.
