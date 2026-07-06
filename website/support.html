@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glotty — Support</title>
+<style>
+  :root { color-scheme: light; }
+  body { font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans", "Noto Sans CJK", sans-serif;
+         max-width: 720px; margin: 0 auto; padding: 40px 20px 80px; color: #1d1d1f; }
+  h1 { font-size: 28px; margin-bottom: 4px; }
+  h2 { font-size: 19px; margin-top: 32px; }
+  .meta { color: #86868b; font-size: 14px; margin-bottom: 28px; }
+  a { color: #2997ff; }
+  ul, ol { padding-left: 20px; }
+  kbd { font: 13px ui-monospace, Menlo, monospace; background: #8882; border-radius: 4px; padding: 1px 6px; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .appicon { width: 56px; height: 56px; object-fit: contain; }
+  select { font: inherit; padding: 4px 8px; border-radius: 8px; }
+  footer { margin-top: 48px; color: #86868b; font-size: 14px; border-top: 1px solid #8884; padding-top: 16px; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <img src="icon.png" alt="Glotty" class="appicon">
+  <select id="lang" aria-label="Language"></select>
+</header>
+<main id="content">
+  <h1>Glotty Support</h1>
+  <p class="meta">Translation &amp; language learning for macOS</p>
+  <p>Select text in any app, hold the Fn key, and press a key to act on it.
+  Enable JavaScript to read this page in your language, or email
+  <a href="mailto:hemoon@outlook.com">hemoon@outlook.com</a>.</p>
+</main>
+
+<script>
+const EMAIL = "hemoon@outlook.com";
+const I18N = {
+  "en": { name:"English", title:"Glotty Support", subtitle:"Translation & language learning for macOS",
+    contact:"Need help, found a bug, or have a feature request? Email ", privacy:"Privacy Policy",
+    blocks:[
+      {p:"Glotty lives in your menu bar. Select text in any app, hold the <kbd>Fn</kbd> key, and press one key to act on it."},
+      {h:"Getting started"},
+      {ol:["On first launch, grant the two permissions Glotty asks for in System Settings → Privacy & Security: <strong>Accessibility</strong> (to read your selected text) and <strong>Input Monitoring</strong> (for the keyboard shortcut). Glotty's in-app Permissions screen guides you through this.",
+           "Select any text, then hold the <kbd>Fn</kbd> key and press one of the shortcuts below."]},
+      {ul:["<kbd>T</kbd> — Translate (works with no setup)",
+           "<kbd>E</kbd> — Explain the meaning and grammar",
+           "<kbd>P</kbd> — Polish your writing",
+           "<kbd>C</kbd> — Chat with a language tutor"]},
+      {h:"Setting up AI features (Explain / Polish / Chat)"},
+      {p:"These use an AI provider that you connect with your own API key. Open Settings → Language Model, choose a provider (such as OpenAI, DeepSeek, or Grok), and paste your key. Translate does not need this — it works out of the box."},
+      {h:"Troubleshooting"},
+      {ul:["<strong>Pressing the shortcut does nothing</strong> — check that Accessibility and Input Monitoring are enabled for Glotty in System Settings → Privacy & Security, then try again.",
+           "<strong>Explain / Polish / Chat show no result</strong> — make sure you've added an AI provider and API key in Settings → Language Model.",
+           "<strong>Nothing happens after selecting text</strong> — make sure the text is actually selected (highlighted) before holding the <kbd>Fn</kbd> key."]},
+      {h:"Contact"}
+    ]},
+
+  "zh-Hans": { name:"简体中文", title:"Glotty 支持", subtitle:"macOS 上的翻译与语言学习",
+    contact:"需要帮助、发现问题或有功能建议？请发送邮件至 ", privacy:"隐私政策",
+    blocks:[
+      {p:"Glotty位于你的菜单栏。在任意应用中选中文本，按住 <kbd>Fn</kbd> 键，再按一个键即可对其进行操作。"},
+      {h:"快速上手"},
+      {ol:["首次启动时，请在“系统设置 → 隐私与安全性”中授予 Glotty 申请的两项权限：<strong>辅助功能</strong>（用于读取你选中的文本）和<strong>输入监控</strong>（用于键盘快捷键）。Glotty 内置的“权限”界面会引导你完成。",
+           "选中任意文本，然后按住 <kbd>Fn</kbd> 键并按下下列快捷键之一。"]},
+      {ul:["<kbd>T</kbd> — 翻译（无需任何设置）",
+           "<kbd>E</kbd> — 解释含义与语法",
+           "<kbd>P</kbd> — 润色你的写作",
+           "<kbd>C</kbd> — 与语言导师对话"]},
+      {h:"设置 AI 功能（解释 / 润色 / 对话）"},
+      {p:"这些功能使用你用自己的 API 密钥连接的 AI 服务商。打开“设置 → 语言模型”，选择一个服务商（例如 OpenAI、DeepSeek 或 Grok），粘贴你的密钥即可。“翻译”无需此设置，开箱即用。"},
+      {h:"疑难解答"},
+      {ul:["<strong>按下快捷键没有反应</strong>——请在“系统设置 → 隐私与安全性”中确认已为 Glotty 启用“辅助功能”和“输入监控”，然后重试。",
+           "<strong>“解释 / 润色 / 对话”没有结果</strong>——请确认你已在“设置 → 语言模型”中添加了 AI 服务商和 API 密钥。",
+           "<strong>选中文本后没有反应</strong>——请确认文本确实已被选中（高亮），再按住 <kbd>Fn</kbd> 键。"]},
+      {h:"联系方式"}
+    ]},
+
+  "zh-Hant": { name:"繁體中文", title:"Glotty 支援", subtitle:"macOS 上的翻譯與語言學習",
+    contact:"需要協助、發現問題或有功能建議？請寄送電子郵件至 ", privacy:"隱私權政策",
+    blocks:[
+      {p:"Glotty位於你的選單列。在任意應用程式中選取文字，按住 <kbd>Fn</kbd> 鍵，再按一個鍵即可對其進行操作。"},
+      {h:"快速上手"},
+      {ol:["首次啟動時，請在「系統設定 → 隱私權與安全性」中授予 Glotty 申請的兩項權限：<strong>輔助使用</strong>（用於讀取你選取的文字）與<strong>輸入監控</strong>（用於鍵盤快速鍵）。Glotty 內建的「權限」畫面會引導你完成。",
+           "選取任意文字，然後按住 <kbd>Fn</kbd> 鍵並按下下列快速鍵之一。"]},
+      {ul:["<kbd>T</kbd> — 翻譯（無需任何設定）",
+           "<kbd>E</kbd> — 解釋含義與文法",
+           "<kbd>P</kbd> — 潤飾你的寫作",
+           "<kbd>C</kbd> — 與語言導師對話"]},
+      {h:"設定 AI 功能（解釋 / 潤飾 / 對話）"},
+      {p:"這些功能使用你以自己的 API 金鑰連接的 AI 服務商。開啟「設定 → 語言模型」，選擇一個服務商（例如 OpenAI、DeepSeek 或 Grok），貼上你的金鑰即可。「翻譯」無需此設定，開箱即用。"},
+      {h:"疑難排解"},
+      {ul:["<strong>按下快速鍵沒有反應</strong>——請在「系統設定 → 隱私權與安全性」中確認已為 Glotty 啟用「輔助使用」與「輸入監控」，然後重試。",
+           "<strong>「解釋 / 潤飾 / 對話」沒有結果</strong>——請確認你已在「設定 → 語言模型」中新增了 AI 服務商與 API 金鑰。",
+           "<strong>選取文字後沒有反應</strong>——請確認文字確實已被選取（反白），再按住 <kbd>Fn</kbd> 鍵。"]},
+      {h:"聯絡方式"}
+    ]},
+
+  "ja": { name:"日本語", title:"Glotty サポート", subtitle:"macOS 向けの翻訳・語学学習",
+    contact:"ヘルプが必要なとき、不具合の報告や機能のご要望は ", privacy:"プライバシーポリシー",
+    blocks:[
+      {p:"Glottyはメニューバーに常駐します。任意のアプリでテキストを選択し、<kbd>Fn</kbd> キーを押しながらもう 1 つキーを押すと操作できます。"},
+      {h:"はじめに"},
+      {ol:["初回起動時に、「システム設定 → プライバシーとセキュリティ」で Glotty が要求する 2 つの権限を許可してください：<strong>アクセシビリティ</strong>（選択したテキストの読み取り用）と<strong>入力監視</strong>（キーボードショートカット用）。Glotty 内の「権限」画面が案内します。",
+           "任意のテキストを選択し、<kbd>Fn</kbd> キーを押しながら下のショートカットのいずれかを押します。"]},
+      {ul:["<kbd>T</kbd> — 翻訳（設定不要）",
+           "<kbd>E</kbd> — 意味と文法を解説",
+           "<kbd>P</kbd> — 文章を推敲",
+           "<kbd>C</kbd> — 語学チューターとチャット"]},
+      {h:"AI 機能の設定（解説 / 推敲 / チャット）"},
+      {p:"これらは、あなた自身の API キーで接続する AI プロバイダを使用します。「設定 → 言語モデル」を開き、プロバイダ（例：OpenAI、DeepSeek、Grok）を選んでキーを貼り付けてください。「翻訳」はこの設定なしでそのまま使えます。"},
+      {h:"トラブルシューティング"},
+      {ul:["<strong>ショートカットを押しても何も起きない</strong> — 「システム設定 → プライバシーとセキュリティ」で Glotty の「アクセシビリティ」と「入力監視」が有効か確認し、再度お試しください。",
+           "<strong>解説 / 推敲 / チャットの結果が出ない</strong> — 「設定 → 言語モデル」で AI プロバイダと API キーを追加済みか確認してください。",
+           "<strong>テキストを選択しても何も起きない</strong> — <kbd>Fn</kbd> キーを押す前に、テキストが実際に選択（ハイライト）されているか確認してください。"]},
+      {h:"お問い合わせ"}
+    ]},
+
+  "ko": { name:"한국어", title:"Glotty 지원", subtitle:"macOS용 번역·언어 학습",
+    contact:"도움이 필요하거나 버그 또는 기능 제안이 있다면 ", privacy:"개인정보 처리방침",
+    blocks:[
+      {p:"Glotty는 메뉴 막대에 상주합니다. 아무 앱에서나 텍스트를 선택하고 <kbd>Fn</kbd> 키를 누른 채 한 키를 더 누르면 동작합니다."},
+      {h:"시작하기"},
+      {ol:["처음 실행 시 ‘시스템 설정 → 개인정보 보호 및 보안’에서 Glotty가 요청하는 두 권한을 허용하세요: <strong>손쉬운 사용</strong>(선택한 텍스트 읽기용)과 <strong>입력 모니터링</strong>(키보드 단축키용). Glotty의 ‘권한’ 화면이 안내합니다.",
+           "아무 텍스트나 선택한 다음 <kbd>Fn</kbd> 키를 누른 채 아래 단축키 중 하나를 누르세요."]},
+      {ul:["<kbd>T</kbd> — 번역 (설정 없이 작동)",
+           "<kbd>E</kbd> — 의미와 문법 설명",
+           "<kbd>P</kbd> — 작문 다듬기",
+           "<kbd>C</kbd> — 언어 튜터와 대화"]},
+      {h:"AI 기능 설정 (설명 / 다듬기 / 대화)"},
+      {p:"이 기능들은 사용자가 자신의 API 키로 연결하는 AI 제공업체를 사용합니다. ‘설정 → 언어 모델’을 열고 제공업체(예: OpenAI, DeepSeek, Grok)를 선택한 뒤 키를 붙여넣으세요. ‘번역’은 이 설정 없이 바로 작동합니다."},
+      {h:"문제 해결"},
+      {ul:["<strong>단축키를 눌러도 아무 반응이 없음</strong> — ‘시스템 설정 → 개인정보 보호 및 보안’에서 Glotty의 ‘손쉬운 사용’과 ‘입력 모니터링’이 켜져 있는지 확인한 후 다시 시도하세요.",
+           "<strong>설명 / 다듬기 / 대화에 결과가 없음</strong> — ‘설정 → 언어 모델’에서 AI 제공업체와 API 키를 추가했는지 확인하세요.",
+           "<strong>텍스트를 선택해도 반응이 없음</strong> — <kbd>Fn</kbd> 키를 누르기 전에 텍스트가 실제로 선택(강조)되어 있는지 확인하세요."]},
+      {h:"문의"}
+    ]},
+
+  "es": { name:"Español", title:"Soporte de Glotty", subtitle:"Traducción y aprendizaje de idiomas para macOS",
+    contact:"¿Necesitas ayuda, encontraste un error o tienes una sugerencia? Escribe a ", privacy:"Política de privacidad",
+    blocks:[
+      {p:"Glotty vive en tu barra de menús. Selecciona texto en cualquier app, mantén pulsada la tecla <kbd>Fn</kbd> y pulsa una tecla para actuar sobre él."},
+      {h:"Primeros pasos"},
+      {ol:["En el primer inicio, concede los dos permisos que Glotty solicita en Ajustes del Sistema → Privacidad y seguridad: <strong>Accesibilidad</strong> (para leer el texto seleccionado) y <strong>Monitorización de entrada</strong> (para el atajo de teclado). La pantalla de Permisos dentro de Glotty te guía.",
+           "Selecciona cualquier texto, mantén pulsada la tecla <kbd>Fn</kbd> y pulsa uno de los atajos siguientes."]},
+      {ul:["<kbd>T</kbd> — Traducir (funciona sin configuración)",
+           "<kbd>E</kbd> — Explicar el significado y la gramática",
+           "<kbd>P</kbd> — Pulir tu redacción",
+           "<kbd>C</kbd> — Chatear con un tutor de idiomas"]},
+      {h:"Configurar las funciones de IA (Explicar / Pulir / Chatear)"},
+      {p:"Usan un proveedor de IA que conectas con tu propia clave de API. Abre Ajustes → Modelo de lenguaje, elige un proveedor (como OpenAI, DeepSeek o Grok) y pega tu clave. Traducir no lo necesita: funciona de inmediato."},
+      {h:"Solución de problemas"},
+      {ul:["<strong>Al pulsar el atajo no pasa nada</strong>: comprueba que Accesibilidad y Monitorización de entrada estén activadas para Glotty en Ajustes del Sistema → Privacidad y seguridad, y vuelve a intentarlo.",
+           "<strong>Explicar / Pulir / Chatear no muestran resultado</strong>: asegúrate de haber añadido un proveedor de IA y una clave de API en Ajustes → Modelo de lenguaje.",
+           "<strong>No pasa nada tras seleccionar texto</strong>: asegúrate de que el texto esté realmente seleccionado (resaltado) antes de mantener pulsada la tecla <kbd>Fn</kbd>."]},
+      {h:"Contacto"}
+    ]},
+
+  "fr": { name:"Français", title:"Assistance Glotty", subtitle:"Traduction et apprentissage des langues pour macOS",
+    contact:"Besoin d'aide, un bug ou une suggestion ? Écrivez à ", privacy:"Politique de confidentialité",
+    blocks:[
+      {p:"Glotty réside dans votre barre des menus. Sélectionnez du texte dans n'importe quelle app, maintenez la touche <kbd>Fn</kbd> et appuyez sur une touche pour agir dessus."},
+      {h:"Premiers pas"},
+      {ol:["Au premier lancement, accordez les deux autorisations demandées par Glotty dans Réglages Système → Confidentialité et sécurité : <strong>Accessibilité</strong> (pour lire le texte sélectionné) et <strong>Surveillance de la saisie</strong> (pour le raccourci clavier). L'écran Autorisations de Glotty vous guide.",
+           "Sélectionnez du texte, puis maintenez la touche <kbd>Fn</kbd> et appuyez sur l'un des raccourcis ci-dessous."]},
+      {ul:["<kbd>T</kbd> — Traduire (fonctionne sans configuration)",
+           "<kbd>E</kbd> — Expliquer le sens et la grammaire",
+           "<kbd>P</kbd> — Peaufiner votre rédaction",
+           "<kbd>C</kbd> — Discuter avec un tuteur de langue"]},
+      {h:"Configurer les fonctions d'IA (Expliquer / Peaufiner / Discuter)"},
+      {p:"Elles utilisent un fournisseur d'IA que vous connectez avec votre propre clé d'API. Ouvrez Réglages → Modèle de langage, choisissez un fournisseur (par exemple OpenAI, DeepSeek ou Grok) et collez votre clé. Traduire n'en a pas besoin : il fonctionne directement."},
+      {h:"Dépannage"},
+      {ul:["<strong>Le raccourci ne fait rien</strong> — vérifiez qu'Accessibilité et Surveillance de la saisie sont activées pour Glotty dans Réglages Système → Confidentialité et sécurité, puis réessayez.",
+           "<strong>Expliquer / Peaufiner / Discuter n'affichent aucun résultat</strong> — assurez-vous d'avoir ajouté un fournisseur d'IA et une clé d'API dans Réglages → Modèle de langage.",
+           "<strong>Rien ne se passe après la sélection</strong> — assurez-vous que le texte est réellement sélectionné (surligné) avant de maintenir la touche <kbd>Fn</kbd>."]},
+      {h:"Contact"}
+    ]},
+
+  "de": { name:"Deutsch", title:"Glotty Support", subtitle:"Übersetzung und Sprachenlernen für macOS",
+    contact:"Brauchen Sie Hilfe, haben Sie einen Fehler gefunden oder einen Wunsch? E-Mail an ", privacy:"Datenschutzerklärung",
+    blocks:[
+      {p:"Glotty sitzt in Ihrer Menüleiste. Markieren Sie Text in einer beliebigen App, halten Sie die <kbd>Fn</kbd>-Taste gedrückt und drücken Sie eine Taste, um damit zu arbeiten."},
+      {h:"Erste Schritte"},
+      {ol:["Erteilen Sie beim ersten Start die beiden von Glotty angeforderten Berechtigungen unter Systemeinstellungen → Datenschutz & Sicherheit: <strong>Bedienungshilfen</strong> (zum Lesen des markierten Texts) und <strong>Eingabeüberwachung</strong> (für das Tastenkürzel). Der Berechtigungs-Bildschirm in Glotty führt Sie durch.",
+           "Markieren Sie beliebigen Text, halten Sie dann die <kbd>Fn</kbd>-Taste gedrückt und drücken Sie eines der folgenden Kürzel."]},
+      {ul:["<kbd>T</kbd> — Übersetzen (ohne Einrichtung nutzbar)",
+           "<kbd>E</kbd> — Bedeutung und Grammatik erklären",
+           "<kbd>P</kbd> — Ihren Text verfeinern",
+           "<kbd>C</kbd> — Mit einem Sprach-Tutor chatten"]},
+      {h:"KI-Funktionen einrichten (Erklären / Verfeinern / Chatten)"},
+      {p:"Diese nutzen einen KI-Anbieter, den Sie mit Ihrem eigenen API-Schlüssel verbinden. Öffnen Sie Einstellungen → Sprachmodell, wählen Sie einen Anbieter (z. B. OpenAI, DeepSeek oder Grok) und fügen Sie Ihren Schlüssel ein. Übersetzen benötigt dies nicht – es funktioniert sofort."},
+      {h:"Fehlerbehebung"},
+      {ul:["<strong>Das Kürzel bewirkt nichts</strong> – prüfen Sie, ob Bedienungshilfen und Eingabeüberwachung für Glotty unter Systemeinstellungen → Datenschutz & Sicherheit aktiviert sind, und versuchen Sie es erneut.",
+           "<strong>Erklären / Verfeinern / Chatten zeigen kein Ergebnis</strong> – stellen Sie sicher, dass Sie unter Einstellungen → Sprachmodell einen KI-Anbieter und API-Schlüssel hinzugefügt haben.",
+           "<strong>Nach dem Markieren passiert nichts</strong> – stellen Sie sicher, dass der Text wirklich markiert (hervorgehoben) ist, bevor Sie die <kbd>Fn</kbd>-Taste gedrückt halten."]},
+      {h:"Kontakt"}
+    ]}
+};
+
+function render(lang){
+  const t = I18N[lang] || I18N.en;
+  document.documentElement.lang = lang;
+  document.title = t.title + " — Glotty";
+  let html = `<h1>${t.title}</h1><p class="meta">${t.subtitle}</p>`;
+  for (const b of t.blocks){
+    if (b.h) html += `<h2>${b.h}</h2>`;
+    if (b.p) html += `<p>${b.p}</p>`;
+    if (b.ul) html += `<ul>${b.ul.map(x=>`<li>${x}</li>`).join("")}</ul>`;
+    if (b.ol) html += `<ol>${b.ol.map(x=>`<li>${x}</li>`).join("")}</ol>`;
+  }
+  html += `<p>${t.contact}<a href="mailto:${EMAIL}">${EMAIL}</a>.</p>`;
+  html += `<footer>© 2026 Glotty · <a href="privacy.html">${t.privacy}</a></footer>`;
+  document.getElementById("content").innerHTML = html;
+}
+
+function pickLang(){
+  const saved = localStorage.getItem("glotty_lang");
+  if (saved && I18N[saved]) return saved;
+  for (const l of (navigator.languages || [navigator.language || "en"])){
+    if (I18N[l]) return l;
+    const base = l.toLowerCase();
+    if (base.startsWith("zh")) return /tw|hk|hant|mo/.test(base) ? "zh-Hant" : "zh-Hans";
+    const short = base.split("-")[0];
+    if (I18N[short]) return short;
+  }
+  return "en";
+}
+
+const sel = document.getElementById("lang");
+for (const code in I18N){
+  const o = document.createElement("option");
+  o.value = code; o.textContent = I18N[code].name; sel.appendChild(o);
+}
+let cur = pickLang();
+sel.value = cur;
+render(cur);
+sel.addEventListener("change", () => { localStorage.setItem("glotty_lang", sel.value); render(sel.value); });
+</script>
+</body>
+</html>

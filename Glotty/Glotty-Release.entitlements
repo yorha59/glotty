@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+    Entitlements applied ONLY to the Developer ID release build
+    produced by scripts/make-dmg-signed.sh. Glotty has no special
+    capability requirements (no sandbox, no Push, no iCloud, no
+    Apple Pay), so this file is empty by design.
+
+    The point is what's NOT here:
+        com.apple.security.get-task-allow
+    Xcode auto-adds that entitlement for Debug builds (so a debugger
+    can attach), and Apple's notary service rejects any binary that
+    requests it. By passing this file to codesign via the signed
+    build's CODE_SIGN_ENTITLEMENTS override, we override Xcode's
+    default and produce a notarizable binary.
+
+    Debug builds in Xcode are unaffected — they don't reference this
+    file, so they keep the auto-generated get-task-allow=YES.
+-->
+<plist version="1.0">
+<dict>
+</dict>
+</plist>

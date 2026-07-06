@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+    Entitlements for the Mac App Store distribution build only.
+    The Developer ID (notarized) build uses Glotty-Release.entitlements
+    (empty), which is correct for non-sandboxed distribution.
+
+    Sandbox is mandatory for App Store. Selection grab still works
+    inside the sandbox because TCC (the privacy framework that
+    governs Accessibility) is independent of the sandbox boundary —
+    same Accessibility permission flow the user is already familiar
+    with. Network client lets the LLM provider HTTP calls reach
+    OpenAI / DeepSeek / etc. without further user prompts.
+
+    NOT included:
+      com.apple.security.get-task-allow — would block notarization
+      and is rejected for App Store too (same reason: debug-attach
+      entitlement doesn't belong in shipped software).
+
+    Open questions Apple Review will decide for us:
+      - Dictionary Services (DCSGetActiveDictionaries via dlsym):
+        likely flagged as private API. If rejected, we'll need to
+        guard those calls behind `#if !APPSTORE` and ship a build
+        without the dictionary section.
+      - Fn-leader hotkey via CGEventTap: may or may not work in
+        sandbox; haven't tested. If broken, switch to
+        RegisterEventHotKey with a Cmd+Shift+T/P/E/C chord.
+-->
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <key>com.apple.security.network.client</key>
+    <true/>
+</dict>
+</plist>
