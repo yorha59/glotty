@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="Glotty/Assets.xcassets/AppIcon.appiconset/icon-256@2x.png" width="128" alt="Glotty 图标">
+  <img src="../Glotty/Assets.xcassets/AppIcon.appiconset/icon-256@2x.png" width="128" alt="Glotty 图标">
   <h1>Glotty</h1>
   <p>
     <b>翻译</b>、<b>解释</b>、<b>润色</b>、<b>对话</b>、<b>朗读</b>任意文本 ——
@@ -11,8 +11,11 @@
     <img src="https://github.com/yorha59/glotty/actions/workflows/build.yml/badge.svg" alt="Build">
   </p>
   <p>
-    <a href="README.md">English</a> ·
-    <b>简体中文</b>
+    <a href="../README.md">English</a> ·
+    <b>简体中文</b> ·
+    <a href="README.zh-TW.md">繁體中文</a> ·
+    <a href="README.ja.md">日本語</a> ·
+    <a href="README.ko.md">한국어</a>
   </p>
 </div>
 
@@ -39,9 +42,9 @@
 
 |  翻译  |  解释  |
 | :--: | :--: |
-| ![翻译](appstore-screenshots/01-translate.png) | ![解释](appstore-screenshots/02-explain.png) |
+| ![翻译](../appstore-screenshots/01-translate.png) | ![解释](../appstore-screenshots/02-explain.png) |
 |  **润色**  |  **对话**  |
-| ![润色](appstore-screenshots/03-polish.png) | ![对话](appstore-screenshots/04-chat.png) |
+| ![润色](../appstore-screenshots/03-polish.png) | ![对话](../appstore-screenshots/04-chat.png) |
 
 ## ⌨️ 如何触发
 
@@ -51,7 +54,7 @@
 - **悬停菜单** —— 将指针停在选区上，弹出一个包含相同操作的紧凑工具条。
 
 <div align="center">
-  <img src="appstore-screenshots/05-hud.png" width="380" alt="引导键菜单">
+  <img src="../appstore-screenshots/05-hud.png" width="380" alt="引导键菜单">
 </div>
 
 ## 🧩 模型提供方
@@ -91,4 +94,4 @@ xcodebuild -project Glotty.xcodeproj -scheme Glotty -configuration Debug \
 
 ## 📄 许可证
 
-[GPL-3.0](LICENSE)。
+[GPL-3.0](../LICENSE)。
