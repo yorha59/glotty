@@ -51,11 +51,9 @@
 - **引导键快捷键** —— 按住引导键（默认 `Fn`），再点一个字母：`T` 翻译、`E` 解释、`P` 润色、`C` 对话、`V` 朗读、`R` 拼写纠正。按住时会显示可选项菜单。
 - **悬停菜单** —— 将指针停在选区上，弹出一个包含相同操作的紧凑工具条。
 
-<div align="center">
-  <img src="../appstore-screenshots/05-hud.png" width="440" alt="引导键菜单">
-  <br><br>
-  <img src="../appstore-screenshots/06-hover.png" width="560" alt="悬停菜单">
-</div>
+|  引导键  |  悬停菜单  |
+| :--: | :--: |
+| ![引导键菜单](../appstore-screenshots/05-hud.png) | ![悬停菜单](../appstore-screenshots/06-hover.png) |
 
 ## 🧩 模型提供方
 

@@ -51,11 +51,9 @@
 - **引導鍵快捷鍵** —— 按住引導鍵（預設 `Fn`），再點一個字母：`T` 翻譯、`E` 解釋、`P` 潤色、`C` 對話、`V` 朗讀、`R` 拼字修正。按住時會顯示可選項選單。
 - **懸停選單** —— 將指標停在選取範圍上，彈出一個包含相同操作的精簡工具列。
 
-<div align="center">
-  <img src="../appstore-screenshots/05-hud.png" width="440" alt="引導鍵選單">
-  <br><br>
-  <img src="../appstore-screenshots/06-hover.png" width="560" alt="懸停選單">
-</div>
+|  引導鍵  |  懸停選單  |
+| :--: | :--: |
+| ![引導鍵選單](../appstore-screenshots/05-hud.png) | ![懸停選單](../appstore-screenshots/06-hover.png) |
 
 ## 🧩 模型供應商
 

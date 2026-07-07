@@ -52,11 +52,9 @@
 - **リーダーキーのショートカット** —— リーダーキー（既定は `Fn`）を押しながら文字をタップ：`T` 翻訳、`E` 解説、`P` 推敲、`C` チャット、`V` 読み上げ、`R` スペル修正。押している間、選択肢メニューが表示されます。
 - **ホバーメニュー** —— 選択範囲にポインタを合わせると、同じ操作を並べたコンパクトなバーが現れます。
 
-<div align="center">
-  <img src="../appstore-screenshots/05-hud.png" width="440" alt="リーダーキーのメニュー">
-  <br><br>
-  <img src="../appstore-screenshots/06-hover.png" width="560" alt="ホバーメニュー">
-</div>
+|  リーダーキー  |  ホバーメニュー  |
+| :--: | :--: |
+| ![リーダーキーのメニュー](../appstore-screenshots/05-hud.png) | ![ホバーメニュー](../appstore-screenshots/06-hover.png) |
 
 ## 🧩 プロバイダ
 

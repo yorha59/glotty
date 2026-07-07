@@ -52,11 +52,9 @@ Two ways, both working across every app:
 - **Leader hotkey** — hold the leader key (`Fn` by default), then tap a letter: `T` translate, `E` explain, `P` polish, `C` chat, `V` speak, `R` correct spelling. A heads-up menu shows the choices while you hold.
 - **Hover menu** — rest the pointer on a selection and a compact bar pops up with the same actions.
 
-<div align="center">
-  <img src="appstore-screenshots/05-hud.png" width="440" alt="Leader hotkey menu">
-  <br><br>
-  <img src="appstore-screenshots/06-hover.png" width="560" alt="Hover menu">
-</div>
+|  Leader hotkey  |  Hover menu  |
+| :--: | :--: |
+| ![Leader hotkey menu](appstore-screenshots/05-hud.png) | ![Hover menu](appstore-screenshots/06-hover.png) |
 
 ## 🧩 Providers
 
