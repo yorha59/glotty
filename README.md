@@ -53,7 +53,9 @@ Two ways, both working across every app:
 - **Hover menu** — rest the pointer on a selection and a compact bar pops up with the same actions.
 
 <div align="center">
-  <img src="appstore-screenshots/05-hud.png" width="380" alt="Leader hotkey menu">
+  <img src="appstore-screenshots/05-hud.png" width="440" alt="Leader hotkey menu">
+  <br><br>
+  <img src="appstore-screenshots/06-hover.png" width="560" alt="Hover menu">
 </div>
 
 ## 🧩 Providers

@@ -52,7 +52,9 @@
 - **悬停菜单** —— 将指针停在选区上，弹出一个包含相同操作的紧凑工具条。
 
 <div align="center">
-  <img src="../appstore-screenshots/05-hud.png" width="380" alt="引导键菜单">
+  <img src="../appstore-screenshots/05-hud.png" width="440" alt="引导键菜单">
+  <br><br>
+  <img src="../appstore-screenshots/06-hover.png" width="560" alt="悬停菜单">
 </div>
 
 ## 🧩 模型提供方

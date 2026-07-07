@@ -52,7 +52,9 @@
 - **懸停選單** —— 將指標停在選取範圍上，彈出一個包含相同操作的精簡工具列。
 
 <div align="center">
-  <img src="../appstore-screenshots/05-hud.png" width="380" alt="引導鍵選單">
+  <img src="../appstore-screenshots/05-hud.png" width="440" alt="引導鍵選單">
+  <br><br>
+  <img src="../appstore-screenshots/06-hover.png" width="560" alt="懸停選單">
 </div>
 
 ## 🧩 模型供應商

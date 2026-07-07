@@ -53,7 +53,9 @@
 - **ホバーメニュー** —— 選択範囲にポインタを合わせると、同じ操作を並べたコンパクトなバーが現れます。
 
 <div align="center">
-  <img src="../appstore-screenshots/05-hud.png" width="380" alt="リーダーキーのメニュー">
+  <img src="../appstore-screenshots/05-hud.png" width="440" alt="リーダーキーのメニュー">
+  <br><br>
+  <img src="../appstore-screenshots/06-hover.png" width="560" alt="ホバーメニュー">
 </div>
 
 ## 🧩 プロバイダ

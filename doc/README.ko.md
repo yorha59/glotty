@@ -52,7 +52,9 @@
 - **호버 메뉴** —— 선택 영역에 포인터를 올리면 같은 동작을 담은 간단한 막대가 나타납니다.
 
 <div align="center">
-  <img src="../appstore-screenshots/05-hud.png" width="380" alt="리더 키 메뉴">
+  <img src="../appstore-screenshots/05-hud.png" width="440" alt="리더 키 메뉴">
+  <br><br>
+  <img src="../appstore-screenshots/06-hover.png" width="560" alt="호버 메뉴">
 </div>
 
 ## 🧩 제공자
