@@ -25,7 +25,6 @@ plain-language explanation, polish your own draft into natural phrasing, chat wi
 about it, or hear it read aloud. It's built for learners who want a fast, in-place tutor
 instead of a separate translation window: no app-switching, no copy-paste.
 
-> A personal project, shared as-is under the GPL. Expect rough edges.
 
 ## ✨ Highlights
 
