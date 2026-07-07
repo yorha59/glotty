@@ -58,38 +58,16 @@
 
 ## 🧩 模型提供方
 
-自带托管 LLM 的密钥，或完全在本地运行：
+自带托管模型的密钥，或在本地运行 —— 在**设置 → 语言模型**中配置：
 
-- **托管** —— OpenAI、DeepSeek，以及其他兼容 OpenAI 的接口。
-- **本地** —— Apple Intelligence（Foundation Models），以及用于完全离线查询的 Apple 翻译框架与系统词典。
+- **OpenAI 兼容** —— OpenAI 或任意兼容 OpenAI 的接口（自定义 base URL + 密钥）
+- **DeepSeek**
+- **Kimi For Coding**（月之暗面）
+- **MiniMax**
+- **Apple Intelligence** —— 本地（Foundation Models），无需密钥或联网
+- **自定义** —— 添加任意其他兼容 OpenAI 的提供方
 
-## 🛠 构建与运行
-
-环境要求：**macOS 15+**、**Xcode 16+**，以及 [XcodeGen](https://github.com/yonaskolb/XcodeGen)（`brew install xcodegen`）—— `.xcodeproj` 为生成产物，不纳入版本库。
-
-```sh
-xcodegen generate     # 由 project.yml 生成 Glotty.xcodeproj
-open Glotty.xcodeproj  # 然后在 Xcode 中运行
-```
-
-或用命令行做一次未签名构建：
-
-```sh
-xcodegen generate
-xcodebuild -project Glotty.xcodeproj -scheme Glotty -configuration Debug \
-  -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
-```
-
-如需**签名**构建，请填入你自己的 Apple 开发者身份 —— `project.yml` 中的 `DEVELOPMENT_TEAM` 默认为空；填入你的（并相应调整 `CODE_SIGN_*`），或在 `xcodebuild` 命令行中覆盖。
-
-## ⚙️ 配置与权限
-
-- 在**设置 → 语言模型**中添加 LLM 提供方与 API 密钥（保存于钥匙串）；可选的 ElevenLabs 语音密钥位于**设置 → 语音**。
-- Glotty 是菜单栏后台应用（无 Dock 图标）。在其他 App 中读取选区需要**辅助功能**权限；引导键快捷键需要**输入监控**权限；主动提醒需要**通知**权限 —— 在系统提示时授予，或在应用内的**权限**面板中操作。
-
-## 🌍 本地化
-
-界面字符串位于 `Glotty/Resources/Localizable.xcstrings`。`scripts/extract-strings.sh` 扫描源码中可翻译的字面量，`scripts/translate-catalog.py` 用你自己的 LLM 密钥将目录填充至各语言。
+翻译也可完全离线运行：使用 Apple 翻译框架 + macOS 词典，无需 LLM。
 
 ## 📄 许可证
 

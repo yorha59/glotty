@@ -58,38 +58,16 @@
 
 ## 🧩 제공자
 
-호스팅 LLM 키를 가져오거나 완전히 온디바이스로 실행:
+호스팅 모델 키를 가져오거나 온디바이스로 실행 —— **설정 → 언어 모델**에서 구성:
 
-- **호스팅** —— OpenAI, DeepSeek 및 기타 OpenAI 호환 엔드포인트.
-- **온디바이스** —— Apple Intelligence(Foundation Models), 그리고 네트워크가 전혀 필요 없는 조회를 위한 Apple 번역 프레임워크와 시스템 사전.
+- **OpenAI 호환** —— OpenAI 또는 OpenAI 호환 엔드포인트(base URL + 키 설정)
+- **DeepSeek**
+- **Kimi For Coding**(Moonshot)
+- **MiniMax**
+- **Apple Intelligence** —— 온디바이스(Foundation Models), 키·네트워크 불필요
+- **커스텀** —— 그 외 OpenAI 호환 제공자 추가
 
-## 🛠 빌드 및 실행
-
-요구 사항: **macOS 15+**, **Xcode 16+**, [XcodeGen](https://github.com/yonaskolb/XcodeGen)(`brew install xcodegen`) —— `.xcodeproj`는 생성물이며 저장소에 포함되지 않습니다.
-
-```sh
-xcodegen generate     # project.yml로부터 Glotty.xcodeproj 생성
-open Glotty.xcodeproj  # 그런 다음 Xcode에서 실행
-```
-
-또는 명령줄에서 미서명 빌드:
-
-```sh
-xcodegen generate
-xcodebuild -project Glotty.xcodeproj -scheme Glotty -configuration Debug \
-  -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
-```
-
-**서명** 빌드는 자신의 Apple 개발자 ID를 설정하세요 —— `project.yml`의 `DEVELOPMENT_TEAM`은 비어 있습니다. 자신의 것을 설정(그리고 `CODE_SIGN_*` 조정)하거나 `xcodebuild` 명령줄에서 재정의하세요.
-
-## ⚙️ 설정 및 권한
-
-- **설정 → 언어 모델**에서 LLM 제공자와 API 키를 추가(키체인에 저장). 선택적 ElevenLabs 음성 키는 **설정 → 음성**에 있습니다.
-- Glotty는 메뉴 막대 백그라운드 앱입니다(Dock 아이콘 없음). 다른 앱에서 선택 영역을 읽으려면 **손쉬운 사용(Accessibility)**, 리더 키 단축키에는 **입력 모니터링**, 능동 알림에는 **알림** 권한이 필요합니다 —— 프롬프트가 뜰 때 또는 앱 내 **권한** 패널에서 허용하세요.
-
-## 🌍 지역화
-
-UI 문자열은 `Glotty/Resources/Localizable.xcstrings`에 있습니다. `scripts/extract-strings.sh`가 번역 대상 리터럴을 소스에서 추출하고, `scripts/translate-catalog.py`가 자신의 LLM 키로 카탈로그를 각 언어로 채웁니다.
+번역은 Apple 번역 프레임워크 + macOS 사전으로 완전 오프라인 실행도 가능. LLM 불필요.
 
 ## 📄 라이선스
 

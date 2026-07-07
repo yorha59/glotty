@@ -59,38 +59,16 @@ Two ways, both working across every app:
 
 ## 🧩 Providers
 
-Bring your own key for a hosted LLM, or run fully on-device:
+Bring your own key for a hosted model, or run on-device — configure it in **Settings → Language Model**:
 
-- **Hosted** — OpenAI, DeepSeek, and other OpenAI-compatible endpoints.
-- **On-device** — Apple Intelligence (Foundation Models), plus Apple's Translation framework and system dictionaries for lookups that need no network at all.
+- **OpenAI-compatible** — OpenAI or any OpenAI-compatible endpoint (set the base URL + key)
+- **DeepSeek**
+- **Kimi For Coding** (Moonshot)
+- **MiniMax**
+- **Apple Intelligence** — on-device (Foundation Models), no key or network needed
+- **Custom** — add any other OpenAI-compatible provider
 
-## 🛠 Build & run
-
-Requirements: **macOS 15+**, **Xcode 16+**, and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`) — the `.xcodeproj` is generated, not checked in.
-
-```sh
-xcodegen generate     # produce Glotty.xcodeproj from project.yml
-open Glotty.xcodeproj  # then Run in Xcode
-```
-
-Or an unsigned build from the command line:
-
-```sh
-xcodegen generate
-xcodebuild -project Glotty.xcodeproj -scheme Glotty -configuration Debug \
-  -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
-```
-
-For a **signed** build, add your Apple Developer identity — `project.yml` ships with an empty `DEVELOPMENT_TEAM`; set yours (and adjust `CODE_SIGN_*`) or override on the `xcodebuild` command line.
-
-## ⚙️ Configuration & permissions
-
-- Add an LLM provider + API key in **Settings → Language Model** (stored in Keychain); an optional ElevenLabs voice key lives in **Settings → Voice**.
-- Glotty is a menu-bar agent (no Dock icon). Reading the selection in other apps needs **Accessibility**; the leader hotkey needs **Input Monitoring**; proactive reminders need **Notifications** — grant these when prompted, or from the in-app **Permissions** pane.
-
-## 🌍 Localization
-
-UI strings live in `Glotty/Resources/Localizable.xcstrings`. `scripts/extract-strings.sh` scans the source for translatable literals, and `scripts/translate-catalog.py` fills the catalog across languages (using an LLM key of your own).
+Translate can also run fully offline via Apple's Translation framework + macOS dictionaries — no LLM required.
 
 ## 📄 License
 

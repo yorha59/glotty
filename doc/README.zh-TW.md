@@ -58,38 +58,16 @@
 
 ## 🧩 模型供應商
 
-自帶托管 LLM 的金鑰，或完全在本機執行：
+自帶托管模型的金鑰，或在本機執行 —— 在**設定 → 語言模型**中設定：
 
-- **托管** —— OpenAI、DeepSeek，以及其他相容 OpenAI 的介面。
-- **裝置端** —— Apple Intelligence（Foundation Models），以及用於完全離線查詢的 Apple 翻譯框架與系統辭典。
+- **OpenAI 相容** —— OpenAI 或任意相容 OpenAI 的介面（自訂 base URL + 金鑰）
+- **DeepSeek**
+- **Kimi For Coding**（月之暗面）
+- **MiniMax**
+- **Apple Intelligence** —— 裝置端（Foundation Models），無需金鑰或連網
+- **自訂** —— 新增任意其他相容 OpenAI 的供應商
 
-## 🛠 建置與執行
-
-環境需求：**macOS 15+**、**Xcode 16+**，以及 [XcodeGen](https://github.com/yonaskolb/XcodeGen)（`brew install xcodegen`）—— `.xcodeproj` 為產生產物，不納入版本庫。
-
-```sh
-xcodegen generate     # 由 project.yml 產生 Glotty.xcodeproj
-open Glotty.xcodeproj  # 然後在 Xcode 中執行
-```
-
-或用命令列做一次未簽署建置：
-
-```sh
-xcodegen generate
-xcodebuild -project Glotty.xcodeproj -scheme Glotty -configuration Debug \
-  -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
-```
-
-如需**簽署**建置，請填入你自己的 Apple 開發者身分 —— `project.yml` 中的 `DEVELOPMENT_TEAM` 預設為空；填入你的（並相應調整 `CODE_SIGN_*`），或在 `xcodebuild` 命令列中覆寫。
-
-## ⚙️ 設定與權限
-
-- 在**設定 → 語言模型**中新增 LLM 供應商與 API 金鑰（保存於鑰匙圈）；可選的 ElevenLabs 語音金鑰位於**設定 → 語音**。
-- Glotty 是選單列背景 App（無 Dock 圖示）。在其他 App 中讀取選取範圍需要**輔助使用**權限；引導鍵快捷鍵需要**輸入監控**權限；主動提醒需要**通知**權限 —— 在系統提示時授予，或在 App 內的**權限**面板中操作。
-
-## 🌍 在地化
-
-介面字串位於 `Glotty/Resources/Localizable.xcstrings`。`scripts/extract-strings.sh` 掃描原始碼中可翻譯的字面值，`scripts/translate-catalog.py` 用你自己的 LLM 金鑰將目錄填入各語言。
+翻譯也可完全離線執行：使用 Apple 翻譯框架 + macOS 辭典，無需 LLM。
 
 ## 📄 授權
 
