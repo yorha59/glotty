@@ -10,6 +10,10 @@
     <img src="https://img.shields.io/badge/License-GPLv3-3b82f6.svg" alt="License: GPL v3">
     <img src="https://github.com/yorha59/glotty/actions/workflows/build.yml/badge.svg" alt="Build">
   </p>
+  <p>
+    <b>English</b> ·
+    <a href="README.zh-CN.md">简体中文</a>
+  </p>
 </div>
 
 **Glotty** is a macOS menu-bar app for reading and writing in a foreign language. Select
