@@ -33,7 +33,6 @@ instead of a separate translation window: no app-switching, no copy-paste.
 - ✏️ **Polish** — rewrite your own draft into more idiomatic target-language phrasing.
 - 💬 **Chat** — a follow-up tutor conversation about the word, sentence, or your writing.
 - 🔊 **Speak** — text-to-speech via the built-in macOS voice, or ElevenLabs.
-- 📖 **Reader** — a built-in EPUB / PDF reader: tap any word to look it up, and mark the vocabulary you want to remember (it stays underlined). Also registers as an *Open With* handler for `.epub` / `.pdf`.
 - 🧠 **Memory** — optionally learns durable glossary terms, preferences, and background facts from your chats to personalize later answers.
 - 🔑 **Bring your own LLM** — keys stay in the macOS **Keychain**, never in the app's files.
 - 🌍 **Localized** across several languages.
