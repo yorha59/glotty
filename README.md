@@ -69,11 +69,14 @@ Glotty carries context between steps — a polish becomes a conversation, and a 
 
 Bring your own key for a hosted model, or run on-device — configure it in **Settings → Language Model**:
 
-- **OpenAI-compatible** — OpenAI or any OpenAI-compatible endpoint (set the base URL + key)
+- **OpenAI** — OpenAI or any OpenAI-compatible endpoint (set the base URL + key)
+- **Google Gemini**
+- **OpenRouter** — one key, many models
 - **DeepSeek**
 - **Z.AI** (Zhipu GLM)
+- **xAI (Grok)**
 - **Kimi For Coding** (Moonshot)
-- **MiniMax**
+- **MiniMax (Coding)**
 - **Apple Intelligence** — on-device (Foundation Models), no key or network needed
 - **Custom** — add any other OpenAI-compatible provider
 
