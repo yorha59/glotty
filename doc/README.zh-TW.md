@@ -55,6 +55,14 @@
 | :--: | :--: |
 | ![引導鍵選單](../appstore-screenshots/05-hud.png) | ![懸停選單](../appstore-screenshots/06-hover.png) |
 
+## 🧠 理解上下文
+
+Glotty 在各步驟之間保留上下文——一次潤色可延續為對話，一次翻譯會參考它對你的了解。
+
+|  上下文追問  |  記憶感知翻譯  |
+| :--: | :--: |
+| ![潤色後追問](../appstore-screenshots/07-polish-chat.png) | ![記住你，依語境翻譯](../appstore-screenshots/08-memory-translate.png) |
+
 ## 🧩 模型供應商
 
 自帶托管模型的金鑰，或在本機執行 —— 在**設定 → 語言模型**中設定：

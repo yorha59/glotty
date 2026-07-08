@@ -56,6 +56,14 @@
 | :--: | :--: |
 | ![リーダーキーのメニュー](../appstore-screenshots/05-hud.png) | ![ホバーメニュー](../appstore-screenshots/06-hover.png) |
 
+## 🧠 文脈を理解
+
+Glotty はステップ間で文脈を保ちます——推敲はそのまま会話になり、翻訳はあなたについて学んだことを踏まえます。
+
+|  文脈を踏まえた追加質問  |  メモリを踏まえた翻訳  |
+| :--: | :--: |
+| ![推敲してから理由を聞く](../appstore-screenshots/07-polish-chat.png) | ![あなたを覚えて文脈で翻訳](../appstore-screenshots/08-memory-translate.png) |
+
 ## 🧩 プロバイダ
 
 ホスト型モデルの鍵を持ち込むか、オンデバイスで実行 —— **設定 → 言語モデル**で設定：

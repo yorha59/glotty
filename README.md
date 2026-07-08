@@ -56,6 +56,14 @@ Two ways, both working across every app:
 | :--: | :--: |
 | ![Leader hotkey menu](appstore-screenshots/05-hud.png) | ![Hover menu](appstore-screenshots/06-hover.png) |
 
+## 🧠 Context-aware
+
+Glotty carries context between steps — a polish becomes a conversation, and a translation draws on what it has learned about you.
+
+|  Contextual follow-ups  |  Memory-aware translation  |
+| :--: | :--: |
+| ![Polish, then ask why](appstore-screenshots/07-polish-chat.png) | ![Remembers you, translates in context](appstore-screenshots/08-memory-translate.png) |
+
 ## 🧩 Providers
 
 Bring your own key for a hosted model, or run on-device — configure it in **Settings → Language Model**:

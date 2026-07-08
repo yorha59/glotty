@@ -55,6 +55,14 @@
 | :--: | :--: |
 | ![리더 키 메뉴](../appstore-screenshots/05-hud.png) | ![호버 메뉴](../appstore-screenshots/06-hover.png) |
 
+## 🧠 맥락을 이해
+
+Glotty는 단계 사이에서 맥락을 이어갑니다 — 다듬기가 대화로 이어지고, 번역은 당신에 대해 배운 것을 반영합니다.
+
+|  맥락 기반 후속 질문  |  메모리 기반 번역  |
+| :--: | :--: |
+| ![다듬고 나서 이유를 묻기](../appstore-screenshots/07-polish-chat.png) | ![당신을 기억해 맥락에 맞게 번역](../appstore-screenshots/08-memory-translate.png) |
+
 ## 🧩 제공자
 
 호스팅 모델 키를 가져오거나 온디바이스로 실행 —— **설정 → 언어 모델**에서 구성:
