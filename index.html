@@ -31,9 +31,6 @@
         color: #fff; font-size: 18px; font-weight: 600; text-decoration: none; border-radius: 980px; }
   .dl:hover { background: #0a84ff; }
   .dlmeta { font-size: 14px; color: #86868b; margin: 0; }
-  .beta { display: inline-block; padding: 12px 30px; background: #b8860b;
-          color: #fff; font-size: 18px; font-weight: 600; text-decoration: none; border-radius: 980px; }
-  .beta:hover { background: #9a6b00; }
   .feat { display: flex; gap: 48px; align-items: center; margin: 72px 0; }
   .feat.reverse { flex-direction: row-reverse; }
   .feat .shot { flex: 0 0 44%; display: flex; justify-content: center; }
@@ -72,8 +69,7 @@
   <p class="tagline" id="tagline"></p>
   <p class="sub" id="sub"></p>
   <div class="dlrow">
-    <a class="dl" id="dl" href="Glotty-1.0.pkg" download></a>
-    <a class="beta" id="beta" href="Glotty-1.0.9-beta.pkg" download></a>
+    <a class="dl" id="dl" href="Glotty-1.0.9.pkg" download></a>
   </div>
   <p class="dlmeta" id="dlmeta"></p>
 </header>
@@ -92,8 +88,7 @@ const I18N = {
           ["Practice by chatting","Fn + C opens a patient AI tutor that keeps the conversation going in the language you're learning."]],
     hud:["One shortcut. Four ways to learn.","Hold Fn to see the menu, then press T, E, P, or C. Glotty appears right where you're working — even over a full-screen app."],
     priv:["Private by design","No account, no ads, no analytics. Bring your own AI key (OpenAI, DeepSeek, Grok, and more) — your text goes straight to the provider you choose, never through our servers."],
-    dl:"Download 1.0 · Stable", dlmeta:"Universal (Apple Silicon & Intel) · macOS 15+ · free",
-    beta:"Try the dev preview · 1.0.9-beta →",
+    dl:"Download 1.0.9", dlmeta:"Universal (Apple Silicon & Intel) · macOS 15+ · free",
     whatsnew:"Changelog",
     support:"Support", privacy:"Privacy Policy" },
 
@@ -106,8 +101,7 @@ const I18N = {
           ["在对话中练习","Fn + C 打开一位耐心的 AI 导师，用你正在学习的语言持续聊天。"]],
     hud:["一个快捷键，四种学习方式","按住 Fn 查看菜单，再按 T、E、P 或 C。Glotty 就浮现在你工作的地方——即使在全屏应用之上。"],
     priv:["隐私优先","没有账户、没有广告、没有分析统计。使用你自己的 AI 密钥（OpenAI、DeepSeek、Grok 等）——你的文本直达你选择的服务商，绝不经过我们的服务器。"],
-    dl:"下载 1.0 · 稳定版", dlmeta:"通用（Apple 芯片与 Intel）· macOS 15+ · 免费",
-    beta:"试用开发预览版 · 1.0.9-beta →",
+    dl:"下载 1.0.9", dlmeta:"通用（Apple 芯片与 Intel）· macOS 15+ · 免费",
     whatsnew:"更新日志",
     support:"支持", privacy:"隐私政策" },
 
@@ -120,8 +114,7 @@ const I18N = {
           ["在對話中練習","Fn + C 開啟一位耐心的 AI 導師，用你正在學習的語言持續聊天。"]],
     hud:["一個快速鍵，四種學習方式","按住 Fn 查看選單，再按 T、E、P 或 C。Glotty 就浮現在你工作的地方——即使在全螢幕應用程式之上。"],
     priv:["隱私優先","沒有帳戶、沒有廣告、沒有分析統計。使用你自己的 AI 金鑰（OpenAI、DeepSeek、Grok 等）——你的文字直達你選擇的服務商，絕不經過我們的伺服器。"],
-    dl:"下載 1.0 · 穩定版", dlmeta:"通用（Apple 晶片與 Intel）· macOS 15+ · 免費",
-    beta:"試用開發預覽版 · 1.0.9-beta →",
+    dl:"下載 1.0.9", dlmeta:"通用（Apple 晶片與 Intel）· macOS 15+ · 免費",
     whatsnew:"更新紀錄",
     support:"支援", privacy:"隱私權政策" },
 
@@ -134,8 +127,7 @@ const I18N = {
           ["チャットで練習","Fn + C で、学習中の言語で会話を続けてくれる辛抱強い AI チューターが開きます。"]],
     hud:["1 つのショートカット、4 つの学び方","Fn を押すとメニューが出て、T・E・P・C を押すだけ。Glotty は作業中の場所に——全画面アプリの上にも——現れます。"],
     priv:["プライバシー第一","アカウントも広告も分析もなし。自分の AI キー（OpenAI、DeepSeek、Grok など）を使用——テキストは選んだプロバイダへ直接送られ、当方のサーバーを経由しません。"],
-    dl:"1.0 をダウンロード · 安定版", dlmeta:"ユニバーサル（Apple Silicon・Intel）· macOS 15+ · 無料",
-    beta:"開発プレビュー版を試す · 1.0.9-beta →",
+    dl:"1.0.9 をダウンロード", dlmeta:"ユニバーサル（Apple Silicon・Intel）· macOS 15+ · 無料",
     whatsnew:"変更履歴",
     support:"サポート", privacy:"プライバシーポリシー" },
 
@@ -148,8 +140,7 @@ const I18N = {
           ["대화로 연습","Fn + C가 배우는 언어로 대화를 이어가는 인내심 있는 AI 튜터를 엽니다."]],
     hud:["단축키 하나, 네 가지 학습","Fn을 누르면 메뉴가 나오고 T·E·P·C를 누르세요. Glotty는 작업 중인 곳에——전체 화면 앱 위에도——나타납니다."],
     priv:["프라이버시 우선","계정도 광고도 분석도 없습니다. 자신의 AI 키(OpenAI, DeepSeek, Grok 등)를 사용하세요——텍스트는 선택한 제공업체로 바로 전송되며 당사 서버를 거치지 않습니다."],
-    dl:"1.0 다운로드 · 안정 버전", dlmeta:"유니버설(Apple Silicon·Intel) · macOS 15+ · 무료",
-    beta:"개발 미리보기 사용해보기 · 1.0.9-beta →",
+    dl:"1.0.9 다운로드", dlmeta:"유니버설(Apple Silicon·Intel) · macOS 15+ · 무료",
     whatsnew:"변경 내역",
     support:"지원", privacy:"개인정보 처리방침" },
 
@@ -162,8 +153,7 @@ const I18N = {
           ["Practica chateando","Fn + C abre un tutor de IA paciente que mantiene la conversación en el idioma que aprendes."]],
     hud:["Un atajo. Cuatro formas de aprender.","Mantén Fn para ver el menú y pulsa T, E, P o C. Glotty aparece justo donde trabajas — incluso sobre una app a pantalla completa."],
     priv:["Privado por diseño","Sin cuenta, sin anuncios, sin analíticas. Usa tu propia clave de IA (OpenAI, DeepSeek, Grok y más) — tu texto va directo al proveedor que elijas, nunca por nuestros servidores."],
-    dl:"Descargar 1.0 · Estable", dlmeta:"Universal (Apple Silicon e Intel) · macOS 15+ · gratis",
-    beta:"Prueba la versión de desarrollo · 1.0.9-beta →",
+    dl:"Descargar 1.0.9", dlmeta:"Universal (Apple Silicon e Intel) · macOS 15+ · gratis",
     whatsnew:"Registro de cambios",
     support:"Soporte", privacy:"Política de privacidad" },
 
@@ -176,8 +166,7 @@ const I18N = {
           ["Pratiquez en discutant","Fn + C ouvre un tuteur IA patient qui poursuit la conversation dans la langue que vous apprenez."]],
     hud:["Un raccourci. Quatre façons d'apprendre.","Maintenez Fn pour voir le menu, puis appuyez sur T, E, P ou C. Glotty apparaît là où vous travaillez — même par-dessus une app en plein écran."],
     priv:["Confidentiel par conception","Pas de compte, pas de pub, pas d'analyse. Utilisez votre propre clé IA (OpenAI, DeepSeek, Grok, etc.) — votre texte va directement au fournisseur choisi, jamais par nos serveurs."],
-    dl:"Télécharger 1.0 · Stable", dlmeta:"Universel (Apple Silicon et Intel) · macOS 15+ · gratuit",
-    beta:"Essayer l'aperçu de développement · 1.0.9-beta →",
+    dl:"Télécharger 1.0.9", dlmeta:"Universel (Apple Silicon et Intel) · macOS 15+ · gratuit",
     whatsnew:"Journal des modifications",
     support:"Assistance", privacy:"Politique de confidentialité" },
 
@@ -190,8 +179,7 @@ const I18N = {
           ["Üben durch Chatten","Fn + C öffnet einen geduldigen KI-Tutor, der das Gespräch in Ihrer Lernsprache fortführt."]],
     hud:["Ein Kürzel. Vier Wege zu lernen.","Halten Sie Fn für das Menü und drücken Sie T, E, P oder C. Glotty erscheint genau dort, wo Sie arbeiten — auch über einer Vollbild-App."],
     priv:["Privat by Design","Kein Konto, keine Werbung, keine Analyse. Nutzen Sie Ihren eigenen KI-Schlüssel (OpenAI, DeepSeek, Grok u. a.) — Ihr Text geht direkt an den gewählten Anbieter, nie über unsere Server."],
-    dl:"1.0 laden · Stabil", dlmeta:"Universal (Apple Silicon & Intel) · macOS 15+ · kostenlos",
-    beta:"Entwicklungsvorschau testen · 1.0.9-beta →",
+    dl:"1.0.9 laden", dlmeta:"Universal (Apple Silicon & Intel) · macOS 15+ · kostenlos",
     whatsnew:"Änderungen",
     support:"Support", privacy:"Datenschutzerklärung" }
 };
@@ -209,7 +197,6 @@ function render(lang){
   document.getElementById("sub").textContent = x.sub;
   document.getElementById("dl").textContent = x.dl;
   document.getElementById("dlmeta").textContent = x.dlmeta;
-  document.getElementById("beta").textContent = x.beta;
   document.getElementById("nav-changelog").textContent = x.whatsnew;
   let html = "";
   x.feat.forEach((f,i)=>{ html += row("shots/"+FEAT[i]+"."+lang+".png", f[0], f[1], i%2===1); });
