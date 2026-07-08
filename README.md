@@ -71,6 +71,7 @@ Bring your own key for a hosted model, or run on-device — configure it in **Se
 
 - **OpenAI-compatible** — OpenAI or any OpenAI-compatible endpoint (set the base URL + key)
 - **DeepSeek**
+- **Z.AI** (Zhipu GLM)
 - **Kimi For Coding** (Moonshot)
 - **MiniMax**
 - **Apple Intelligence** — on-device (Foundation Models), no key or network needed
