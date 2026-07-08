@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glotty — Changelog</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { font: 17px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans", "Noto Sans CJK", sans-serif;
+         max-width: 760px; margin: 0 auto; padding: 16px 24px 80px; color: #1d1d1f; }
+  .topnav { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; }
+  .topnav .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 18px;
+                   color: #1d1d1f; text-decoration: none; }
+  .topnav .brand img { width: 26px; height: 26px; }
+  .topnav .navright { display: flex; align-items: center; gap: 18px; }
+  .topnav .navlink { color: #1d1d1f; text-decoration: none; font-weight: 500; }
+  .topnav .navlink:hover { color: #2997ff; }
+  select { font: inherit; padding: 4px 8px; border-radius: 8px; }
+  h1 { font-size: 34px; text-align: center; margin: 28px 0 36px; }
+  .track { margin: 0 0 44px; }
+  .trackhead { font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+               color: #2997ff; margin: 0 0 6px; padding-bottom: 8px; border-bottom: 2px solid #e3e3e6; }
+  .trackhead.dev { color: #b8860b; }
+  .rel { display: flex; gap: 24px; padding: 18px 0; border-bottom: 1px solid #f0f0f2; }
+  .ver { flex: 0 0 124px; font-weight: 600; }
+  .ver .date { display: block; font-weight: 400; font-size: 13px; color: #86868b; margin-top: 2px; }
+  .ver .tag { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 700; color: #9a6b00;
+              background: #fff3d6; padding: 1px 7px; border-radius: 6px; vertical-align: middle; }
+  .body { color: #444; white-space: pre-line; }
+  ul.body { color: #444; margin: 0; padding-left: 1.3em; }
+  ul.body li { margin: 4px 0; }
+  footer { text-align: center; margin-top: 56px; color: #86868b; font-size: 15px;
+           border-top: 1px solid #e3e3e6; padding-top: 24px; }
+  footer a { color: #2997ff; text-decoration: none; margin: 0 8px; }
+  @media (max-width: 600px) { .rel { flex-direction: column; gap: 6px; } }
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <a class="brand" href="index.html"><img src="icon.png" alt="">Glotty</a>
+  <div class="navright">
+    <a class="navlink" id="nav-home" href="index.html"></a>
+    <select id="lang" aria-label="Language"></select>
+  </div>
+</nav>
+<h1 id="h1">Changelog</h1>
+<main id="content"></main>
+<footer id="footer"></footer>
+
+<script>
+// Two tracks, newest first. Notes are localized via I18N[lang].officialNotes /
+// .devNotes (same index order). To log a release: prepend a {v,date} to the
+// right track and one note string to every language's matching notes array.
+const OFFICIAL = [{ v:"1.0", date:"2026-06-09" }];
+const DEV      = [{ v:"1.0.9-beta", date:"2026-06-26" },
+                  { v:"1.0.8-beta", date:"2026-06-23" },
+                  { v:"1.0.7-beta", date:"2026-06-16" },
+                  { v:"1.0.6-beta", date:"2026-06-12" },
+                  { v:"1.0.5-beta", date:"2026-06-11" },
+                  { v:"1.0.4-beta", date:"2026-06-11" },
+                  { v:"1.0.3-beta", date:"2026-06-11" },
+                  { v:"1.0.2-beta", date:"2026-06-11" },
+                  { v:"1.0.1-beta", date:"2026-06-10" }];
+
+const I18N = {
+  "en": { name:"English", title:"Changelog", home:"Home", privacy:"Privacy Policy",
+    official:"Official", dev:"Dev preview",
+    officialNotes:["First public release. Translate, explain, polish, and chat on any text you select — on-device translation, plus Apple Intelligence or your own AI key."],
+    devNotes:["Memory Contexts are now interactive — click one to switch, and give each a short intro (with a ✨ one-tap AI draft from its name) that’s woven into every chat.\nThe Discuss tutor only corrects genuine attempts in your target language — no more turning your questions into example sentences.\nIn chat, Send becomes Stop mid-reply so you can cancel a stalled response, with a timeout that suggests a retry.\nTerminal selections are now captured with your manual ⌘C.",
+      "Practice your past mistakes: every Polish run that flagged grammar becomes a spaced-repetition drill — the tutor replays your draft and what you meant, you say it naturally, and it checks.",
+      "Spell correction now works in Chrome and other Chromium/Electron apps.",
+      "Adds MiniMax (Coding) as an AI provider — connect your MiniMax coding plan via its Anthropic-compatible API.",
+      "Switch the AI model right from the menu bar.",
+      "Spell correction now falls back to AI for badly-mangled words the built-in checker can’t fix (e.g. “simotanious” → “simultaneous”). Only used when the local check finds nothing.",
+      "Chat now opens on your current selection — highlight something and start chatting about it.",
+      "Adds a shortcut-free trigger: rest the pointer on a selection to pop up the action menu (Translate, Explain, Polish, Chat, Correct spelling). Enable it and tune the delay in Settings.",
+      "Adds Fn + R — spell-correct the selected word: a single suggestion is replaced in place; several show a pick-list to choose from."] },
+  "zh-Hans": { name:"简体中文", title:"更新日志", home:"主页", privacy:"隐私政策",
+    official:"正式版", dev:"开发预览版",
+    officialNotes:["首次公开发布。对任意选中的文本进行翻译、解释、润色与对话——本机翻译，并支持 Apple Intelligence 或你自己的 AI 密钥。"],
+    devNotes:["记忆情境现在可交互——点击即可切换，并能为每个情境写一段简短介绍（还能用 ✨ 一键根据名称生成 AI 草稿），这段介绍会融入每一次对话。\n讨论导师只纠正你用目标语言做出的真实尝试，不再把你的问题改写成例句。\n对话中，回复进行时“发送”会变为“停止”，可取消卡住的回复，超时还会提示重试。\n终端中的选区现在通过你手动按 ⌘C 获取。",
+      "练习你过去的错误：每次润色中标记出的语法问题都会变成间隔重复练习——导师重现你的原句和本意，你用自然的说法重写，它来检查。",
+      "拼写校正现在可在 Chrome 及其他 Chromium/Electron 应用中使用。",
+      "新增 MiniMax（编程）作为 AI 服务商——通过其 Anthropic 兼容 API 连接你的 MiniMax 编程套餐。",
+      "直接在菜单栏切换 AI 模型。",
+      "拼写校正现在会对内置检查器无法纠正的严重拼错单词回退到 AI（例如“simotanious”→“simultaneous”）。仅在本地检查无结果时使用。",
+      "对话现在会带上当前选区——选中内容即可直接就此开聊。",
+      "新增免快捷键触发：将指针停留在选区上即可弹出操作菜单（翻译、解释、润色、对话、校正拼写）。可在设置中开关并调整延迟。",
+      "新增 Fn + R——校正所选单词的拼写：只有一个建议时就地替换，多个建议时显示候选列表供选择。"] },
+  "zh-Hant": { name:"繁體中文", title:"更新紀錄", home:"主頁", privacy:"隱私權政策",
+    official:"正式版", dev:"開發預覽版",
+    officialNotes:["首次公開發布。對任意選取的文字進行翻譯、解釋、潤飾與對話——本機翻譯，並支援 Apple Intelligence 或你自己的 AI 金鑰。"],
+    devNotes:["記憶情境現在可互動——點擊即可切換，並能為每個情境寫一段簡短介紹（還能用 ✨ 一鍵依名稱產生 AI 草稿），這段介紹會融入每一次對話。\n討論導師只糾正你用目標語言做出的真實嘗試，不再把你的問題改寫成例句。\n對話中，回覆進行時「傳送」會變為「停止」，可取消卡住的回覆，逾時還會提示重試。\n終端機中的選取範圍現在透過你手動按 ⌘C 取得。",
+      "練習你過去的錯誤：每次潤飾中標記出的文法問題都會變成間隔重複練習——導師重現你的原句和本意，你用自然的說法重寫，它來檢查。",
+      "拼寫校正現在可在 Chrome 及其他 Chromium/Electron 應用中使用。",
+      "新增 MiniMax（程式設計）作為 AI 服務商——透過其 Anthropic 相容 API 連接你的 MiniMax 程式設計方案。",
+      "直接在選單列切換 AI 模型。",
+      "拼寫校正現在會對內建檢查器無法糾正的嚴重拼錯單字回退到 AI（例如「simotanious」→「simultaneous」）。僅在本機檢查無結果時使用。",
+      "對話現在會帶上目前選取範圍——選取內容即可直接就此開聊。",
+      "新增免快速鍵觸發：將指標停留在選取範圍上即可彈出操作選單（翻譯、解釋、潤飾、對話、校正拼寫）。可在設定中開關並調整延遲。",
+      "新增 Fn + R——校正所選單字的拼寫：只有一個建議時就地替換，多個建議時顯示候選清單供選擇。"] },
+  "ja": { name:"日本語", title:"変更履歴", home:"ホーム", privacy:"プライバシーポリシー",
+    official:"正式版", dev:"開発プレビュー",
+    officialNotes:["初の一般公開リリース。選択したテキストを翻訳・解説・推敲・チャット——オンデバイス翻訳に加え、Apple Intelligence または自分の AI キーに対応。"],
+    devNotes:["メモリーコンテキストが操作可能に——クリックで切り替えでき、それぞれに短い紹介文（名前から ✨ ワンタップで AI 下書き）を付けられ、すべてのチャットに反映されます。\nディスカッションのチューターは、ターゲット言語での本当の試みだけを添削します（質問を例文に書き換えなくなりました）。\nチャットでは返信中に「送信」が「停止」になり、止まった応答をキャンセルでき、タイムアウト時には再試行を促します。\nターミナルの選択範囲は手動の ⌘C で取得するようになりました。",
+      "過去の間違いを練習：推敲で指摘された文法は間隔反復ドリルになります——チューターがあなたの下書きと意図を再現し、自然な言い方で言い直すとチェックします。",
+      "スペル修正が Chrome やその他の Chromium/Electron アプリでも動作するようになりました。",
+      "AI プロバイダーに MiniMax（コーディング）を追加——Anthropic 互換 API 経由で MiniMax コーディングプランに接続できます。",
+      "メニューバーから AI モデルを切り替え。",
+      "スペル修正が、内蔵チェッカーでは直せないほど崩れた単語に対して AI へフォールバックするようになりました（例：「simotanious」→「simultaneous」）。ローカルチェックが何も見つけられない場合のみ使用します。",
+      "チャットが現在の選択範囲を引き継ぐように——選択してそのまま話しかけられます。",
+      "ショートカット不要のトリガーを追加：選択範囲にポインタを重ねるとアクションメニュー（翻訳・解説・推敲・チャット・スペル修正）が表示されます。設定でオン/オフと遅延を調整できます。",
+      "Fn + R を追加——選択した単語のスペルを修正。候補が1つなら即座に置換し、複数あれば候補リストから選べます。"] },
+  "ko": { name:"한국어", title:"변경 내역", home:"홈", privacy:"개인정보 처리방침",
+    official:"정식 버전", dev:"개발 미리보기",
+    officialNotes:["첫 정식 출시. 선택한 텍스트를 번역·설명·다듬기·대화 — 온디바이스 번역과 Apple Intelligence 또는 직접 준비한 AI 키 지원."],
+    devNotes:["메모리 컨텍스트가 인터랙티브해졌습니다 — 클릭해서 전환하고, 각 컨텍스트에 짧은 소개(이름에서 ✨ 한 번에 AI 초안 생성)를 달면 모든 대화에 반영됩니다.\n디스커션 튜터는 목표 언어로 한 실제 시도만 교정합니다(더 이상 질문을 예문으로 바꾸지 않습니다).\n채팅에서 답변 중에는 ‘보내기’가 ‘중지’로 바뀌어 멈춘 응답을 취소할 수 있고, 시간이 초과되면 다시 시도하라고 안내합니다.\n터미널 선택 항목은 이제 직접 누른 ⌘C로 가져옵니다.",
+      "지난 실수 연습하기: 다듬기에서 지적된 문법은 간격 반복 드릴이 됩니다 — 튜터가 초안과 의도를 다시 보여주고, 자연스럽게 다시 말하면 확인해 줍니다.",
+      "이제 Chrome 및 기타 Chromium/Electron 앱에서도 맞춤법 교정이 작동합니다.",
+      "AI 제공업체로 MiniMax(코딩)를 추가했습니다 — Anthropic 호환 API를 통해 MiniMax 코딩 플랜을 연결하세요.",
+      "메뉴 막대에서 바로 AI 모델을 전환하세요.",
+      "맞춤법 교정이 내장 검사기로는 고칠 수 없을 만큼 심하게 틀린 단어에 대해 AI로 폴백합니다(예: ‘simotanious’ → ‘simultaneous’). 로컬 검사가 아무것도 찾지 못할 때만 사용됩니다.",
+      "채팅이 현재 선택 영역을 가져옵니다 — 선택한 내용에 대해 바로 대화하세요.",
+      "단축키 없는 트리거 추가: 선택 영역에 포인터를 올리면 작업 메뉴(번역·설명·다듬기·대화·철자 교정)가 나타납니다. 설정에서 켜고 지연 시간을 조정할 수 있습니다.",
+      "Fn + R 추가 — 선택한 단어의 철자를 교정합니다. 제안이 하나면 바로 교체하고, 여러 개면 후보 목록에서 선택합니다."] },
+  "es": { name:"Español", title:"Registro de cambios", home:"Inicio", privacy:"Política de privacidad",
+    official:"Oficial", dev:"Versión de desarrollo",
+    officialNotes:["Primera versión pública. Traduce, explica, pule y chatea sobre cualquier texto seleccionado: traducción en el dispositivo, más Apple Intelligence o tu propia clave de IA."],
+    devNotes:["Los contextos de memoria ahora son interactivos — haz clic para cambiar y dale a cada uno una breve introducción (con un borrador de IA en un toque ✨ a partir de su nombre) que se incorpora a cada chat.\nEl tutor de Conversación solo corrige intentos reales en tu idioma de destino, sin convertir tus preguntas en frases de ejemplo.\nEn el chat, Enviar se convierte en Detener mientras responde para cancelar una respuesta atascada, con un tiempo de espera que sugiere reintentar.\nLas selecciones en Terminal ahora se capturan con tu ⌘C manual.",
+      "Practica tus errores pasados: cada pulido que marcó gramática se convierte en un ejercicio de repetición espaciada — el tutor recrea tu borrador y lo que querías decir, lo dices con naturalidad y lo revisa.",
+      "La corrección ortográfica ahora funciona en Chrome y otras apps Chromium/Electron.",
+      "Añade MiniMax (Coding) como proveedor de IA: conecta tu plan de programación de MiniMax mediante su API compatible con Anthropic.",
+      "Cambia el modelo de IA desde la barra de menús.",
+      "La corrección ortográfica ahora recurre a la IA para palabras muy mal escritas que el corrector integrado no puede arreglar (p. ej. «simotanious» → «simultaneous»). Solo se usa cuando la comprobación local no encuentra nada.",
+      "El chat ahora toma tu selección actual: selecciona algo y empieza a hablar sobre ello.",
+      "Añade un disparador sin atajos: posa el puntero sobre una selección para mostrar el menú de acciones (Traducir, Explicar, Pulir, Chatear, Corregir ortografía). Actívalo y ajusta el retardo en Ajustes.",
+      "Añade Fn + R: corrige la ortografía de la palabra seleccionada. Una única sugerencia se reemplaza al instante; si hay varias, muestra una lista para elegir."] },
+  "fr": { name:"Français", title:"Journal des modifications", home:"Accueil", privacy:"Politique de confidentialité",
+    official:"Officielle", dev:"Aperçu de développement",
+    officialNotes:["Première version publique. Traduisez, expliquez, peaufinez et discutez sur tout texte sélectionné : traduction sur l'appareil, plus Apple Intelligence ou votre propre clé IA."],
+    devNotes:["Les contextes de mémoire sont désormais interactifs — cliquez pour changer, et donnez à chacun une courte présentation (avec un brouillon IA en un clic ✨ à partir de son nom) intégrée à chaque conversation.\nLe tuteur Discussion corrige uniquement les tentatives réelles dans votre langue cible, sans transformer vos questions en phrases d’exemple.\nDans le chat, Envoyer devient Arrêter pendant la réponse pour annuler une réponse bloquée, avec un délai qui invite à réessayer.\nLes sélections dans le Terminal sont maintenant récupérées via votre ⌘C manuel.",
+      "Entraînez-vous sur vos erreurs passées : chaque Peaufiner ayant signalé une faute de grammaire devient un exercice de répétition espacée — le tuteur rejoue votre brouillon et votre intention, vous le dites naturellement, et il vérifie.",
+      "La correction orthographique fonctionne désormais dans Chrome et les autres applis Chromium/Electron.",
+      "Ajoute MiniMax (Coding) comme fournisseur d’IA : connectez votre forfait codage MiniMax via son API compatible Anthropic.",
+      "Changez de modèle d’IA directement depuis la barre des menus.",
+      "La correction orthographique recourt désormais à l’IA pour les mots trop déformés que le correcteur intégré ne peut pas corriger (p. ex. « simotanious » → « simultaneous »). Utilisée uniquement quand la vérification locale ne trouve rien.",
+      "Le chat reprend désormais votre sélection : surlignez un texte et discutez-en directement.",
+      "Ajoute un déclencheur sans raccourci : posez le pointeur sur une sélection pour afficher le menu d'actions (Traduire, Expliquer, Peaufiner, Discuter, Corriger l'orthographe). Activation et délai réglables dans les Réglages.",
+      "Ajoute Fn + R : corrige l'orthographe du mot sélectionné. Une suggestion unique est remplacée sur place ; s'il y en a plusieurs, une liste de choix s'affiche."] },
+  "de": { name:"Deutsch", title:"Änderungen", home:"Startseite", privacy:"Datenschutzerklärung",
+    official:"Offiziell", dev:"Entwicklungsvorschau",
+    officialNotes:["Erste öffentliche Version. Übersetze, erkläre, verfeinere und chatte zu jedem markierten Text — Übersetzung auf dem Gerät, plus Apple Intelligence oder dein eigener KI-Schlüssel."],
+    devNotes:["Speicher-Kontexte sind jetzt interaktiv — Klicke zum Wechseln und gib jedem eine kurze Einführung (mit einem ✨ KI-Entwurf per Tipp aus dem Namen), die in jeden Chat einfließt.\nDer Diskussions-Tutor korrigiert nur echte Versuche in deiner Zielsprache und formt deine Fragen nicht mehr zu Beispielsätzen um.\nIm Chat wird „Senden“ während der Antwort zu „Stopp“, um eine hängende Antwort abzubrechen, mit einem Timeout, der einen erneuten Versuch vorschlägt.\nAuswahlen im Terminal werden jetzt über dein manuelles ⌘C erfasst.",
+      "Übe deine früheren Fehler: Jeder Verfeinern-Durchlauf, der Grammatik markiert hat, wird zu einer Übung mit verteilter Wiederholung — der Tutor zeigt deinen Entwurf und deine Absicht erneut, du sagst es natürlich, und er prüft es.",
+      "Die Rechtschreibkorrektur funktioniert jetzt in Chrome und anderen Chromium/Electron-Apps.",
+      "Fügt MiniMax (Coding) als KI-Anbieter hinzu – verbinde deinen MiniMax-Coding-Plan über dessen Anthropic-kompatible API.",
+      "Wechsle das KI-Modell direkt aus der Menüleiste.",
+      "Die Rechtschreibkorrektur greift jetzt auf KI zurück für stark verstümmelte Wörter, die die eingebaute Prüfung nicht beheben kann (z. B. „simotanious“ → „simultaneous“). Nur wenn die lokale Prüfung nichts findet.",
+      "Der Chat übernimmt jetzt deine aktuelle Auswahl – markiere etwas und sprich direkt darüber.",
+      "Fügt einen Auslöser ohne Tastenkürzel hinzu: Zeiger auf eine Auswahl halten, um das Aktionsmenü (Übersetzen, Erklären, Verfeinern, Chatten, Rechtschreibung korrigieren) zu öffnen. Ein/Aus und Verzögerung in den Einstellungen.",
+      "Fügt Fn + R hinzu: korrigiert die Rechtschreibung des markierten Wortes. Ein einzelner Vorschlag wird direkt ersetzt; bei mehreren erscheint eine Auswahlliste."] }
+};
+
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+function track(rels, notes, isDev){
+  return rels.map((r,i)=>{
+    const note = (notes && notes[i]) || "";
+    const tag = isDev ? ` <span class="tag">beta</span>` : "";
+    const lines = note.split("\n");
+    const body = `<ul class="body">${lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul>`;
+    return `<div class="rel"><div class="ver">${esc(r.v)}${tag}<span class="date">${esc(r.date)}</span></div>${body}</div>`;
+  }).join("");
+}
+function render(lang){
+  const x = I18N[lang] || I18N.en;
+  document.documentElement.lang = lang;
+  document.title = x.title + " — Glotty";
+  document.getElementById("h1").textContent = x.title;
+  document.getElementById("nav-home").textContent = x.home;
+  let html = "";
+  html += `<section class="track"><h2 class="trackhead">${esc(x.official)}</h2>${track(OFFICIAL, x.officialNotes, false)}</section>`;
+  html += `<section class="track"><h2 class="trackhead dev">${esc(x.dev)}</h2>${track(DEV, x.devNotes, true)}</section>`;
+  document.getElementById("content").innerHTML = html;
+  document.getElementById("footer").innerHTML =
+    `© 2026 Glotty · <a href="index.html">${esc(x.home)}</a> · <a href="privacy.html">${esc(x.privacy)}</a>`;
+}
+function pickLang(){
+  const saved = localStorage.getItem("glotty_lang");
+  if (saved && I18N[saved]) return saved;
+  for (const l of (navigator.languages || [navigator.language || "en"])){
+    if (I18N[l]) return l;
+    const b = l.toLowerCase();
+    if (b.startsWith("zh")) return /tw|hk|hant|mo/.test(b) ? "zh-Hant" : "zh-Hans";
+    const s = b.split("-")[0];
+    if (I18N[s]) return s;
+  }
+  return "en";
+}
+const sel = document.getElementById("lang");
+for (const code in I18N){ const o=document.createElement("option"); o.value=code; o.textContent=I18N[code].name; sel.appendChild(o); }
+let cur = pickLang(); sel.value = cur; render(cur);
+sel.addEventListener("change", ()=>{ localStorage.setItem("glotty_lang", sel.value); render(sel.value); });
+</script>
+</body>
+</html>

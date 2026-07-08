@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glotty — Privacy Policy</title>
+<style>
+  :root { color-scheme: light; }
+  body { font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans", "Noto Sans CJK", sans-serif;
+         max-width: 720px; margin: 0 auto; padding: 40px 20px 80px; color: #1d1d1f; }
+  h1 { font-size: 28px; margin-bottom: 4px; }
+  h2 { font-size: 19px; margin-top: 32px; }
+  .meta { color: #86868b; font-size: 14px; margin-bottom: 28px; }
+  a { color: #2997ff; }
+  ul { padding-left: 20px; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .appicon { width: 56px; height: 56px; object-fit: contain; }
+  select { font: inherit; padding: 4px 8px; border-radius: 8px; }
+  footer { margin-top: 48px; color: #86868b; font-size: 14px; border-top: 1px solid #8884; padding-top: 16px; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <img src="icon.png" alt="Glotty" class="appicon">
+  <select id="lang" aria-label="Language"></select>
+</header>
+<main id="content"><!-- rendered by script; English fallback below for no-JS -->
+  <h1>Glotty Privacy Policy</h1>
+  <p class="meta">Last updated: 7 June 2026</p>
+  <p>Glotty has no account, shows no ads, runs no analytics, and your text
+  never passes through our servers. Enable JavaScript to read this policy
+  in your language.</p>
+</main>
+
+<script>
+const EMAIL = "hemoon@outlook.com";
+const I18N = {
+  "en": { name:"English", title:"Glotty Privacy Policy", updated:"Last updated: 7 June 2026",
+    contact:"Questions about privacy? Email ",
+    footer:"© 2026 Glotty. This page is the official privacy policy for the Glotty macOS app.",
+    blocks:[
+      {p:"Glotty is a menu-bar translation and language-learning app for macOS. This policy explains exactly what data Glotty handles. In short: Glotty has no account, shows no ads, and runs no analytics — and your text never passes through our servers, because we don't operate any."},
+      {h:"What Glotty does with the text you select"},
+      {ul:["Translate runs on your Mac using Apple's built-in translation. The selected text is not sent to us or to any third party.",
+           "Explain, Polish, and Chat send the relevant text to the AI provider you choose and configure yourself (for example OpenAI, DeepSeek, or Grok), using the API key you entered. The request goes directly from your Mac to that provider. Glotty keeps no copy. How that provider handles the text is governed by their own privacy policy."]},
+      {h:"What is stored, and where"},
+      {ul:["Your API keys are stored locally on your Mac in the macOS Keychain, and are sent only to the provider they belong to.",
+           "Learned vocabulary, history, and settings are stored locally on your Mac. They are not uploaded anywhere.",
+           "Glotty does not collect your name, email, contacts, location, device identifiers, usage analytics, or crash diagnostics."]},
+      {h:"Third-party AI providers"},
+      {p:"When you enable Explain, Polish, or Chat, the text you act on is sent to the provider you configured. Glotty does not control those services. Please review the privacy policy of whichever provider you connect (for example OpenAI, DeepSeek, or xAI/Grok) to understand how they process your data."},
+      {h:"Permissions Glotty requests"},
+      {ul:["Accessibility — to read the text you have selected in the active app, so it can be translated or processed.",
+           "Input Monitoring — to detect the Fn-leader keyboard shortcut. Glotty does not record or store your keystrokes."]},
+      {h:"Children"},
+      {p:"Glotty is not directed at children under 13 and does not knowingly collect information from them."},
+      {h:"Changes to this policy"},
+      {p:"If this policy changes, the updated version will be posted on this page with a new date above."},
+      {h:"Contact"}
+    ]},
+
+  "zh-Hans": { name:"简体中文", title:"Glotty 隐私政策", updated:"最后更新：2026 年 6 月 7 日",
+    contact:"有隐私方面的问题？请发送邮件至 ",
+    footer:"© 2026 Glotty。本页面为 Glotty macOS 应用的官方隐私政策。",
+    blocks:[
+      {p:"Glotty是一款位于菜单栏的 macOS 翻译与语言学习应用。本政策说明 Glotty 究竟会处理哪些数据。简而言之：Glotty 没有账户、不展示广告、不进行任何分析统计——而且你的文本绝不会经过我们的服务器，因为我们根本没有服务器。"},
+      {h:"Glotty 如何处理你选中的文本"},
+      {ul:["“翻译”在你的 Mac 本机上使用 Apple 内置的翻译功能完成。选中的文本不会发送给我们或任何第三方。",
+           "“解释”“润色”和“对话”会将相关文本发送给你自行选择并配置的 AI 服务商（例如 OpenAI、DeepSeek 或 Grok），并使用你填入的 API 密钥。请求直接从你的 Mac 发送至该服务商，Glotty 不保留任何副本。该服务商如何处理这些文本，由其自身的隐私政策约束。"]},
+      {h:"存储了哪些数据，存在何处"},
+      {ul:["你的 API 密钥保存在 Mac 本机的 macOS 钥匙串中，且仅发送给其对应的服务商。",
+           "已学习的词汇、历史记录和设置均保存在你的 Mac 本机，不会上传到任何地方。",
+           "Glotty 不会收集你的姓名、邮箱、通讯录、位置、设备标识符、使用分析或崩溃诊断信息。"]},
+      {h:"第三方 AI 服务商"},
+      {p:"当你启用“解释”“润色”或“对话”时，你所操作的文本会发送给你配置的服务商。Glotty 无法控制这些服务。请查阅你所连接服务商（例如 OpenAI、DeepSeek 或 xAI/Grok）的隐私政策，以了解他们如何处理你的数据。"},
+      {h:"Glotty 申请的权限"},
+      {ul:["辅助功能（Accessibility）——用于读取你在当前应用中选中的文本，以便进行翻译或处理。",
+           "输入监控（Input Monitoring）——用于检测 Fn 引导快捷键。Glotty 不会记录或存储你的按键。"]},
+      {h:"儿童"},
+      {p:"Glotty 并非面向 13 岁以下儿童，也不会有意收集他们的信息。"},
+      {h:"本政策的变更"},
+      {p:"如本政策有所变更，更新后的版本将发布在本页面，并在上方标注新的日期。"},
+      {h:"联系方式"}
+    ]},
+
+  "zh-Hant": { name:"繁體中文", title:"Glotty 隱私權政策", updated:"最後更新：2026 年 6 月 7 日",
+    contact:"有隱私方面的問題？請寄送電子郵件至 ",
+    footer:"© 2026 Glotty。本頁面為 Glotty macOS 應用程式的官方隱私權政策。",
+    blocks:[
+      {p:"Glotty是一款位於選單列的 macOS 翻譯與語言學習應用程式。本政策說明 Glotty 究竟會處理哪些資料。簡而言之：Glotty 沒有帳戶、不顯示廣告、不進行任何分析統計——而且你的文字絕不會經過我們的伺服器，因為我們根本沒有伺服器。"},
+      {h:"Glotty 如何處理你選取的文字"},
+      {ul:["「翻譯」會在你的 Mac 本機上使用 Apple 內建的翻譯功能完成。選取的文字不會傳送給我們或任何第三方。",
+           "「解釋」「潤飾」和「對話」會將相關文字傳送給你自行選擇並設定的 AI 服務商（例如 OpenAI、DeepSeek 或 Grok），並使用你填入的 API 金鑰。請求直接從你的 Mac 傳送至該服務商，Glotty 不保留任何副本。該服務商如何處理這些文字，由其自身的隱私權政策規範。"]},
+      {h:"儲存了哪些資料，存於何處"},
+      {ul:["你的 API 金鑰儲存在 Mac 本機的 macOS 鑰匙圈中，且僅傳送給其對應的服務商。",
+           "已學習的詞彙、歷史記錄與設定皆儲存在你的 Mac 本機，不會上傳到任何地方。",
+           "Glotty 不會蒐集你的姓名、電子郵件、通訊錄、位置、裝置識別碼、使用分析或當機診斷資訊。"]},
+      {h:"第三方 AI 服務商"},
+      {p:"當你啟用「解釋」「潤飾」或「對話」時，你所操作的文字會傳送給你設定的服務商。Glotty 無法控制這些服務。請查閱你所連接服務商（例如 OpenAI、DeepSeek 或 xAI/Grok）的隱私權政策，以了解他們如何處理你的資料。"},
+      {h:"Glotty 申請的權限"},
+      {ul:["輔助使用（Accessibility）——用於讀取你在目前應用程式中選取的文字，以便進行翻譯或處理。",
+           "輸入監控（Input Monitoring）——用於偵測 Fn 引導快速鍵。Glotty 不會記錄或儲存你的按鍵。"]},
+      {h:"兒童"},
+      {p:"Glotty 並非針對 13 歲以下兒童，也不會有意蒐集他們的資訊。"},
+      {h:"本政策的變更"},
+      {p:"如本政策有所變更，更新後的版本將發布於本頁面，並於上方標註新的日期。"},
+      {h:"聯絡方式"}
+    ]},
+
+  "ja": { name:"日本語", title:"Glotty プライバシーポリシー", updated:"最終更新：2026 年 6 月 7 日",
+    contact:"プライバシーに関するご質問は ",
+    footer:"© 2026 Glotty。本ページは Glotty macOS アプリの公式プライバシーポリシーです。",
+    blocks:[
+      {p:"Glottyは、メニューバーに常駐する macOS 向けの翻訳・語学学習アプリです。本ポリシーは、Glotty が扱うデータを正確に説明します。要点として、Glotty にはアカウントがなく、広告を表示せず、分析も行いません。さらに、当方はサーバーを一切運用していないため、あなたのテキストが当方のサーバーを経由することはありません。"},
+      {h:"選択したテキストに対して Glotty が行うこと"},
+      {ul:["「翻訳」は Apple 内蔵の翻訳機能を使い、あなたの Mac 上で実行されます。選択したテキストが当方や第三者に送信されることはありません。",
+           "「解説」「推敲」「チャット」では、対象のテキストを、あなた自身が選んで設定した AI プロバイダ（例：OpenAI、DeepSeek、Grok）へ、あなたが入力した API キーを使って送信します。リクエストはあなたの Mac から直接そのプロバイダへ送られ、Glotty はコピーを保持しません。そのプロバイダによるテキストの取り扱いは、各社のプライバシーポリシーに従います。"]},
+      {h:"何が、どこに保存されるか"},
+      {ul:["API キーはあなたの Mac の macOS キーチェーンにローカル保存され、対応するプロバイダにのみ送信されます。",
+           "学習した語彙・履歴・設定はあなたの Mac にローカル保存され、どこにもアップロードされません。",
+           "Glotty は、氏名・メール・連絡先・位置情報・デバイス識別子・利用状況の分析・クラッシュ診断を収集しません。"]},
+      {h:"第三者の AI プロバイダ"},
+      {p:"「解説」「推敲」「チャット」を使うと、操作対象のテキストは設定したプロバイダへ送信されます。Glotty はこれらのサービスを管理していません。接続するプロバイダ（例：OpenAI、DeepSeek、xAI/Grok）のプライバシーポリシーをご確認のうえ、データの取り扱いをご理解ください。"},
+      {h:"Glotty が要求する権限"},
+      {ul:["アクセシビリティ — 翻訳・処理のために、アクティブなアプリで選択したテキストを読み取ります。",
+           "入力監視 — Fn リーダーのショートカットを検知するために使用します。Glotty はキー入力を記録・保存しません。"]},
+      {h:"子どもについて"},
+      {p:"Glotty は 13 歳未満の子どもを対象としておらず、子どもの情報を意図的に収集することはありません。"},
+      {h:"本ポリシーの変更"},
+      {p:"本ポリシーを変更する場合は、更新版を本ページに掲載し、上部の日付を更新します。"},
+      {h:"お問い合わせ"}
+    ]},
+
+  "ko": { name:"한국어", title:"Glotty 개인정보 처리방침", updated:"최종 업데이트: 2026년 6월 7일",
+    contact:"개인정보에 관한 문의는 ",
+    footer:"© 2026 Glotty. 이 페이지는 Glotty macOS 앱의 공식 개인정보 처리방침입니다.",
+    blocks:[
+      {p:"Glotty는 메뉴 막대에 상주하는 macOS용 번역·언어 학습 앱입니다. 본 방침은 Glotty가 처리하는 데이터를 정확히 설명합니다. 요컨대 Glotty는 계정이 없고, 광고를 표시하지 않으며, 어떠한 분석도 하지 않습니다. 또한 당사는 서버를 운영하지 않으므로 사용자의 텍스트가 당사 서버를 거치는 일은 없습니다."},
+      {h:"선택한 텍스트로 Glotty가 하는 일"},
+      {ul:["‘번역’은 Apple 내장 번역 기능을 사용하여 사용자의 Mac에서 실행됩니다. 선택한 텍스트는 당사나 제3자에게 전송되지 않습니다.",
+           "‘설명’, ‘다듬기’, ‘대화’는 해당 텍스트를 사용자가 직접 선택·설정한 AI 제공업체(예: OpenAI, DeepSeek, Grok)로, 사용자가 입력한 API 키를 사용하여 전송합니다. 요청은 사용자의 Mac에서 해당 제공업체로 직접 전송되며 Glotty는 사본을 보관하지 않습니다. 해당 제공업체의 텍스트 처리 방식은 각자의 개인정보 처리방침을 따릅니다."]},
+      {h:"무엇이 어디에 저장되는가"},
+      {ul:["API 키는 사용자 Mac의 macOS 키체인에 로컬로 저장되며 해당 제공업체에만 전송됩니다.",
+           "학습한 어휘, 기록, 설정은 사용자의 Mac에 로컬로 저장되며 어디에도 업로드되지 않습니다.",
+           "Glotty는 이름, 이메일, 연락처, 위치, 기기 식별자, 사용 분석, 충돌 진단 정보를 수집하지 않습니다."]},
+      {h:"제3자 AI 제공업체"},
+      {p:"‘설명’, ‘다듬기’, ‘대화’를 사용하면 작업 대상 텍스트가 설정한 제공업체로 전송됩니다. Glotty는 이러한 서비스를 통제하지 않습니다. 연결하는 제공업체(예: OpenAI, DeepSeek, xAI/Grok)의 개인정보 처리방침을 확인하여 데이터 처리 방식을 이해하시기 바랍니다."},
+      {h:"Glotty가 요청하는 권한"},
+      {ul:["손쉬운 사용(Accessibility) — 번역·처리를 위해 활성 앱에서 선택한 텍스트를 읽습니다.",
+           "입력 모니터링(Input Monitoring) — Fn 리더 단축키를 감지하기 위해 사용합니다. Glotty는 키 입력을 기록하거나 저장하지 않습니다."]},
+      {h:"아동"},
+      {p:"Glotty는 만 13세 미만 아동을 대상으로 하지 않으며, 아동의 정보를 고의로 수집하지 않습니다."},
+      {h:"본 방침의 변경"},
+      {p:"본 방침이 변경되면 갱신된 버전을 본 페이지에 게시하고 상단 날짜를 갱신합니다."},
+      {h:"문의"}
+    ]},
+
+  "es": { name:"Español", title:"Política de privacidad de Glotty", updated:"Última actualización: 7 de junio de 2026",
+    contact:"¿Preguntas sobre privacidad? Escribe a ",
+    footer:"© 2026 Glotty. Esta página es la política de privacidad oficial de la app Glotty para macOS.",
+    blocks:[
+      {p:"Glotty es una app de traducción y aprendizaje de idiomas para macOS que vive en la barra de menús. Esta política explica exactamente qué datos maneja Glotty. En resumen: Glotty no tiene cuenta, no muestra anuncios y no realiza analíticas, y tu texto nunca pasa por nuestros servidores, porque no tenemos ninguno."},
+      {h:"Qué hace Glotty con el texto que seleccionas"},
+      {ul:["Traducir se ejecuta en tu Mac con la traducción integrada de Apple. El texto seleccionado no se envía ni a nosotros ni a terceros.",
+           "Explicar, Pulir y Chatear envían el texto correspondiente al proveedor de IA que tú eliges y configuras (por ejemplo OpenAI, DeepSeek o Grok), usando la clave de API que introdujiste. La solicitud va directamente desde tu Mac a ese proveedor. Glotty no guarda ninguna copia. El tratamiento que ese proveedor haga del texto se rige por su propia política de privacidad."]},
+      {h:"Qué se almacena y dónde"},
+      {ul:["Tus claves de API se guardan localmente en tu Mac, en el Llavero de macOS, y solo se envían al proveedor al que pertenecen.",
+           "El vocabulario aprendido, el historial y los ajustes se guardan localmente en tu Mac. No se suben a ningún sitio.",
+           "Glotty no recopila tu nombre, correo, contactos, ubicación, identificadores del dispositivo, analíticas de uso ni diagnósticos de fallos."]},
+      {h:"Proveedores de IA de terceros"},
+      {p:"Cuando activas Explicar, Pulir o Chatear, el texto sobre el que actúas se envía al proveedor que configuraste. Glotty no controla esos servicios. Revisa la política de privacidad del proveedor que conectes (por ejemplo OpenAI, DeepSeek o xAI/Grok) para entender cómo tratan tus datos."},
+      {h:"Permisos que Glotty solicita"},
+      {ul:["Accesibilidad: para leer el texto que has seleccionado en la app activa y poder traducirlo o procesarlo.",
+           "Monitorización de entrada: para detectar el atajo de teclado con la tecla Fn. Glotty no registra ni almacena tus pulsaciones."]},
+      {h:"Menores"},
+      {p:"Glotty no está dirigido a menores de 13 años y no recopila a sabiendas información de ellos."},
+      {h:"Cambios en esta política"},
+      {p:"Si esta política cambia, la versión actualizada se publicará en esta página con una nueva fecha arriba."},
+      {h:"Contacto"}
+    ]},
+
+  "fr": { name:"Français", title:"Politique de confidentialité de Glotty", updated:"Dernière mise à jour : 7 juin 2026",
+    contact:"Des questions sur la confidentialité ? Écrivez à ",
+    footer:"© 2026 Glotty. Cette page est la politique de confidentialité officielle de l'app Glotty pour macOS.",
+    blocks:[
+      {p:"Glotty est une app de traduction et d'apprentissage des langues pour macOS, logée dans la barre des menus. Cette politique explique exactement quelles données Glotty traite. En bref : Glotty n'a pas de compte, n'affiche pas de publicité et ne fait aucune analyse, et votre texte ne transite jamais par nos serveurs, car nous n'en exploitons aucun."},
+      {h:"Ce que Glotty fait du texte que vous sélectionnez"},
+      {ul:["Traduire s'exécute sur votre Mac avec la traduction intégrée d'Apple. Le texte sélectionné n'est envoyé ni à nous ni à un tiers.",
+           "Expliquer, Peaufiner et Discuter envoient le texte concerné au fournisseur d'IA que vous choisissez et configurez vous-même (par exemple OpenAI, DeepSeek ou Grok), avec la clé d'API que vous avez saisie. La requête part directement de votre Mac vers ce fournisseur. Glotty n'en conserve aucune copie. La manière dont ce fournisseur traite le texte est régie par sa propre politique de confidentialité."]},
+      {h:"Ce qui est stocké, et où"},
+      {ul:["Vos clés d'API sont stockées localement sur votre Mac, dans le Trousseau macOS, et ne sont envoyées qu'au fournisseur auquel elles appartiennent.",
+           "Le vocabulaire appris, l'historique et les réglages sont stockés localement sur votre Mac. Rien n'est téléversé.",
+           "Glotty ne collecte pas votre nom, e-mail, contacts, localisation, identifiants d'appareil, analyses d'usage ni diagnostics de plantage."]},
+      {h:"Fournisseurs d'IA tiers"},
+      {p:"Lorsque vous utilisez Expliquer, Peaufiner ou Discuter, le texte traité est envoyé au fournisseur que vous avez configuré. Glotty ne contrôle pas ces services. Consultez la politique de confidentialité du fournisseur que vous connectez (par exemple OpenAI, DeepSeek ou xAI/Grok) pour comprendre comment il traite vos données."},
+      {h:"Autorisations demandées par Glotty"},
+      {ul:["Accessibilité — pour lire le texte que vous avez sélectionné dans l'app active, afin de le traduire ou de le traiter.",
+           "Surveillance de la saisie — pour détecter le raccourci clavier basé sur la touche Fn. Glotty n'enregistre ni ne stocke vos frappes."]},
+      {h:"Enfants"},
+      {p:"Glotty ne s'adresse pas aux enfants de moins de 13 ans et ne collecte pas sciemment leurs informations."},
+      {h:"Modifications de cette politique"},
+      {p:"En cas de modification, la version mise à jour sera publiée sur cette page avec une nouvelle date ci-dessus."},
+      {h:"Contact"}
+    ]},
+
+  "de": { name:"Deutsch", title:"Glotty Datenschutzerklärung", updated:"Zuletzt aktualisiert: 7. Juni 2026",
+    contact:"Fragen zum Datenschutz? E-Mail an ",
+    footer:"© 2026 Glotty. Diese Seite ist die offizielle Datenschutzerklärung der Glotty-App für macOS.",
+    blocks:[
+      {p:"Glotty ist eine in der Menüleiste laufende Übersetzungs- und Sprachlern-App für macOS. Diese Erklärung beschreibt genau, welche Daten Glotty verarbeitet. Kurz gesagt: Glotty hat kein Konto, zeigt keine Werbung und führt keine Analysen durch – und Ihr Text gelangt niemals über unsere Server, denn wir betreiben keine."},
+      {h:"Was Glotty mit dem von Ihnen ausgewählten Text macht"},
+      {ul:["Übersetzen läuft auf Ihrem Mac mit Apples integrierter Übersetzung. Der ausgewählte Text wird weder an uns noch an Dritte gesendet.",
+           "Erklären, Verfeinern und Chatten senden den betreffenden Text an den von Ihnen selbst gewählten und eingerichteten KI-Anbieter (z. B. OpenAI, DeepSeek oder Grok) – mit dem von Ihnen eingegebenen API-Schlüssel. Die Anfrage geht direkt von Ihrem Mac an diesen Anbieter. Glotty behält keine Kopie. Wie dieser Anbieter mit dem Text umgeht, regelt dessen eigene Datenschutzerklärung."]},
+      {h:"Was wird gespeichert, und wo"},
+      {ul:["Ihre API-Schlüssel werden lokal auf Ihrem Mac im macOS-Schlüsselbund gespeichert und nur an den zugehörigen Anbieter gesendet.",
+           "Gelernter Wortschatz, Verlauf und Einstellungen werden lokal auf Ihrem Mac gespeichert und nirgendwohin hochgeladen.",
+           "Glotty erfasst weder Ihren Namen, E-Mail, Kontakte, Standort, Gerätekennungen noch Nutzungsanalysen oder Absturzdiagnosen."]},
+      {h:"KI-Anbieter von Drittanbietern"},
+      {p:"Wenn Sie Erklären, Verfeinern oder Chatten verwenden, wird der bearbeitete Text an den von Ihnen eingerichteten Anbieter gesendet. Glotty kontrolliert diese Dienste nicht. Bitte lesen Sie die Datenschutzerklärung des jeweils verbundenen Anbieters (z. B. OpenAI, DeepSeek oder xAI/Grok), um zu verstehen, wie er Ihre Daten verarbeitet."},
+      {h:"Von Glotty angeforderte Berechtigungen"},
+      {ul:["Bedienungshilfen (Accessibility) – um den in der aktiven App ausgewählten Text zu lesen, damit er übersetzt oder verarbeitet werden kann.",
+           "Eingabeüberwachung (Input Monitoring) – um das Fn-Leader-Tastenkürzel zu erkennen. Glotty zeichnet Ihre Tastenanschläge nicht auf und speichert sie nicht."]},
+      {h:"Kinder"},
+      {p:"Glotty richtet sich nicht an Kinder unter 13 Jahren und erfasst wissentlich keine Informationen von ihnen."},
+      {h:"Änderungen dieser Erklärung"},
+      {p:"Bei Änderungen wird die aktualisierte Fassung mit neuem Datum oben auf dieser Seite veröffentlicht."},
+      {h:"Kontakt"}
+    ]}
+};
+
+function render(lang){
+  const t = I18N[lang] || I18N.en;
+  document.documentElement.lang = lang;
+  document.title = t.title + " — Glotty";
+  let html = `<h1>${t.title}</h1><p class="meta">${t.updated}</p>`;
+  for (const b of t.blocks){
+    if (b.h) html += `<h2>${b.h}</h2>`;
+    if (b.p) html += `<p>${b.p}</p>`;
+    if (b.ul) html += `<ul>${b.ul.map(x=>`<li>${x}</li>`).join("")}</ul>`;
+  }
+  html += `<p>${t.contact}<a href="mailto:${EMAIL}">${EMAIL}</a>.</p>`;
+  html += `<footer>${t.footer}</footer>`;
+  document.getElementById("content").innerHTML = html;
+}
+
+function pickLang(){
+  const saved = localStorage.getItem("glotty_lang");
+  if (saved && I18N[saved]) return saved;
+  for (const l of (navigator.languages || [navigator.language || "en"])){
+    if (I18N[l]) return l;
+    const base = l.toLowerCase();
+    if (base.startsWith("zh")) return /tw|hk|hant|mo/.test(base) ? "zh-Hant" : "zh-Hans";
+    const short = base.split("-")[0];
+    if (I18N[short]) return short;
+  }
+  return "en";
+}
+
+const sel = document.getElementById("lang");
+for (const code in I18N){
+  const o = document.createElement("option");
+  o.value = code; o.textContent = I18N[code].name; sel.appendChild(o);
+}
+let cur = pickLang();
+sel.value = cur;
+render(cur);
+sel.addEventListener("change", () => { localStorage.setItem("glotty_lang", sel.value); render(sel.value); });
+</script>
+</body>
+</html>
