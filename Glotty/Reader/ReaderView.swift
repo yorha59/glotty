@@ -1,5 +1,7 @@
 import SwiftUI
 import PDFKit
+import Translation
+import NaturalLanguage
 
 /// The reader UI: a toggleable table-of-contents sidebar, a control bar
 /// (chapter nav, font size, theme), and the chapter web view. A tap on any word
@@ -8,6 +10,7 @@ struct ReaderView: View {
     @ObservedObject var state: ReaderState
     @State private var showTOC = true
     @State private var showCustomize = false
+    @State private var transConfig: TranslationSession.Configuration?
 
     var body: some View {
         if let book = state.book { epubBody(book) }
@@ -59,10 +62,38 @@ struct ReaderView: View {
             VStack(spacing: 0) {
                 pdfControlBar(pdf)
                 Divider()
-                PDFReaderView(doc: pdf, page: $state.pdfPage, onLookup: { word in
-                    (NSApp.delegate as? AppDelegate)?.handleFire(mode: .explain, providedText: word)
-                })
+                PDFReaderView(
+                    doc: pdf,
+                    page: $state.pdfPage,
+                    translations: state.pdfTranslations,
+                    onLookup: { word in
+                        (NSApp.delegate as? AppDelegate)?.handleFire(mode: .explain, providedText: word)
+                    },
+                    onTranslate: { page, bounds, text in
+                        state.requestPDFTranslation(page: page, bounds: bounds, source: text)
+                    },
+                    onRemove: { id in state.removePDFTranslation(id) }
+                )
             }
+        }
+        .onChange(of: state.pendingPDFTranslation) { _, pending in
+            guard let pending else { transConfig = nil; return }
+            let source = LanguagePolicy.detectSourceLanguage(pending.source)?.rawValue
+            let target = UserDefaults.standard.string(forKey: "glotty.targetLang").flatMap { $0.isEmpty ? nil : $0 }
+                ?? Locale.current.language.languageCode?.identifier ?? "en"
+            transConfig = TranslationSession.Configuration(
+                source: source.map { Locale.Language(identifier: $0) },
+                target: Locale.Language(identifier: target))
+        }
+        .translationTask(transConfig) { session in
+            guard let pending = state.pendingPDFTranslation else { return }
+            do {
+                let response = try await session.translate(pending.source)
+                state.completePDFTranslation(pending, translation: response.targetText)
+            } catch {
+                state.cancelPDFTranslation()
+            }
+            transConfig = nil
         }
     }
 

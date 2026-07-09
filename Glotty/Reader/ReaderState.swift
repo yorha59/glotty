@@ -71,6 +71,41 @@ final class ReaderState: ObservableObject {
     @Published var pdfPage: Int = 0 { didSet { savePDFPage() } }
     private var pdfURL: URL?
 
+    // Inline PDF translations: bubbles anchored under a selection, persisted
+    // per document. `pendingPDFTranslation` is the request the reader's
+    // `.translationTask` picks up to run Apple's on-device translator.
+    struct PendingPDFTranslation: Equatable {
+        let page: Int
+        let bounds: CGRect
+        let source: String
+    }
+    @Published var pdfTranslations: [ReaderTranslation] = []
+    @Published var pendingPDFTranslation: PendingPDFTranslation?
+
+    /// Ask for a translation of `source` (the selected text) anchored at
+    /// `bounds` on `page`. The reader's `.translationTask` fulfils it.
+    func requestPDFTranslation(page: Int, bounds: CGRect, source: String) {
+        let src = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !src.isEmpty else { return }
+        pendingPDFTranslation = PendingPDFTranslation(page: page, bounds: bounds, source: src)
+    }
+
+    func completePDFTranslation(_ pending: PendingPDFTranslation, translation: String) {
+        pendingPDFTranslation = nil
+        let t = translation.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty, let u = pdfURL else { return }
+        pdfTranslations.append(ReaderTranslation(page: pending.page, bounds: pending.bounds,
+                                                 source: pending.source, translation: t))
+        ReaderTranslationStore.save(pdfTranslations, for: u)
+    }
+
+    func cancelPDFTranslation() { pendingPDFTranslation = nil }
+
+    func removePDFTranslation(_ id: UUID) {
+        pdfTranslations.removeAll { $0.id == id }
+        if let u = pdfURL { ReaderTranslationStore.save(pdfTranslations, for: u) }
+    }
+
     @Published var fontScale: Double {
         didSet { UserDefaults.standard.set(fontScale, forKey: Self.fontKey) }
     }
@@ -167,6 +202,8 @@ final class ReaderState: ObservableObject {
         // back to a TOC synthesized from section headings so the sidebar is
         // still useful instead of empty.
         if pdfTOC.isEmpty { pdfTOC = Self.synthesizePDFTOC(doc) }
+        pdfTranslations = ReaderTranslationStore.load(url)
+        pendingPDFTranslation = nil
         pdfPage = min(max(0, UserDefaults.standard.integer(forKey: Self.pdfPageKey(url))),
                       max(0, doc.pageCount - 1))
     }
