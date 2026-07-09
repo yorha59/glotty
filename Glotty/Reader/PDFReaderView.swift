@@ -265,8 +265,8 @@ struct PDFTranslationBubble: View {
         }
         .padding(8)
         .frame(width: width, alignment: .leading)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Color(nsColor: .controlBackgroundColor)))
         .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Color.primary.opacity(0.12)))
-        .shadow(color: .black.opacity(0.14), radius: 5, y: 2)
+        .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
     }
 }

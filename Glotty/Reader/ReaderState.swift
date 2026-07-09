@@ -85,9 +85,20 @@ final class ReaderState: ObservableObject {
     /// Ask for a translation of `source` (the selected text) anchored at
     /// `bounds` on `page`. The reader's `.translationTask` fulfils it.
     func requestPDFTranslation(page: Int, bounds: CGRect, source: String) {
-        let src = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        let src = Self.cleanSelection(source)
         guard !src.isEmpty else { return }
         pendingPDFTranslation = PendingPDFTranslation(page: page, bounds: bounds, source: src)
+    }
+
+    /// PDF selections carry the document's hard line breaks — often mid-word
+    /// ("synthe-\nsis"). Translating that verbatim fragments the output and
+    /// mistranslates the pieces. Rejoin into flowing sentences first: drop
+    /// end-of-line hyphenation, turn line breaks into spaces, collapse runs.
+    static func cleanSelection(_ s: String) -> String {
+        var t = s.replacingOccurrences(of: "-\\s*\\n\\s*", with: "", options: .regularExpression)
+        t = t.replacingOccurrences(of: "\\s*\\n\\s*", with: " ", options: .regularExpression)
+        t = t.replacingOccurrences(of: "\\s{2,}", with: " ", options: .regularExpression)
+        return t.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     func completePDFTranslation(_ pending: PendingPDFTranslation, translation: String) {
