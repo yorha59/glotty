@@ -1,5 +1,6 @@
 import SwiftUI
 import PDFKit
+import AppKit
 
 /// Observable state for the EPUB reader window: the open book, current chapter,
 /// type settings, and the per-book set of looked-up words (underlined in the
@@ -162,6 +163,10 @@ final class ReaderState: ObservableObject {
         pdf = doc
         openError = nil
         pdfTOC = Self.buildPDFTOC(doc)
+        // Many PDFs (arXiv papers especially) ship no bookmark outline. Fall
+        // back to a TOC synthesized from section headings so the sidebar is
+        // still useful instead of empty.
+        if pdfTOC.isEmpty { pdfTOC = Self.synthesizePDFTOC(doc) }
         pdfPage = min(max(0, UserDefaults.standard.integer(forKey: Self.pdfPageKey(url))),
                       max(0, doc.pageCount - 1))
     }
@@ -215,13 +220,71 @@ final class ReaderState: ObservableObject {
         func walk(_ node: PDFOutline, _ level: Int) {
             for i in 0..<node.numberOfChildren {
                 guard let child = node.child(at: i) else { continue }
-                if let label = child.label, !label.isEmpty, let page = child.destination?.page {
+                // Outline items point at a page either directly (`destination`)
+                // or via a GoTo action — resolve both, else we drop entries.
+                let dest = child.destination ?? (child.action as? PDFActionGoTo)?.destination
+                if let label = child.label, !label.isEmpty, let page = dest?.page {
                     out.append(PDFTOCItem(label: label, pageIndex: doc.index(for: page), level: level))
                 }
                 walk(child, level + 1)
             }
         }
         walk(root, 0)
+        return out
+    }
+
+    /// Fallback TOC for PDFs with no embedded outline: scan each page's text for
+    /// section headings. A heading is a numbered ("2.1 Title") or well-known
+    /// ("Abstract", "References") line; single-number sections and named ones
+    /// must be rendered larger than the body font (that's how we tell "3. Experiments"
+    /// from a sentence starting "16 for…"), while dotted subsections are trusted
+    /// at body size as long as they're Title-case and free of code punctuation.
+    /// ponytail: font+regex heuristic tuned for academic papers — misses
+    /// heading-less docs and unusual layouts; upgrade path is a proper layout
+    /// analysis if it proves too coarse.
+    private static func synthesizePDFTOC(_ doc: PDFDocument) -> [PDFTOCItem] {
+        // Guard against a long stall on very large outline-less PDFs.
+        guard doc.pageCount > 0, doc.pageCount <= 1500 else { return [] }
+
+        // Modal body font size, sampled from the first pages (cheap, representative).
+        var sizeCount: [Int: Int] = [:]
+        for p in 0..<min(doc.pageCount, 15) {
+            guard let a = doc.page(at: p)?.attributedString else { continue }
+            a.enumerateAttribute(.font, in: NSRange(location: 0, length: a.length)) { v, r, _ in
+                if let f = v as? NSFont { sizeCount[Int(f.pointSize.rounded()), default: 0] += r.length }
+            }
+        }
+        let body = sizeCount.max { $0.value < $1.value }?.key ?? 10
+
+        let numbered = try! NSRegularExpression(pattern: "^(\\d{1,2}(?:\\.\\d{1,2}){0,3})\\.?\\s+([A-Z][^\\n]{1,60})$")
+        let named = try! NSRegularExpression(pattern: "^(Abstract|Introduction|Related Work|Conclusions?|References|Acknowledge?ments?|Discussion|Appendix)$")
+        let codeChars = CharacterSet(charactersIn: "={}()\"_;[]<>")
+
+        var out: [PDFTOCItem] = []
+        for p in 0..<doc.pageCount {
+            guard let a = doc.page(at: p)?.attributedString else { continue }
+            let ns = a.string as NSString
+            ns.enumerateSubstrings(in: NSRange(location: 0, length: ns.length), options: .byLines) { sub, subRange, _, _ in
+                let line = (sub ?? "").trimmingCharacters(in: .whitespaces)
+                guard !line.isEmpty else { return }
+                let rr = NSRange(line.startIndex..., in: line)
+                var size = 0
+                a.enumerateAttribute(.font, in: subRange) { v, _, _ in
+                    if let f = v as? NSFont { size = max(size, Int(f.pointSize.rounded())) }
+                }
+                if let m = numbered.firstMatch(in: line, range: rr) {
+                    let num = (line as NSString).substring(with: m.range(at: 1))
+                    let title = (line as NSString).substring(with: m.range(at: 2)).trimmingCharacters(in: .whitespaces)
+                    if title.rangeOfCharacter(from: codeChars) != nil { return }
+                    let level = num.components(separatedBy: ".").count - 1
+                    if level == 0 && size <= body { return }   // top-level section must be heading-size
+                    if level >= 1 && size < body { return }     // subsection at ≥ body size drops tiny code lines
+                    out.append(PDFTOCItem(label: "\(num) \(title)", pageIndex: p, level: level))
+                } else if named.firstMatch(in: line, range: rr) != nil, size > body {
+                    out.append(PDFTOCItem(label: line, pageIndex: p, level: 0))
+                }
+            }
+        }
         return out
     }
 }
