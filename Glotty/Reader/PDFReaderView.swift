@@ -15,6 +15,7 @@ struct PDFReaderView: NSViewRepresentable {
     let translations: [ReaderTranslation]
     let onLookup: (String) -> Void
     let onTranslate: (Int, CGRect, String) -> Void
+    let onAsk: (String) -> Void
     let onRemove: (UUID) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -50,7 +51,9 @@ struct PDFReaderView: NSViewRepresentable {
         c.overlay = overlay
         c.rebuild(initial: true)
 
-        let chip = NSHostingView(rootView: TranslateChip { [weak c] in c?.translateTapped() })
+        let chip = NSHostingView(rootView: SelectionChip(
+            onTranslate: { [weak c] in c?.translateTapped() },
+            onAsk: { [weak c] in c?.askTapped() }))
         chip.frame.size = chip.fittingSize
         chip.isHidden = true
         overlay.addSubview(chip)
@@ -79,7 +82,7 @@ struct PDFReaderView: NSViewRepresentable {
         var parent: PDFReaderView
         weak var pdfView: PDFView?
         weak var overlay: NSView?
-        weak var chip: NSHostingView<TranslateChip>?
+        weak var chip: NSHostingView<SelectionChip>?
 
         private var derived = ReflowPDF.Result(doc: PDFDocument(), originalIndex: [], translationID: [:])
         private var originalToDerived: [Int: Int] = [:]
@@ -175,12 +178,22 @@ struct PDFReaderView: NSViewRepresentable {
             chip.isHidden = false
         }
 
-        @objc func translateTapped() {
+        func translateTapped() {
             guard let v = pdfView, let s = pendingSelection, let doc = v.document else { return }
             let d = doc.index(for: s.page)
             let original = derived.originalIndex.indices.contains(d) ? derived.originalIndex[d] : d
             parent.onTranslate(original, s.rect, s.text)
-            v.clearSelection()
+            clearSelectionUI()
+        }
+
+        func askTapped() {
+            guard let s = pendingSelection else { return }
+            parent.onAsk(s.text)
+            clearSelectionUI()
+        }
+
+        private func clearSelectionUI() {
+            pdfView?.clearSelection()
             chip?.isHidden = true
             pendingSelection = nil
         }
@@ -196,18 +209,28 @@ private final class PassthroughView: NSView {
     }
 }
 
-struct TranslateChip: View {
-    let action: () -> Void
+struct SelectionChip: View {
+    let onTranslate: () -> Void
+    let onAsk: () -> Void
     var body: some View {
+        HStack(spacing: 0) {
+            button("globe", "Translate", onTranslate)
+            Divider().frame(height: 16).overlay(Color.white.opacity(0.35))
+            button("bubble.left.and.bubble.right", "Ask", onAsk)
+        }
+        .background(Color.accentColor, in: Capsule())
+        .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+    }
+
+    private func button(_ icon: String, _ label: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 5) {
-                Image(systemName: "globe").font(.system(size: 12, weight: .semibold))
-                Text("Translate").font(.system(size: 12, weight: .medium))
+                Image(systemName: icon).font(.system(size: 12, weight: .semibold))
+                Text(label).font(.system(size: 12, weight: .medium))
             }
-            .padding(.horizontal, 11).padding(.vertical, 6)
             .foregroundStyle(.white)
-            .background(Color.accentColor, in: Capsule())
-            .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+            .padding(.horizontal, 12).padding(.vertical, 6)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

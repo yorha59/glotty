@@ -11,6 +11,8 @@ struct ReaderView: View {
     @State private var showTOC = true
     @State private var showCustomize = false
     @State private var transConfig: TranslationSession.Configuration?
+    @StateObject private var chat = ReaderChat()
+    @State private var showChat = false
 
     var body: some View {
         if let book = state.book { epubBody(book) }
@@ -72,8 +74,18 @@ struct ReaderView: View {
                     onTranslate: { page, bounds, text in
                         state.requestPDFTranslation(page: page, bounds: bounds, source: text)
                     },
+                    onAsk: { text in
+                        chat.attach(text)
+                        withAnimation(.easeInOut(duration: 0.18)) { showChat = true }
+                    },
                     onRemove: { id in state.removePDFTranslation(id) }
                 )
+            }
+            if showChat {
+                Divider()
+                ReaderChatPanel(chat: chat,
+                                onClose: { withAnimation(.easeInOut(duration: 0.18)) { showChat = false } })
+                    .transition(.move(edge: .trailing))
             }
         }
         .onChange(of: state.pendingPDFTranslation) { _, pending in
@@ -132,6 +144,10 @@ struct ReaderView: View {
             Button { if state.pdfPage < pdf.pageCount - 1 { state.pdfPage += 1 } } label: { Image(systemName: "chevron.right") }
                 .disabled(state.pdfPage >= pdf.pageCount - 1)
             Spacer()
+            Button { withAnimation(.easeInOut(duration: 0.18)) { showChat.toggle() } } label: {
+                Image(systemName: showChat ? "bubble.left.and.bubble.right.fill" : "bubble.left.and.bubble.right")
+            }
+            .help("Toggle chat")
         }
         .buttonStyle(.borderless)
         .padding(.horizontal, 12)
