@@ -13,6 +13,8 @@ struct ReaderView: View {
     @State private var transConfig: TranslationSession.Configuration?
     @StateObject private var chat = ReaderChat()
     @State private var showChat = true
+    @AppStorage("glotty.reader.chatWidth") private var chatWidth: Double = 380
+    @State private var chatDragStart: Double?
 
     var body: some View {
         if let book = state.book { epubBody(book) }
@@ -82,8 +84,8 @@ struct ReaderView: View {
                 )
             }
             if showChat {
-                Divider()
-                ReaderChatPanel(chat: chat,
+                chatResizeHandle
+                ReaderChatPanel(chat: chat, width: CGFloat(chatWidth),
                                 onClose: { withAnimation(.easeInOut(duration: 0.18)) { showChat = false } })
                     .transition(.move(edge: .trailing))
             }
@@ -107,6 +109,26 @@ struct ReaderView: View {
             }
             transConfig = nil
         }
+    }
+
+    /// Draggable divider on the chat panel's leading edge — resize like the
+    /// VSCode side panel; width persists across sessions.
+    private var chatResizeHandle: some View {
+        Rectangle()
+            .fill(Color.clear)
+            .frame(width: 8)
+            .contentShape(Rectangle())
+            .overlay(Divider())
+            .pointerStyle(.columnResize)
+            .gesture(
+                DragGesture()
+                    .onChanged { v in
+                        let base = chatDragStart ?? chatWidth
+                        if chatDragStart == nil { chatDragStart = chatWidth }
+                        chatWidth = min(680, max(300, base - v.translation.width))
+                    }
+                    .onEnded { _ in chatDragStart = nil }
+            )
     }
 
     private var pdfTOCSidebar: some View {

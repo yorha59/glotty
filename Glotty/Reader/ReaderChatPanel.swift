@@ -4,6 +4,7 @@ import SwiftUI
 /// message list, and a composer. Reuses `LLMProvider.current()` via `ReaderChat`.
 struct ReaderChatPanel: View {
     @ObservedObject var chat: ReaderChat
+    let width: CGFloat
     let onClose: () -> Void
     @FocusState private var inputFocused: Bool
 
@@ -15,7 +16,7 @@ struct ReaderChatPanel: View {
             Divider()
             composer
         }
-        .frame(width: 340)
+        .frame(width: width)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 
@@ -85,22 +86,27 @@ struct ReaderChatPanel: View {
     }
 
     private var composer: some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .bottom, spacing: 8) {
             TextField("Ask about the passage…", text: $chat.input, axis: .vertical)
                 .textFieldStyle(.plain)
-                .lineLimit(1...5)
+                .font(.callout)
+                .lineLimit(1...6)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .focused($inputFocused)
                 .onSubmit(chat.send)
             if chat.isStreaming {
-                Button(action: chat.stop) { Image(systemName: "stop.circle.fill").font(.title3) }
+                Button(action: chat.stop) { Image(systemName: "stop.circle.fill").font(.title2) }
                     .buttonStyle(.plain).foregroundStyle(.secondary)
             } else {
-                Button(action: chat.send) { Image(systemName: "arrow.up.circle.fill").font(.title3) }
+                Button(action: chat.send) { Image(systemName: "arrow.up.circle.fill").font(.title2) }
                     .buttonStyle(.plain)
                     .foregroundStyle(chat.input.trimmingCharacters(in: .whitespaces).isEmpty ? Color.secondary : Color.accentColor)
                     .disabled(chat.input.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
+        .padding(.horizontal, 12).padding(.vertical, 9)
+        .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color.primary.opacity(0.06)))
+        .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Color.primary.opacity(0.12)))
         .padding(10)
     }
 }
