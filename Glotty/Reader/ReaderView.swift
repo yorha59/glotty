@@ -12,7 +12,7 @@ struct ReaderView: View {
     @State private var showCustomize = false
     @State private var transConfig: TranslationSession.Configuration?
     @StateObject private var chat = ReaderChat()
-    @State private var showChat = false
+    @State private var showChat = true
 
     var body: some View {
         if let book = state.book { epubBody(book) }
