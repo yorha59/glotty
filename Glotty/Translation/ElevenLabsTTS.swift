@@ -58,6 +58,10 @@ final class ElevenLabsTTS: NSObject, ObservableObject {
                 VoiceCache.store(data, text: text, voice: voice, model: model)
                 self?.play(data)
             } catch {
+                // A newer speak() (or stop()) cancelled this request. That's a
+                // supersede, not a failure — leave the new request's HUD/phase
+                // alone and don't toast or fall back to the system voice.
+                if Task.isCancelled || (error as? URLError)?.code == .cancelled { return }
                 Log.debug(.app, "ElevenLabs TTS failed (\(error.localizedDescription)) — falling back to the system voice")
                 self?.phase = .idle
                 SpeechHUDController.shared.hide()
