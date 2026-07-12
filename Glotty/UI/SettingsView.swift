@@ -2801,6 +2801,9 @@ private struct VoiceSettingsSection: View {
     @State private var voices: [ElevenLabsTTS.Voice] = []
     @State private var voicesLoading: Bool = false
     @State private var voicesError: String?
+    @State private var mosiVoices: [ElevenLabsTTS.Voice] = []
+    @State private var mosiVoicesLoading: Bool = false
+    @State private var mosiVoicesError: String?
     @State private var cacheSize: Int = 0
     @State private var cachedItems: [VoiceCache.Entry] = []
     @State private var selectedClip: VoiceCache.Entry?
@@ -2824,6 +2827,22 @@ private struct VoiceSettingsSection: View {
                                  error.localizedDescription)
         }
         voicesLoading = false
+    }
+
+    private func loadMosiVoices() async {
+        guard let key = Keychain.read(account: ElevenLabsTTS.mosiKeychainAccount), !key.isEmpty else { return }
+        mosiVoicesLoading = true
+        mosiVoicesError = nil
+        do {
+            mosiVoices = try await ElevenLabsTTS.listMosiVoices(apiKey: key)
+            if !mosiVoices.isEmpty, !mosiVoices.contains(where: { $0.id == mosiVoiceID }) {
+                mosiVoiceID = mosiVoices[0].id
+            }
+        } catch {
+            mosiVoicesError = String(format: String(localized: "Couldn't load voices: %@"),
+                                     error.localizedDescription)
+        }
+        mosiVoicesLoading = false
     }
 
     @ViewBuilder private var elevenLabsFields: some View {
@@ -2890,6 +2909,7 @@ private struct VoiceSettingsSection: View {
                 if Keychain.write(mosiKey, account: ElevenLabsTTS.mosiKeychainAccount) {
                     mosiKey = ""
                     mosiKeyStored = true
+                    Task { await loadMosiVoices() }
                 }
             }
             .disabled(mosiKey.isEmpty)
@@ -2898,6 +2918,7 @@ private struct VoiceSettingsSection: View {
                     Keychain.delete(account: ElevenLabsTTS.mosiKeychainAccount)
                     mosiKey = ""
                     mosiKeyStored = false
+                    mosiVoices = []
                 }
             }
         }
@@ -2905,8 +2926,26 @@ private struct VoiceSettingsSection: View {
             Label("Key saved to Keychain.", systemImage: "checkmark.circle.fill")
                 .font(.caption)
                 .foregroundStyle(.green)
-            TextField("Voice ID", text: $mosiVoiceID,
-                      prompt: Text("e.g. voice_123 — from your MoSi console"))
+            HStack {
+                Picker("Voice", selection: $mosiVoiceID) {
+                    if mosiVoiceID.isEmpty { Text("Pick a voice").tag("") }
+                    else if !mosiVoices.contains(where: { $0.id == mosiVoiceID }) {
+                        Text(mosiVoiceID).tag(mosiVoiceID)
+                    }
+                    ForEach(mosiVoices) { v in Text(v.name).tag(v.id) }
+                }
+                Button {
+                    Task { await loadMosiVoices() }
+                } label: {
+                    if mosiVoicesLoading { ProgressView().controlSize(.small) }
+                    else { Image(systemName: "arrow.clockwise") }
+                }
+                .disabled(mosiVoicesLoading)
+                .help("Load your MoSi voices")
+            }
+            if let mosiVoicesError {
+                Text(mosiVoicesError).font(.caption).foregroundStyle(.red)
+            }
         }
         if let url = URL(string: "https://platform.mosi.cn/") {
             Link("Get a MoSi API key →", destination: url)
@@ -2945,6 +2984,7 @@ private struct VoiceSettingsSection: View {
             cacheSize = VoiceCache.sizeBytes()
             cachedItems = VoiceCache.entries()
             if elevenKeyStored { Task { await loadVoices() } }
+            if mosiKeyStored { Task { await loadMosiVoices() } }
         }
 
         if !cachedItems.isEmpty {

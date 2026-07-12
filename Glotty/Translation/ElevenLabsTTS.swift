@@ -269,6 +269,23 @@ final class ElevenLabsTTS: NSObject, ObservableObject {
         return try JSONDecoder().decode(Payload.self, from: data)
             .voices.map { Voice(id: $0.voice_id, name: $0.name) }
     }
+
+    /// MoSi voice list — `GET /v1/audio/voices` → `{ data: [{ id, name }] }`.
+    nonisolated static func listMosiVoices(apiKey: String) async throws -> [Voice] {
+        guard let url = URL(string: "https://api.mosi.cn/v1/audio/voices") else { throw URLError(.badURL) }
+        var req = URLRequest(url: url)
+        req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+            throw NSError(domain: "MoSi", code: code, userInfo: [NSLocalizedDescriptionKey: "HTTP \(code)"])
+        }
+        struct Payload: Decodable {
+            let data: [Item]
+            struct Item: Decodable { let id: String; let name: String }
+        }
+        return try JSONDecoder().decode(Payload.self, from: data).data.map { Voice(id: $0.id, name: $0.name) }
+    }
 }
 
 extension ElevenLabsTTS: AVAudioPlayerDelegate {
