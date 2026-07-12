@@ -2791,9 +2791,13 @@ private struct PolishPromptsSection: View {
 /// the popup speak buttons. Off by default (uses the on-device system voice).
 private struct VoiceSettingsSection: View {
     @AppStorage(ElevenLabsTTS.enabledDefaultsKey) private var ttsEnabled: Bool = false
+    @AppStorage(ElevenLabsTTS.providerKey)        private var providerRaw: String = ElevenLabsTTS.Provider.elevenlabs.rawValue
     @AppStorage(ElevenLabsTTS.voiceDefaultsKey)   private var voiceID: String = ElevenLabsTTS.defaultVoiceID
+    @AppStorage(ElevenLabsTTS.mosiVoiceKey)       private var mosiVoiceID: String = ""
     @State private var elevenKey: String = ""
     @State private var elevenKeyStored: Bool = false
+    @State private var mosiKey: String = ""
+    @State private var mosiKeyStored: Bool = false
     @State private var voices: [ElevenLabsTTS.Voice] = []
     @State private var voicesLoading: Bool = false
     @State private var voicesError: String?
@@ -2822,60 +2826,103 @@ private struct VoiceSettingsSection: View {
         voicesLoading = false
     }
 
+    @ViewBuilder private var elevenLabsFields: some View {
+        HStack {
+            SecureField("ElevenLabs API key", text: $elevenKey,
+                        prompt: Text(elevenKeyStored
+                                     ? "Key saved — paste to replace"
+                                     : "Paste your ElevenLabs API key"))
+            Button("Save") {
+                if Keychain.write(elevenKey, account: ElevenLabsTTS.keychainAccount) {
+                    elevenKey = ""
+                    elevenKeyStored = true
+                    Task { await loadVoices() }
+                }
+            }
+            .disabled(elevenKey.isEmpty)
+            if elevenKeyStored {
+                Button("Clear", role: .destructive) {
+                    Keychain.delete(account: ElevenLabsTTS.keychainAccount)
+                    elevenKey = ""
+                    elevenKeyStored = false
+                    voices = []
+                }
+            }
+        }
+        if elevenKeyStored {
+            Label("Key saved to Keychain.", systemImage: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.green)
+            HStack {
+                Picker("Voice", selection: $voiceID) {
+                    if !voices.contains(where: { $0.id == voiceID }) {
+                        Text(voiceID == ElevenLabsTTS.defaultVoiceID ? "Default (Rachel)" : voiceID)
+                            .tag(voiceID)
+                    }
+                    ForEach(voices) { v in Text(v.name).tag(v.id) }
+                }
+                Button {
+                    Task { await loadVoices() }
+                } label: {
+                    if voicesLoading { ProgressView().controlSize(.small) }
+                    else { Image(systemName: "arrow.clockwise") }
+                }
+                .disabled(voicesLoading)
+                .help("Load your ElevenLabs voices")
+            }
+            if let voicesError {
+                Text(voicesError).font(.caption).foregroundStyle(.red)
+            }
+        }
+        if let url = URL(string: "https://elevenlabs.io/app/settings/api-keys") {
+            Link("Get an ElevenLabs API key →", destination: url)
+                .font(.caption)
+        }
+    }
+
+    @ViewBuilder private var mosiFields: some View {
+        HStack {
+            SecureField("MoSi API key", text: $mosiKey,
+                        prompt: Text(mosiKeyStored
+                                     ? "Key saved — paste to replace"
+                                     : "Paste your MoSi API key"))
+            Button("Save") {
+                if Keychain.write(mosiKey, account: ElevenLabsTTS.mosiKeychainAccount) {
+                    mosiKey = ""
+                    mosiKeyStored = true
+                }
+            }
+            .disabled(mosiKey.isEmpty)
+            if mosiKeyStored {
+                Button("Clear", role: .destructive) {
+                    Keychain.delete(account: ElevenLabsTTS.mosiKeychainAccount)
+                    mosiKey = ""
+                    mosiKeyStored = false
+                }
+            }
+        }
+        if mosiKeyStored {
+            Label("Key saved to Keychain.", systemImage: "checkmark.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.green)
+            TextField("Voice ID", text: $mosiVoiceID,
+                      prompt: Text("e.g. voice_123 — from your MoSi console"))
+        }
+        if let url = URL(string: "https://platform.mosi.cn/") {
+            Link("Get a MoSi API key →", destination: url)
+                .font(.caption)
+        }
+    }
+
     var body: some View {
         Section {
-            Toggle("Speak with ElevenLabs (cloud voice)", isOn: $ttsEnabled)
-            HStack {
-                SecureField("ElevenLabs API key", text: $elevenKey,
-                            prompt: Text(elevenKeyStored
-                                         ? "Key saved — paste to replace"
-                                         : "Paste your ElevenLabs API key"))
-                Button("Save") {
-                    if Keychain.write(elevenKey, account: ElevenLabsTTS.keychainAccount) {
-                        elevenKey = ""
-                        elevenKeyStored = true
-                        Task { await loadVoices() }
-                    }
-                }
-                .disabled(elevenKey.isEmpty)
-                if elevenKeyStored {
-                    Button("Clear", role: .destructive) {
-                        Keychain.delete(account: ElevenLabsTTS.keychainAccount)
-                        elevenKey = ""
-                        elevenKeyStored = false
-                        voices = []
-                    }
-                }
+            Toggle("Use a cloud voice", isOn: $ttsEnabled)
+            Picker("Provider", selection: $providerRaw) {
+                Text("ElevenLabs").tag(ElevenLabsTTS.Provider.elevenlabs.rawValue)
+                Text("MoSi").tag(ElevenLabsTTS.Provider.mosi.rawValue)
             }
-            if elevenKeyStored {
-                Label("Key saved to Keychain.", systemImage: "checkmark.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.green)
-                HStack {
-                    Picker("Voice", selection: $voiceID) {
-                        if !voices.contains(where: { $0.id == voiceID }) {
-                            Text(voiceID == ElevenLabsTTS.defaultVoiceID ? "Default (Rachel)" : voiceID)
-                                .tag(voiceID)
-                        }
-                        ForEach(voices) { v in Text(v.name).tag(v.id) }
-                    }
-                    Button {
-                        Task { await loadVoices() }
-                    } label: {
-                        if voicesLoading { ProgressView().controlSize(.small) }
-                        else { Image(systemName: "arrow.clockwise") }
-                    }
-                    .disabled(voicesLoading)
-                    .help("Load your ElevenLabs voices")
-                }
-                if let voicesError {
-                    Text(voicesError).font(.caption).foregroundStyle(.red)
-                }
-            }
-            if let url = URL(string: "https://elevenlabs.io/app/settings/api-keys") {
-                Link("Get an ElevenLabs API key →", destination: url)
-                    .font(.caption)
-            }
+            .pickerStyle(.segmented)
+            if providerRaw == ElevenLabsTTS.Provider.mosi.rawValue { mosiFields } else { elevenLabsFields }
             Button(role: .destructive) {
                 VoiceCache.clear()
                 cacheSize = 0
@@ -2888,12 +2935,13 @@ private struct VoiceSettingsSection: View {
         } header: {
             Text("Speech")
         } footer: {
-            Text("Off → Fn+V uses the built-in macOS voice (offline, free). On (with a key) → Fn+V and the popup speak buttons use ElevenLabs: higher quality, but a network call billed to your own ElevenLabs plan. Falls back to the system voice if a request fails.")
+            Text("Off → Fn+V uses the built-in macOS voice (offline, free). On (with a key) → Fn+V and the popup speak buttons use your chosen cloud provider (ElevenLabs or MoSi): higher quality, but a network call billed to your own plan. Falls back to the system voice if a request fails.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .onAppear {
             elevenKeyStored = (Keychain.read(account: ElevenLabsTTS.keychainAccount).map { !$0.isEmpty } ?? false)
+            mosiKeyStored = (Keychain.read(account: ElevenLabsTTS.mosiKeychainAccount).map { !$0.isEmpty } ?? false)
             cacheSize = VoiceCache.sizeBytes()
             cachedItems = VoiceCache.entries()
             if elevenKeyStored { Task { await loadVoices() } }

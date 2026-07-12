@@ -23,26 +23,69 @@ final class ElevenLabsTTS: NSObject, ObservableObject {
     nonisolated static let defaultVoiceID = "21m00Tcm4TlvDq8ikWAM"
     nonisolated static let defaultModel   = "eleven_multilingual_v2"
 
+    // --- Cloud provider selection (ElevenLabs or MoSi) -----------------------
+    // This engine (player, cache, HUD, cancel/fallback) is provider-agnostic;
+    // only `fetch` and the credentials differ per backend.
+    enum Provider: String, CaseIterable, Identifiable {
+        case elevenlabs, mosi
+        var id: String { rawValue }
+        var label: String { self == .elevenlabs ? "ElevenLabs" : "MoSi" }
+    }
+    nonisolated static let providerKey = "glotty.tts.provider"
+    nonisolated static var provider: Provider {
+        Provider(rawValue: UserDefaults.standard.string(forKey: providerKey) ?? "") ?? .elevenlabs
+    }
+
+    // MoSi (https://platform.mosi.cn) — OpenAI-style POST /v1/audio/speech.
+    nonisolated static let mosiKeychainAccount = "mosi"
+    nonisolated static let mosiVoiceKey        = "glotty.tts.mosi.voice"
+    nonisolated static let mosiVersionKey       = "glotty.tts.mosi.version"
+    nonisolated static let mosiModel           = "moss-tts"
+
+    nonisolated static func keychainAccount(for p: Provider) -> String {
+        p == .elevenlabs ? keychainAccount : mosiKeychainAccount
+    }
+    nonisolated static func voiceKey(for p: Provider) -> String {
+        p == .elevenlabs ? voiceDefaultsKey : mosiVoiceKey
+    }
+    nonisolated static func model(for p: Provider) -> String {
+        p == .elevenlabs ? (UserDefaults.standard.string(forKey: modelDefaultsKey) ?? defaultModel) : mosiModel
+    }
+    nonisolated static func voiceID(for p: Provider) -> String {
+        UserDefaults.standard.string(forKey: voiceKey(for: p)) ?? (p == .elevenlabs ? defaultVoiceID : "")
+    }
+
     private var player: AVAudioPlayer?
     private var task: Task<Void, Never>?
     private var progressTimer: Timer?
 
-    /// Enabled AND a key stored. Read per call so toggling takes effect at once.
+    /// Enabled AND a key stored for the selected provider. Read per call so
+    /// toggling takes effect at once.
     nonisolated static var isConfigured: Bool {
         UserDefaults.standard.bool(forKey: enabledDefaultsKey)
-            && (Keychain.read(account: keychainAccount).map { !$0.isEmpty } ?? false)
+            && (Keychain.read(account: keychainAccount(for: provider)).map { !$0.isEmpty } ?? false)
     }
 
     /// Synthesize + play `text` (cache first, then network). Drives the HUD via
     /// `phase`. On any failure calls `onFailure` so the caller falls back to the
     /// system voice — speech never goes silent.
     func speak(_ text: String, onFailure: @escaping () -> Void) {
-        guard let key = Keychain.read(account: Self.keychainAccount), !key.isEmpty else {
+        let prov = Self.provider
+        guard let key = Keychain.read(account: Self.keychainAccount(for: prov)), !key.isEmpty else {
             onFailure(); return
         }
-        let voice = UserDefaults.standard.string(forKey: Self.voiceDefaultsKey) ?? Self.defaultVoiceID
-        let model = UserDefaults.standard.string(forKey: Self.modelDefaultsKey) ?? Self.defaultModel
+        let voice = Self.voiceID(for: prov)
+        let model = Self.model(for: prov)
         cancel()
+
+        // MoSi has no callable default voice — the request 400s without one.
+        // Point the user at Settings rather than surfacing a raw server error.
+        if prov == .mosi, voice.isEmpty {
+            HUDController.shared.toast(
+                String(localized: "Pick a MoSi voice in Settings → Voice."),
+                systemImage: "waveform", duration: 4)
+            onFailure(); return
+        }
 
         if let cached = VoiceCache.load(text: text, voice: voice, model: model) {
             play(cached)
@@ -53,7 +96,7 @@ final class ElevenLabsTTS: NSObject, ObservableObject {
         SpeechHUDController.shared.show()
         task = Task { [weak self] in
             do {
-                let data = try await Self.fetch(text: text, voiceID: voice, model: model, apiKey: key)
+                let data = try await Self.fetch(provider: prov, text: text, voiceID: voice, model: model, apiKey: key)
                 if Task.isCancelled { return }
                 VoiceCache.store(data, text: text, voice: voice, model: model)
                 self?.play(data)
@@ -73,14 +116,15 @@ final class ElevenLabsTTS: NSObject, ObservableObject {
                 // NB: keep each String(localized:) as a standalone binding —
                 // extract-strings.sh doesn't catch it when nested in a "\(…)".
                 let ns = error as NSError
-                let isPlanBlock = ns.code == 402
-                    || ns.localizedDescription.contains("payment_required")
-                    || ns.localizedDescription.contains("library voices")
+                let isPlanBlock = prov == .elevenlabs
+                    && (ns.code == 402
+                        || ns.localizedDescription.contains("payment_required")
+                        || ns.localizedDescription.contains("library voices"))
                 let toastMsg: String
                 if isPlanBlock {
                     toastMsg = String(localized: "That ElevenLabs voice needs a paid plan. Open Settings → Voice and pick one of your own voices (Glotty will do this for you), or clear the key to use the free system voice.")
                 } else {
-                    let head = String(localized: "ElevenLabs voice failed — using the system voice.")
+                    let head = String(format: String(localized: "%@ voice failed — using the system voice."), prov.label)
                     toastMsg = "\(head) \(ns.localizedDescription.prefix(160))"
                 }
                 HUDController.shared.toast(
@@ -146,9 +190,27 @@ final class ElevenLabsTTS: NSObject, ObservableObject {
         }
     }
 
-    /// One TTS round-trip. Returns the MP3 bytes; throws on non-2xx (the body
-    /// usually carries the ElevenLabs error JSON, surfaced in the message).
-    nonisolated static func fetch(text: String, voiceID: String, model: String, apiKey: String) async throws -> Data {
+    /// One TTS round-trip → MP3 bytes. Dispatches to the selected backend.
+    nonisolated static func fetch(provider: Provider, text: String, voiceID: String,
+                                  model: String, apiKey: String) async throws -> Data {
+        switch provider {
+        case .elevenlabs: return try await fetchElevenLabs(text: text, voiceID: voiceID, model: model, apiKey: apiKey)
+        case .mosi:       return try await fetchMosi(text: text, voiceID: voiceID, model: model, apiKey: apiKey)
+        }
+    }
+
+    /// Throws on non-2xx (the body usually carries the provider's error JSON).
+    private nonisolated static func check(_ data: Data, _ resp: URLResponse, domain: String) throws -> Data {
+        guard let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+            let body = String(data: data, encoding: .utf8) ?? ""
+            throw NSError(domain: domain, code: code,
+                          userInfo: [NSLocalizedDescriptionKey: "HTTP \(code): \(body.prefix(200))"])
+        }
+        return data
+    }
+
+    nonisolated static func fetchElevenLabs(text: String, voiceID: String, model: String, apiKey: String) async throws -> Data {
         guard let url = URL(string: "https://api.elevenlabs.io/v1/text-to-speech/\(voiceID)") else {
             throw URLError(.badURL)
         }
@@ -159,13 +221,28 @@ final class ElevenLabsTTS: NSObject, ObservableObject {
         req.setValue("audio/mpeg", forHTTPHeaderField: "Accept")
         req.httpBody = try JSONSerialization.data(withJSONObject: ["text": text, "model_id": model])
         let (data, resp) = try await URLSession.shared.data(for: req)
-        guard let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
-            let body = String(data: data, encoding: .utf8) ?? ""
-            throw NSError(domain: "ElevenLabs", code: code,
-                          userInfo: [NSLocalizedDescriptionKey: "HTTP \(code): \(body.prefix(200))"])
+        return try check(data, resp, domain: "ElevenLabs")
+    }
+
+    /// MoSi (https://platform.mosi.cn) — `POST /v1/audio/speech`, Bearer auth,
+    /// `delivery_method: audio` returns the raw MP3 stream. `version` is sent
+    /// only if the user set one (the API accepts requests without it).
+    nonisolated static func fetchMosi(text: String, voiceID: String, model: String, apiKey: String) async throws -> Data {
+        guard let url = URL(string: "https://api.mosi.cn/v1/audio/speech") else { throw URLError(.badURL) }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("audio/mpeg", forHTTPHeaderField: "Accept")
+        var body: [String: Any] = [
+            "model": model, "input": text, "voice_id": voiceID,
+            "response_format": "mp3", "delivery_method": "audio"]
+        if let version = UserDefaults.standard.string(forKey: mosiVersionKey), !version.isEmpty {
+            body["version"] = version
         }
-        return data
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        return try check(data, resp, domain: "MoSi")
     }
 
     /// A selectable ElevenLabs voice (for the Settings picker).

@@ -4534,7 +4534,7 @@ final class Speaker {
             if UserDefaults.standard.bool(forKey: ElevenLabsTTS.enabledDefaultsKey) {
                 Task { @MainActor in
                     HUDController.shared.toast(
-                        String(localized: "ElevenLabs is on but no API key is saved — using the system voice. Add your key in Settings → Voice."),
+                        String(format: String(localized: "%@ is on but no API key is saved — using the system voice. Add your key in Settings → Voice."), ElevenLabsTTS.provider.label),
                         systemImage: "key", duration: 4)
                 }
             }
