@@ -180,6 +180,7 @@ final class ReaderState: ObservableObject {
 
     func open(_ url: URL) {
         if url.pathExtension.lowercased() == "pdf" { openPDF(url) } else { openEPUB(url) }
+        if openError == nil { ReaderRecents.record(url) }
     }
 
     private func openEPUB(_ url: URL) {

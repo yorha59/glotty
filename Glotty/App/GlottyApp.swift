@@ -332,6 +332,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ReaderWindowController.shared.openBook()
     }
 
+    @objc private func openRecentBook(_ sender: NSMenuItem) {
+        guard let url = sender.representedObject as? URL else { return }
+        dbg("openRecentBook — \(url.lastPathComponent)")
+        ReaderWindowController.shared.open(url: url)
+    }
+
+    @objc private func clearRecentBooks() { ReaderRecents.clear() }
+
     /// Finder "Open With → Glotty" (or opening / dropping a .epub) routes here.
     func application(_ application: NSApplication, open urls: [URL]) {
         guard let doc = urls.first(where: { ["epub", "pdf"].contains($0.pathExtension.lowercased()) })
@@ -429,10 +437,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Reader — open a (DRM-free) EPUB in Glotty's own reader, where tapping
         // a word runs the explain popup and looked-up words get underlined.
-        let reader = NSMenuItem(
-            title: "Read a book…".t, action: #selector(openReader), keyEquivalent: "")
-        reader.target = self
+        let reader = NSMenuItem(title: "Read a book…".t, action: nil, keyEquivalent: "")
         reader.image = NSImage(systemSymbolName: "book", accessibilityDescription: nil)
+        let readerMenu = NSMenu()
+        let openItem = NSMenuItem(title: "Open File…".t, action: #selector(openReader), keyEquivalent: "")
+        openItem.target = self
+        openItem.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
+        readerMenu.addItem(openItem)
+        let recents = ReaderRecents.all()
+        if !recents.isEmpty {
+            readerMenu.addItem(.separator())
+            for url in recents {
+                let item = NSMenuItem(title: url.lastPathComponent,
+                                      action: #selector(openRecentBook(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = url
+                item.toolTip = url.path
+                item.image = NSImage(
+                    systemSymbolName: url.pathExtension.lowercased() == "pdf" ? "doc.richtext" : "book.closed",
+                    accessibilityDescription: nil)
+                readerMenu.addItem(item)
+            }
+            readerMenu.addItem(.separator())
+            let clear = NSMenuItem(title: "Clear Recent".t, action: #selector(clearRecentBooks), keyEquivalent: "")
+            clear.target = self
+            readerMenu.addItem(clear)
+        }
+        reader.submenu = readerMenu
         menu.addItem(reader)
 
         // Model submenu — switch the active provider's model inline (built from
