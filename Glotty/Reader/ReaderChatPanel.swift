@@ -90,8 +90,7 @@ struct ReaderChatPanel: View {
             TextField("Ask about the passage…", text: $chat.input, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(.callout)
-                .lineLimit(1...6)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: 200, alignment: .topLeading)
                 .focused($inputFocused)
                 .onSubmit(chat.send)
             if chat.isStreaming {
