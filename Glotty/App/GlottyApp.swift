@@ -122,6 +122,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         dbg("applicationDidFinishLaunching START")
+        // The reader talks to the core through this seam; in-process here.
+        ReaderCore.services = GlottyReaderServices()
         // Apply the saved appearance (Light / Dark / System) before any
         // window renders so onboarding + popups open in the chosen theme.
         Theme.apply()

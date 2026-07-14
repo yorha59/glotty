@@ -44,7 +44,7 @@ struct ReaderView: View {
                         // Tapping only looks up the meaning; marking is deliberate
                         // (the popup's Mark button). Arm it for this word.
                         ReaderMark.pending = word
-                        (NSApp.delegate as? AppDelegate)?.handleFire(mode: .explain, providedText: word)
+                        ReaderCore.services?.lookUp(word)
                     }
                 )
                 .id(book.identifier)   // fresh web view per book
@@ -68,13 +68,13 @@ struct ReaderView: View {
                     page: $state.pdfPage,
                     translations: [],
                     onLookup: { word in
-                        (NSApp.delegate as? AppDelegate)?.handleFire(mode: .explain, providedText: word)
+                        ReaderCore.services?.lookUp(word)
                     },
                     onTranslate: { _, _, text in
                         // Show the result in Glotty's standard translate popup (a
                         // floating window) rather than an inline band — the popup
                         // owns the working Apple-translation path.
-                        (NSApp.delegate as? AppDelegate)?.handleFire(mode: .translate, providedText: text)
+                        ReaderCore.services?.translate(text)
                     },
                     onAsk: { text in
                         chat.attach(text)

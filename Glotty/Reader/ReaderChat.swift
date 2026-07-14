@@ -31,19 +31,19 @@ final class ReaderChat: ObservableObject {
         input = ""
         messages.append(Msg(role: .user, text: q))
 
-        guard let provider = LLMRegistry.current() else {
+        let prompt = buildPrompt()
+        guard let stream = ReaderCore.services?.chatStream(prompt: prompt) else {
             messages.append(Msg(role: .assistant,
                 text: String(localized: "No language model is configured. Choose one in Settings → Language Model.")))
             return
         }
 
-        let prompt = buildPrompt()
         messages.append(Msg(role: .assistant, text: ""))
         let idx = messages.count - 1
         isStreaming = true
         task = Task { [weak self] in
             do {
-                for try await snapshot in provider.chatCompletionStream(prompt: prompt) {
+                for try await snapshot in stream {
                     guard let self else { return }
                     if self.messages.indices.contains(idx) { self.messages[idx].text = snapshot }
                 }
