@@ -50,28 +50,63 @@ private struct BookDetailView: View {
             }
             .padding()
             Divider()
-            if book.queries.isEmpty {
-                ContentUnavailableView("No look-ups yet", systemImage: "text.magnifyingglass")
+            if book.queries.isEmpty && book.dialogueList.isEmpty {
+                ContentUnavailableView("Nothing recorded yet", systemImage: "text.magnifyingglass")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                List(book.queries.sorted { $0.date > $1.date }) { q in
-                    VStack(alignment: .leading, spacing: 5) {
-                        HStack(spacing: 8) {
-                            Text(q.term).font(.headline).lineLimit(1)
-                            Text(q.kind == "translate" ? "Translation" : "Explanation")
-                                .font(.caption2).padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(Capsule().fill(Color.accentColor.opacity(0.15)))
-                                .foregroundStyle(.tint)
-                            Spacer()
-                            Text(q.date, format: .dateTime.month().day().hour().minute())
-                                .font(.caption2).foregroundStyle(.secondary)
+                List {
+                    if !book.queries.isEmpty {
+                        Section("Look-ups") {
+                            ForEach(book.queries.sorted { $0.date > $1.date }) { queryRow($0) }
                         }
-                        Text(q.result).font(.callout).foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding(.vertical, 5)
+                    if !book.dialogueList.isEmpty {
+                        Section("Conversations") {
+                            ForEach(book.dialogueList.sorted { $0.date > $1.date }) { dialogueRow($0) }
+                        }
+                    }
                 }
+            }
+        }
+    }
+
+    private func queryRow(_ q: QueryRecord) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 8) {
+                Text(q.term).font(.headline).lineLimit(1)
+                Text(q.kind == "translate" ? "Translation" : "Explanation")
+                    .font(.caption2).padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+                    .foregroundStyle(.tint)
+                Spacer()
+                Text(q.date, format: .dateTime.month().day().hour().minute())
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            Text(q.result).font(.callout).foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.vertical, 5)
+    }
+
+    private func dialogueRow(_ d: SavedDialogue) -> some View {
+        DisclosureGroup {
+            ForEach(d.messages) { m in
+                HStack(alignment: .top, spacing: 8) {
+                    Text(m.role == "user" ? "You" : "Glotty")
+                        .font(.caption2).bold()
+                        .foregroundStyle(m.role == "user" ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                        .frame(width: 46, alignment: .leading)
+                    Text(m.text).font(.callout).textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.vertical, 2)
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(d.title).font(.headline).lineLimit(1)
+                Text("\(d.messages.count) messages · \(d.date.formatted(.dateTime.month().day().hour().minute()))")
+                    .font(.caption2).foregroundStyle(.secondary)
             }
         }
     }

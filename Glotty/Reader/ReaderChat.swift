@@ -17,7 +17,21 @@ final class ReaderChat: ObservableObject {
     @Published var input: String = ""
     @Published var isStreaming = false
 
+    // Book the conversation is about — used to persist the thread.
+    private var bookID: String?
+    private var bookTitle = ""
+    private var bookPath: String?
+    private var threadID = UUID()
+
     private var task: Task<Void, Never>?
+
+    /// Bind the chat to the open book; a different book starts a fresh thread.
+    func setBook(_ info: ReaderState.BookInfo?) {
+        if info?.id != bookID { reset() }
+        bookID = info?.id
+        bookTitle = info?.title ?? ""
+        bookPath = info?.path
+    }
 
     /// Attach a selection as the passage the conversation is about.
     func attach(_ text: String) {
@@ -55,6 +69,7 @@ final class ReaderChat: ObservableObject {
                 }
             }
             self?.isStreaming = false
+            self?.saveThread()
         }
     }
 
@@ -64,6 +79,21 @@ final class ReaderChat: ObservableObject {
         stop()
         messages.removeAll()
         context = nil
+        threadID = UUID()
+    }
+
+    /// Persist the current thread into the book's saved dialogues.
+    private func saveThread() {
+        guard let bookID, !messages.isEmpty,
+              messages.contains(where: { $0.role == .assistant && !$0.text.isEmpty }) else { return }
+        let title = messages.first(where: { $0.role == .user })?.text ?? context ?? "Conversation"
+        let dialogue = SavedDialogue(
+            id: threadID,
+            title: String(title.prefix(70)),
+            date: Date(),
+            context: context,
+            messages: messages.map { SavedMessage(role: $0.role == .user ? "user" : "assistant", text: $0.text) })
+        BookLibrary.saveDialogue(bookID: bookID, title: bookTitle, path: bookPath, dialogue)
     }
 
     private func buildPrompt() -> String {

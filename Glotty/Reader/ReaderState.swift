@@ -72,6 +72,17 @@ final class ReaderState: ObservableObject {
     private var pdfURL: URL?
     private var bookURL: URL?
 
+    struct BookInfo: Equatable { let id: String; let title: String; let path: String? }
+    /// Identity of the open book/PDF, for the chat + library.
+    var bookInfo: BookInfo? {
+        if let b = book { return BookInfo(id: b.identifier, title: b.title, path: bookURL?.path) }
+        if let u = pdfURL {
+            return BookInfo(id: "pdf:" + u.lastPathComponent,
+                            title: u.deletingPathExtension().lastPathComponent, path: u.path)
+        }
+        return nil
+    }
+
     /// Capture context for a look-up fired from the reader, so the popup can
     /// record the result into `BookLibrary` and underline the term.
     func queryCapture(term: String, kind: String) -> ReaderMark.Capture? {

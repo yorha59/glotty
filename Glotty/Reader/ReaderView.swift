@@ -14,9 +14,13 @@ struct ReaderView: View {
     @State private var chatDragStart: Double?
 
     var body: some View {
-        if let book = state.book { epubBody(book) }
-        else if let pdf = state.pdf { pdfBody(pdf) }
-        else { emptyState }
+        Group {
+            if let book = state.book { epubBody(book) }
+            else if let pdf = state.pdf { pdfBody(pdf) }
+            else { emptyState }
+        }
+        .onAppear { chat.setBook(state.bookInfo) }
+        .onChange(of: state.bookInfo) { _, info in chat.setBook(info) }
     }
 
     private func epubBody(_ book: EPUBBook) -> some View {
@@ -50,6 +54,12 @@ struct ReaderView: View {
                     }
                 )
                 .id(book.identifier)   // fresh web view per book
+            }
+            if showChat {
+                chatResizeHandle
+                ReaderChatPanel(chat: chat, width: CGFloat(chatWidth),
+                                onClose: { withAnimation(.easeInOut(duration: 0.18)) { showChat = false } })
+                    .transition(.move(edge: .trailing))
             }
         }
     }
@@ -208,6 +218,11 @@ struct ReaderView: View {
             }
             .help("Text & colors")
             .popover(isPresented: $showCustomize, arrowEdge: .bottom) { customizePanel }
+
+            Button { withAnimation(.easeInOut(duration: 0.18)) { showChat.toggle() } } label: {
+                Image(systemName: showChat ? "bubble.left.and.bubble.right.fill" : "bubble.left.and.bubble.right")
+            }
+            .help("Toggle chat")
         }
         .buttonStyle(.borderless)
         .padding(.horizontal, 12)

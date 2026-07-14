@@ -12,8 +12,24 @@ struct QueryRecord: Codable, Identifiable, Equatable {
     var date: Date
 }
 
-/// A book the user has opened, plus everything recorded about it. Saved
-/// dialogues are added in a later phase.
+/// One message in a saved reader chat.
+struct SavedMessage: Codable, Identifiable, Equatable {
+    var id = UUID()
+    let role: String        // "user" | "assistant"
+    let text: String
+}
+
+/// A saved chat thread about a book (from the reader's chat panel).
+struct SavedDialogue: Codable, Identifiable, Equatable {
+    var id = UUID()
+    var title: String
+    var date: Date
+    var context: String?
+    var messages: [SavedMessage]
+}
+
+/// A book the user has opened, plus everything recorded about it. `dialogues`
+/// is optional so records written before it existed still decode.
 struct BookRecord: Codable, Identifiable {
     var id: String { bookID }
     let bookID: String
@@ -21,6 +37,9 @@ struct BookRecord: Codable, Identifiable {
     var path: String?
     var lastOpened: Date
     var queries: [QueryRecord] = []
+    var dialogues: [SavedDialogue]?
+
+    var dialogueList: [SavedDialogue] { dialogues ?? [] }
 }
 
 /// On-disk library: one JSON file per book under Application Support, so both
@@ -87,6 +106,19 @@ enum BookLibrary {
         } else {
             rec.queries.append(QueryRecord(term: term, kind: kind, result: result, chapter: chapter, date: Date()))
         }
+        save(rec)
+    }
+
+    /// Upsert a chat thread into a book's saved dialogues (by dialogue id).
+    static func saveDialogue(bookID: String, title: String, path: String?, _ dialogue: SavedDialogue) {
+        guard !dialogue.messages.isEmpty else { return }
+        var rec = load(bookID) ?? BookRecord(bookID: bookID, title: title, path: path, lastOpened: Date())
+        rec.title = title
+        rec.path = path
+        var list = rec.dialogues ?? []
+        if let i = list.firstIndex(where: { $0.id == dialogue.id }) { list[i] = dialogue }
+        else { list.append(dialogue) }
+        rec.dialogues = list
         save(rec)
     }
 
