@@ -20,3 +20,13 @@ protocol ReaderServices: AnyObject {
 enum ReaderCore {
     static var services: ReaderServices?
 }
+
+/// Shared IPC constants for the standalone Reader ↔ Glotty channel (both targets
+/// compile `Reader/`, so this stays in one place).
+enum ReaderIPC {
+    /// Distributed notification the Reader app posts; Glotty observes it and
+    /// runs the matching popup. userInfo: `["action": "explain"|"translate",
+    /// "text": <selection>]`.
+    static let requestName = Notification.Name("com.ruojunye.glotty.reader.request")
+    static let glottyBundleID = "com.ruojunye.glotty"
+}

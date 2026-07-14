@@ -133,6 +133,35 @@ targets:
         CODE_SIGN_IDENTITY: "Apple Development"
         DEVELOPMENT_TEAM: "47D8DFFZQ4"
 
+  # Standalone reader app. Reuses Glotty/Reader (no duplication); the AI
+  # actions are served by a running Glotty over IPC (see GlottyReader/).
+  GlottyReader:
+    type: application
+    platform: macOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: GlottyReader
+        excludes:
+          - Info.plist
+      - path: Glotty/Reader
+      - path: Glotty/Assets.xcassets
+    settings:
+      base:
+        PRODUCT_NAME: "Glotty Reader"
+        PRODUCT_BUNDLE_IDENTIFIER: com.ruojunye.glotty.reader
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: GlottyReader/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_CFBundleDisplayName: "Glotty Reader"
+        INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026"
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        DEVELOPMENT_TEAM: "47D8DFFZQ4"
+
   GlottyTests:
     type: bundle.unit-test
     platform: macOS
@@ -165,6 +194,12 @@ schemes:
     build:
       targets:
         GlottyLab: all
+    run:
+      config: Debug
+  GlottyReader:
+    build:
+      targets:
+        GlottyReader: all
     run:
       config: Debug
   # Mac App Store build. Pick this scheme in Xcode (or

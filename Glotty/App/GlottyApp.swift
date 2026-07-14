@@ -124,6 +124,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         dbg("applicationDidFinishLaunching START")
         // The reader talks to the core through this seam; in-process here.
         ReaderCore.services = GlottyReaderServices()
+        // Also serve the standalone Glotty Reader app: it posts look-up /
+        // translate requests over a distributed notification; we run the popup.
+        DistributedNotificationCenter.default().addObserver(
+            self, selector: #selector(handleReaderIPCRequest(_:)),
+            name: ReaderIPC.requestName, object: nil)
         // Apply the saved appearance (Light / Dark / System) before any
         // window renders so onboarding + popups open in the chosen theme.
         Theme.apply()
@@ -332,6 +337,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func openReader() {
         dbg("openReader invoked (menu bar)")
         ReaderWindowController.shared.openBook()
+    }
+
+    /// The standalone Reader app relays look-up / translate here (see `ReaderIPC`).
+    @objc private func handleReaderIPCRequest(_ note: Notification) {
+        let action = note.userInfo?["action"] as? String
+        guard let text = (note.userInfo?["text"] as? String), !text.isEmpty else { return }
+        dbg("reader IPC request: \(action ?? "?") — \(text.prefix(40))")
+        handleFire(mode: action == "translate" ? .translate : .explain, providedText: text)
     }
 
     @objc private func openRecentBook(_ sender: NSMenuItem) {
