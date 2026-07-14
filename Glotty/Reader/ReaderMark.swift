@@ -10,4 +10,17 @@ import Foundation
 @MainActor
 enum ReaderMark {
     static var pending: String?
+
+    /// Context for capturing a reader look-up into the library and underlining
+    /// it. The reader sets this before firing the popup; the popup consumes it
+    /// when the result finalizes (`term` must match the popup's source text).
+    struct Capture {
+        let bookID: String
+        let title: String
+        let path: String?
+        let term: String
+        let kind: String        // "explain" | "translate"
+        let chapter: Int?
+    }
+    static var capture: Capture?
 }

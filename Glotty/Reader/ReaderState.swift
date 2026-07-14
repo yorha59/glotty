@@ -70,6 +70,22 @@ final class ReaderState: ObservableObject {
     @Published var pdfTOC: [PDFTOCItem] = []
     @Published var pdfPage: Int = 0 { didSet { savePDFPage() } }
     private var pdfURL: URL?
+    private var bookURL: URL?
+
+    /// Capture context for a look-up fired from the reader, so the popup can
+    /// record the result into `BookLibrary` and underline the term.
+    func queryCapture(term: String, kind: String) -> ReaderMark.Capture? {
+        if let b = book {
+            return ReaderMark.Capture(bookID: b.identifier, title: b.title, path: bookURL?.path,
+                                      term: term, kind: kind, chapter: chapterIndex)
+        }
+        if let u = pdfURL {
+            return ReaderMark.Capture(bookID: "pdf:" + u.lastPathComponent,
+                                      title: u.deletingPathExtension().lastPathComponent, path: u.path,
+                                      term: term, kind: kind, chapter: pdfPage)
+        }
+        return nil
+    }
 
     // Inline PDF translations: bubbles anchored under a selection, persisted
     // per document. `pendingPDFTranslation` is the request the reader's
@@ -188,8 +204,10 @@ final class ReaderState: ObservableObject {
             let b = try EPUBBook.open(url)
             pdf = nil; pdfTOC = []
             book = b
+            bookURL = url
             openError = nil
             lookedUp = Self.loadWords(b.identifier)
+            BookLibrary.touch(bookID: b.identifier, title: b.title, path: url.path)
             chapterIndex = min(max(0, UserDefaults.standard.integer(forKey: Self.progressKey(b.identifier))),
                                b.chapters.count - 1)
         } catch {

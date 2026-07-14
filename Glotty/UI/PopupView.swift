@@ -3473,12 +3473,23 @@ struct PopupView: View {
         )
     }
 
+    /// When this popup was opened from the reader for `sourceText`, record the
+    /// answer into the book library and underline the term.
+    private func captureReaderQuery(kind: String, result: String) {
+        guard let cap = ReaderMark.capture, cap.kind == kind, cap.term == sourceText else { return }
+        BookLibrary.addQuery(bookID: cap.bookID, title: cap.title, path: cap.path,
+                             term: cap.term, kind: kind, result: result, chapter: cap.chapter)
+        ReaderWindowController.shared.state.markLookedUp(cap.term)
+        ReaderMark.capture = nil
+    }
+
     private func translate(using session: TranslationSession) async {
         Self.dbg("translate begin — text='\(sourceText)' target=\(targetLang)")
         do {
             let response = try await session.translate(sourceText)
             translated = Self.flattenWhitespace(response.targetText)
             status = .ready
+            captureReaderQuery(kind: "translate", result: translated)
             elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
             Self.dbg("translate ok — '\(sourceText)' → '\(response.targetText)' in \(elapsedMs)ms")
 
@@ -3590,6 +3601,7 @@ struct PopupView: View {
                 }
             }
             explainStatus = .ready
+            captureReaderQuery(kind: "explain", result: explainText)
             elapsedMs = Int((CFAbsoluteTimeGetCurrent() - startedAt) * 1000)
             Self.dbg("explain ok — \(explainText.count) chars in \(elapsedMs)ms")
 

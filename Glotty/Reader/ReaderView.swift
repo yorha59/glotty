@@ -41,9 +41,10 @@ struct ReaderView: View {
                     fontCSS: state.font.css ?? "",
                     lookedUp: state.lookedUp,
                     onLookup: { word in
-                        // Tapping only looks up the meaning; marking is deliberate
-                        // (the popup's Mark button). Arm it for this word.
+                        // Tapping looks up the meaning; the result is captured
+                        // into the library + the word underlined (see the popup).
                         ReaderMark.pending = word
+                        ReaderMark.capture = state.queryCapture(term: word, kind: "explain")
                         ReaderCore.services?.lookUp(word)
                     }
                 )
@@ -68,12 +69,15 @@ struct ReaderView: View {
                     page: $state.pdfPage,
                     translations: [],
                     onLookup: { word in
+                        ReaderMark.pending = word
+                        ReaderMark.capture = state.queryCapture(term: word, kind: "explain")
                         ReaderCore.services?.lookUp(word)
                     },
                     onTranslate: { _, _, text in
                         // Show the result in Glotty's standard translate popup (a
                         // floating window) rather than an inline band — the popup
                         // owns the working Apple-translation path.
+                        ReaderMark.capture = state.queryCapture(term: text, kind: "translate")
                         ReaderCore.services?.translate(text)
                     },
                     onAsk: { text in
