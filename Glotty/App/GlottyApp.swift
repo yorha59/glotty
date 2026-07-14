@@ -347,6 +347,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         handleFire(mode: action == "translate" ? .translate : .explain, providedText: text)
     }
 
+    @objc private func openLibrary() {
+        dbg("openLibrary invoked (menu bar)")
+        LibraryWindowController.shared.show()
+    }
+
     @objc private func openRecentBook(_ sender: NSMenuItem) {
         guard let url = sender.representedObject as? URL else { return }
         dbg("openRecentBook — \(url.lastPathComponent)")
@@ -480,6 +485,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         reader.submenu = readerMenu
         menu.addItem(reader)
+
+        let library = NSMenuItem(title: "Library…".t, action: #selector(openLibrary), keyEquivalent: "")
+        library.target = self
+        library.image = NSImage(systemSymbolName: "books.vertical", accessibilityDescription: nil)
+        menu.addItem(library)
 
         // Model submenu — switch the active provider's model inline (built from
         // the same registry the chat's set_setting uses). Omitted when the

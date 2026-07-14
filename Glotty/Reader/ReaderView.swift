@@ -32,6 +32,7 @@ struct ReaderView: View {
                 Divider()
                 EPUBWebView(
                     book: book,
+                    bookID: book.identifier,
                     chapterIndex: state.chapterIndex,
                     fontScale: state.fontScale,
                     bg: state.bgColorHex,

@@ -8,6 +8,7 @@ import WebKit
 /// fonts) resolve via file URLs scoped to the book's extraction directory.
 struct EPUBWebView: NSViewRepresentable {
     let book: EPUBBook
+    let bookID: String
     let chapterIndex: Int
     let fontScale: Double
     let bg: String
@@ -18,7 +19,7 @@ struct EPUBWebView: NSViewRepresentable {
     let lookedUp: Set<String>
     let onLookup: (String) -> Void
 
-    func makeCoordinator() -> Coordinator { Coordinator(onLookup: onLookup) }
+    func makeCoordinator() -> Coordinator { Coordinator(onLookup: onLookup, bookID: bookID) }
 
     func makeNSView(context: Context) -> WKWebView {
         let cfg = WKWebViewConfiguration()
@@ -53,6 +54,8 @@ struct EPUBWebView: NSViewRepresentable {
     final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         weak var webView: WKWebView?
         var onLookup: (String) -> Void
+        let bookID: String
+        private var previewPopover: NSPopover?
         var loadedChapter = -1
         struct Style {
             var scale = 1.0, lineHeight = 1.65, letterSpacing = 0.0
@@ -61,7 +64,9 @@ struct EPUBWebView: NSViewRepresentable {
         var style = Style()
         var words: [String] = []
 
-        init(onLookup: @escaping (String) -> Void) { self.onLookup = onLookup }
+        init(onLookup: @escaping (String) -> Void, bookID: String) {
+            self.onLookup = onLookup; self.bookID = bookID
+        }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             applyStyle(); applyMarks()
@@ -86,8 +91,32 @@ struct EPUBWebView: NSViewRepresentable {
         }
 
         func userContentController(_ ucc: WKUserContentController, didReceive message: WKScriptMessage) {
-            guard let d = message.body as? [String: Any], let word = d["word"] as? String else { return }
-            onLookup(word)
+            guard let d = message.body as? [String: Any] else { return }
+            if (d["type"] as? String) == "preview", let term = d["term"] as? String {
+                let x = (d["x"] as? Double) ?? 0, y = (d["y"] as? Double) ?? 0
+                showPreview(term: term, at: CGPoint(x: x, y: y))
+                return
+            }
+            if let word = d["word"] as? String { onLookup(word) }
+        }
+
+        /// Popover previewing the saved look-up for an underlined word. Falls
+        /// back to a fresh look-up if nothing was recorded.
+        private func showPreview(term: String, at pt: CGPoint) {
+            guard let web = webView else { return }
+            guard let record = BookLibrary.record(bookID: bookID, term: term) else { onLookup(term); return }
+            previewPopover?.performClose(nil)
+            let pop = NSPopover()
+            pop.behavior = .transient
+            let term = term
+            pop.contentViewController = NSHostingController(
+                rootView: QueryPreviewView(record: record) { [weak self] in
+                    self?.previewPopover?.performClose(nil)
+                    self?.onLookup(term)
+                })
+            pop.show(relativeTo: NSRect(x: pt.x, y: pt.y, width: 1, height: 1),
+                     of: web, preferredEdge: .maxY)
+            previewPopover = pop
         }
     }
 
@@ -147,6 +176,14 @@ struct EPUBWebView: NSViewRepresentable {
       };
 
       document.addEventListener('click', function (e) {
+        // Click on an already-looked-up (underlined) word → preview the record.
+        var seen = e.target && e.target.closest ? e.target.closest('span.glotty-seen') : null;
+        if (seen) {
+          window.webkit.messageHandlers.glotty.postMessage(
+            { type: 'preview', term: seen.textContent, x: e.clientX, y: e.clientY });
+          e.preventDefault(); e.stopPropagation();
+          return;
+        }
         var r = document.caretRangeFromPoint ? document.caretRangeFromPoint(e.clientX, e.clientY) : null;
         if (!r) return;
         var node = r.startContainer;
@@ -156,8 +193,40 @@ struct EPUBWebView: NSViewRepresentable {
         while (en < text.length && isWord(text[en])) en++;
         var word = text.slice(s, en).trim();
         if (!/\p{L}/u.test(word)) return;   // need a letter — ignore lone punctuation
-        window.webkit.messageHandlers.glotty.postMessage({ word: word });
+        window.webkit.messageHandlers.glotty.postMessage({ type: 'lookup', word: word });
       }, true);
     })();
     """#
+}
+
+/// The click-preview shown for an underlined (already-looked-up) word.
+struct QueryPreviewView: View {
+    let record: QueryRecord
+    let onLookAgain: () -> Void
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text(record.term).font(.headline).lineLimit(2)
+                Text(record.kind == "translate" ? "Translation" : "Explanation")
+                    .font(.caption2).padding(.horizontal, 7).padding(.vertical, 2)
+                    .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+                    .foregroundStyle(.tint)
+                Spacer(minLength: 0)
+            }
+            ScrollView {
+                Text(record.result)
+                    .font(.callout).textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxHeight: 240)
+            HStack {
+                Text(record.date, format: .dateTime.month().day().hour().minute())
+                    .font(.caption2).foregroundStyle(.secondary)
+                Spacer()
+                Button("Look up again", action: onLookAgain).font(.caption)
+            }
+        }
+        .padding(14)
+        .frame(width: 340)
+    }
 }
