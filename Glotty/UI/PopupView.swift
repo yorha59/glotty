@@ -3476,11 +3476,25 @@ struct PopupView: View {
     /// When this popup was opened from the reader for `sourceText`, record the
     /// answer into the book library and underline the term.
     private func captureReaderQuery(kind: String, result: String) {
-        guard let cap = ReaderMark.capture, cap.kind == kind, cap.term == sourceText else { return }
-        BookLibrary.addQuery(bookID: cap.bookID, title: cap.title, path: cap.path,
-                             term: cap.term, kind: kind, result: result, chapter: cap.chapter)
-        ReaderWindowController.shared.state.markLookedUp(cap.term)
-        ReaderMark.capture = nil
+        // Explain can fire an empty first pass before the real stream; don't let
+        // it consume the capture context.
+        guard !result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        // In-process reader (menu-bar Glotty): record + underline locally.
+        if let cap = ReaderMark.capture, cap.kind == kind, cap.term == sourceText {
+            BookLibrary.addQuery(bookID: cap.bookID, title: cap.title, path: cap.path,
+                                 term: cap.term, kind: kind, result: result, chapter: cap.chapter)
+            ReaderWindowController.shared.state.markLookedUp(cap.term)
+            ReaderMark.capture = nil
+            return
+        }
+        // Standalone Reader app (query arrived over IPC): write to the shared
+        // library here, then ping the Reader to underline in its own window.
+        if let cap = ReaderIPCBridge.pendingCapture, cap.kind == kind, cap.term == sourceText {
+            BookLibrary.addQuery(bookID: cap.bookID, title: cap.title, path: cap.path,
+                                 term: cap.term, kind: kind, result: result, chapter: cap.chapter)
+            ReaderIPCBridge.notifyRecorded(cap)
+            ReaderIPCBridge.pendingCapture = nil
+        }
     }
 
     private func translate(using session: TranslationSession) async {

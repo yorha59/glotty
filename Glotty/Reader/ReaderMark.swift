@@ -24,3 +24,19 @@ enum ReaderMark {
     }
     static var capture: Capture?
 }
+
+extension ReaderMark.Capture {
+    /// Encode for a distributed-notification userInfo (all string values).
+    var userInfo: [String: String] {
+        var d = ["bookID": bookID, "title": title, "term": term, "kind": kind]
+        if let path { d["path"] = path }
+        if let chapter { d["chapter"] = String(chapter) }
+        return d
+    }
+    init?(userInfo d: [AnyHashable: Any]) {
+        guard let bookID = d["bookID"] as? String, let title = d["title"] as? String,
+              let term = d["term"] as? String, let kind = d["kind"] as? String else { return nil }
+        self.init(bookID: bookID, title: title, path: d["path"] as? String,
+                  term: term, kind: kind, chapter: (d["chapter"] as? String).flatMap { Int($0) })
+    }
+}

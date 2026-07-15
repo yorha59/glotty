@@ -28,5 +28,11 @@ enum ReaderIPC {
     /// runs the matching popup. userInfo: `["action": "explain"|"translate",
     /// "text": <selection>]`.
     static let requestName = Notification.Name("com.ruojunye.glotty.reader.request")
+    /// Glotty → Reader: the finished look-up/translate result to record + underline.
+    static let resultName = Notification.Name("com.ruojunye.glotty.reader.result")
+    /// Reader → Glotty: a chat prompt; Glotty streams the reply back.
+    static let chatRequestName = Notification.Name("com.ruojunye.glotty.reader.chat.request")
+    static let chatChunkName   = Notification.Name("com.ruojunye.glotty.reader.chat.chunk")
+    static let chatDoneName    = Notification.Name("com.ruojunye.glotty.reader.chat.done")
     static let glottyBundleID = "com.ruojunye.glotty"
 }

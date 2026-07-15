@@ -1,40 +1,98 @@
 import AppKit
 
-/// `ReaderServices` for the standalone Reader app: relays look-up / translate
-/// requests to a running Glotty over a distributed notification. Glotty then
-/// shows its explain / translate popup (a floating window over the reader).
-///
-/// Distributed notifications aren't queued, so Glotty must be running to
-/// receive them — if it isn't, we launch it and retry once after it registers.
-/// Chat streaming needs a return channel and lands in a later phase (XPC).
+/// `ReaderServices` for the standalone Reader app. Relays to a running Glotty
+/// over distributed notifications and handles the replies:
+///   • look-up / translate → Glotty shows its popup; when it finishes it echoes
+///     the result back (`resultName`), which we record into `BookLibrary` and
+///     underline in our own reader window.
+///   • chat → we post the prompt (`chatRequestName`) and stream the reply from
+///     the `chatChunk` / `chatDone` notifications Glotty posts back.
 @MainActor
-final class IPCReaderServices: ReaderServices {
+final class IPCReaderServices: NSObject, ReaderServices {
+    private var chatConts: [String: AsyncThrowingStream<String, Error>.Continuation] = [:]
+    private var chatAccum: [String: String] = [:]
+
+    override init() {
+        super.init()
+        let nc = DistributedNotificationCenter.default()
+        nc.addObserver(self, selector: #selector(onResult(_:)), name: ReaderIPC.resultName, object: nil)
+        nc.addObserver(self, selector: #selector(onChatChunk(_:)), name: ReaderIPC.chatChunkName, object: nil)
+        nc.addObserver(self, selector: #selector(onChatDone(_:)), name: ReaderIPC.chatDoneName, object: nil)
+    }
+
+    // MARK: look-up / translate
+
     func lookUp(_ text: String) { send(action: "explain", text: text) }
     func translate(_ text: String) { send(action: "translate", text: text) }
-
-    // Streaming chat over IPC is a later phase; nil → the panel shows the
-    // "no model configured" line for now.
-    func chatStream(prompt: String) -> AsyncThrowingStream<String, Error>? { nil }
 
     private func send(action: String, text: String) {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
-        let post = {
+        var info: [String: String] = ["action": action, "text": text]
+        // Carry the book context so Glotty can echo the result back for capture.
+        if let cap = ReaderMark.capture, cap.term == text {
+            info.merge(cap.userInfo) { a, _ in a }
+        }
+        ReaderMark.capture = nil
+        post(ReaderIPC.requestName, info)
+    }
+
+    @objc private func onResult(_ note: Notification) {
+        // Glotty already wrote the answer to the shared library; just underline.
+        guard let info = note.userInfo, let cap = ReaderMark.Capture(userInfo: info) else { return }
+        ReaderWindowController.shared.state.markLookedUp(cap.term)
+    }
+
+    // MARK: chat
+
+    func chatStream(prompt: String) -> AsyncThrowingStream<String, Error>? {
+        let reqID = UUID().uuidString
+        return AsyncThrowingStream { continuation in
+            chatConts[reqID] = continuation
+            continuation.onTermination = { [weak self] _ in
+                Task { @MainActor in self?.chatConts[reqID] = nil }
+            }
+            post(ReaderIPC.chatRequestName, ["requestID": reqID, "prompt": prompt])
+        }
+    }
+
+    @objc private func onChatChunk(_ note: Notification) {
+        guard let id = note.userInfo?["requestID"] as? String,
+              let delta = note.userInfo?["delta"] as? String else { return }
+        if (note.userInfo?["reset"] as? String) == "1" { chatAccum[id] = delta }
+        else { chatAccum[id, default: ""] += delta }
+        chatConts[id]?.yield(chatAccum[id] ?? delta)
+    }
+
+    @objc private func onChatDone(_ note: Notification) {
+        guard let id = note.userInfo?["requestID"] as? String else { return }
+        if let err = note.userInfo?["error"] as? String {
+            chatConts[id]?.finish(throwing: NSError(domain: "GlottyReader", code: 2,
+                                                    userInfo: [NSLocalizedDescriptionKey: err]))
+        } else {
+            chatConts[id]?.finish()
+        }
+        chatConts[id] = nil
+        chatAccum[id] = nil
+    }
+
+    // MARK: transport
+
+    /// Post to Glotty, launching it first if it isn't running (distributed
+    /// notifications aren't queued, so we wait for it to register).
+    private func post(_ name: Notification.Name, _ info: [String: String]) {
+        let fire = {
             DistributedNotificationCenter.default().postNotificationName(
-                ReaderIPC.requestName, object: nil,
-                userInfo: ["action": action, "text": text],
-                deliverImmediately: true)
+                name, object: nil, userInfo: info, deliverImmediately: true)
         }
         if isGlottyRunning {
-            post()
+            fire()
         } else if launchGlotty() {
-            // Give Glotty a moment to register its observer, then post once.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { post() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { fire() }
         } else {
-            NSApp.presentError(NSError(
-                domain: "GlottyReader", code: 1,
+            NSApp.presentError(NSError(domain: "GlottyReader", code: 1,
                 userInfo: [NSLocalizedDescriptionKey:
-                    NSLocalizedString("Open the Glotty app to use look-up and translate.", comment: "")]))
+                    NSLocalizedString("Open the Glotty app to use look-up, translate, and chat.", comment: "")]))
         }
     }
 

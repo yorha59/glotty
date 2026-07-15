@@ -129,6 +129,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DistributedNotificationCenter.default().addObserver(
             self, selector: #selector(handleReaderIPCRequest(_:)),
             name: ReaderIPC.requestName, object: nil)
+        ReaderIPCBridge.startChatServer()
         // Apply the saved appearance (Light / Dark / System) before any
         // window renders so onboarding + popups open in the chosen theme.
         Theme.apply()
@@ -344,6 +345,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let action = note.userInfo?["action"] as? String
         guard let text = (note.userInfo?["text"] as? String), !text.isEmpty else { return }
         dbg("reader IPC request: \(action ?? "?") — \(text.prefix(40))")
+        // Stash the book context (if the standalone Reader sent one) so the
+        // popup can echo the result back for capture; nil for a plain selection.
+        ReaderIPCBridge.pendingCapture = ReaderMark.Capture(userInfo: note.userInfo ?? [:])
         handleFire(mode: action == "translate" ? .translate : .explain, providedText: text)
     }
 
