@@ -151,7 +151,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.ruojunye.glotty.reader
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: GlottyReader/Info.plist
-        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_APPICON_NAME: ReaderAppIcon
         INFOPLIST_KEY_CFBundleDisplayName: "Glotty Reader"
         INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026"
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
