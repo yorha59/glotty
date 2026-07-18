@@ -14,6 +14,11 @@ struct ReaderView: View {
     @State private var chatDragStart: Double?
     /// Live EPUB selection, mirrored out of the web view so ⌘T can act on it.
     @State private var epubSelection = ""
+    /// Paged-layout position within the current chapter.
+    @State private var epubPage = 0
+    @State private var epubPageCount = 1
+    /// Set when the reader pages backwards into a chapter, so it opens at the end.
+    @State private var landOnLastPage = false
 
     var body: some View {
         Group {
@@ -59,10 +64,15 @@ struct ReaderView: View {
                         chat.attach(text)
                         withAnimation(.easeInOut(duration: 0.18)) { showChat = true }
                     },
-                    onSelectionChange: { epubSelection = $0 }
+                    onSelectionChange: { epubSelection = $0 },
+                    page: $epubPage,
+                    pageCount: $epubPageCount,
+                    onChapterFlip: { dir in flipChapter(book, dir) },
+                    landOnLastPage: landOnLastPage
                 )
                 .id(book.identifier)   // fresh web view per book
                 .background(translateShortcut)
+                pageBar(book)
             }
             if showChat {
                 chatResizeHandle
@@ -71,6 +81,48 @@ struct ReaderView: View {
                     .transition(.move(edge: .trailing))
             }
         }
+    }
+
+    /// Page counter under the text, Books-style: position in the chapter and
+    /// how much of it is left. Paging past either end moves chapter.
+    private func pageBar(_ book: EPUBBook) -> some View {
+        let left = max(0, epubPageCount - epubPage - 1)
+        return HStack(spacing: 12) {
+            Button { turnPage(book, -1) } label: {
+                Image(systemName: "chevron.left")
+            }
+            .buttonStyle(.plain)
+            .disabled(epubPage == 0 && state.chapterIndex == 0)
+            Spacer()
+            Text("\(epubPage + 1) of \(epubPageCount)")
+            Spacer()
+            Text(left == 0 ? "End of chapter" : "^[\(left) page](inflect: true) left in chapter")
+            Spacer()
+            Button { turnPage(book, 1) } label: {
+                Image(systemName: "chevron.right")
+            }
+            .buttonStyle(.plain)
+            .disabled(epubPage >= epubPageCount - 1
+                      && state.chapterIndex >= book.chapters.count - 1)
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 6)
+    }
+
+    /// Turn one page, rolling over into the neighbouring chapter at the ends.
+    private func turnPage(_ book: EPUBBook, _ dir: Int) {
+        let next = epubPage + dir
+        if next < 0 || next >= epubPageCount { flipChapter(book, dir) } else { epubPage = next }
+    }
+
+    private func flipChapter(_ book: EPUBBook, _ dir: Int) {
+        let next = state.chapterIndex + dir
+        guard book.chapters.indices.contains(next) else { return }
+        landOnLastPage = dir < 0     // arriving backwards → open at the end
+        epubPage = 0
+        state.chapterIndex = next
     }
 
     /// Translate a selected passage in Glotty's popup, recording it against the

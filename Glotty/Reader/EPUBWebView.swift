@@ -24,6 +24,19 @@ struct EPUBWebView: NSViewRepresentable {
     /// Fires whenever the selection changes so the window can offer a
     /// keyboard path (⌘T) for the same action the chip exposes.
     let onSelectionChange: (String) -> Void
+    /// Current page within the chapter, and how many there are. Two-way: the
+    /// web view reports what it laid out, and writing a new value pages there.
+    @Binding var page: Int
+    @Binding var pageCount: Int
+    /// Paging past either end of a chapter — `dir` is +1 or -1.
+    let onChapterFlip: (Int) -> Void
+    /// Where to land after a chapter load: the end, when the reader arrived by
+    /// paging backwards.
+    let landOnLastPage: Bool
+
+    /// Side margin around the text, applied to the view rather than in CSS so
+    /// it survives horizontal paging.
+    private static let pageMargin: CGFloat = 44
 
     func makeCoordinator() -> Coordinator { Coordinator(onLookup: onLookup, bookID: bookID) }
 
@@ -41,14 +54,19 @@ struct EPUBWebView: NSViewRepresentable {
 
         // Web view + a click-through overlay that hosts the selection chip, so
         // the chip floats above the text without blocking selection elsewhere.
+        // Both are inset by the page margin: the paged layout scrolls the text
+        // horizontally, so a CSS margin would only apply to the first page —
+        // insetting the view itself keeps the margin on every page. The
+        // container carries the book's background so the inset isn't a gap.
         let container = NSView()
+        container.wantsLayer = true
         let overlay = PassthroughView()
         for v in [web, overlay] as [NSView] {
             v.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(v)
             NSLayoutConstraint.activate([
-                v.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-                v.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+                v.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: Self.pageMargin),
+                v.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -Self.pageMargin),
                 v.topAnchor.constraint(equalTo: container.topAnchor),
                 v.bottomAnchor.constraint(equalTo: container.bottomAnchor),
             ])
@@ -67,15 +85,23 @@ struct EPUBWebView: NSViewRepresentable {
     func updateNSView(_ container: NSView, context: Context) {
         let c = context.coordinator
         guard let web = c.webView else { return }
+        container.layer?.backgroundColor = NSColor(Color(readerHex: bg)).cgColor
         c.onLookup = onLookup
         c.onTranslate = onTranslate
         c.onAsk = onAsk
         c.onSelectionChange = onSelectionChange
+        c.onChapterFlip = onChapterFlip
+        let pageB = $page, countB = $pageCount
+        c.onPagination = { p, n in
+            if pageB.wrappedValue != p { pageB.wrappedValue = p }
+            if countB.wrappedValue != n { countB.wrappedValue = n }
+        }
         c.style = Coordinator.Style(scale: fontScale, lineHeight: lineHeight,
                                     letterSpacing: letterSpacing, bg: bg, fg: fg, font: fontCSS)
         c.words = lookedUp.sorted()   // stable order — the dirty check compares it
         if c.loadedChapter != chapterIndex, book.chapters.indices.contains(chapterIndex) {
             c.loadedChapter = chapterIndex
+            c.pendingLanding = landOnLastPage ? -1 : 0
             // Drop the old chapter's selection, else the chip stays floating over
             // the new text and Translate/⌘T would act on the previous chapter.
             c.resetSelection()
@@ -84,6 +110,7 @@ struct EPUBWebView: NSViewRepresentable {
         } else {
             c.applyStyle()
             c.applyMarks()
+            c.syncPage(page)
         }
     }
 
@@ -95,6 +122,13 @@ struct EPUBWebView: NSViewRepresentable {
         var onTranslate: (String) -> Void = { _ in }
         var onAsk: (String) -> Void = { _ in }
         var onSelectionChange: (String) -> Void = { _ in }
+        var onPagination: (Int, Int) -> Void = { _, _ in }
+        var onChapterFlip: (Int) -> Void = { _ in }
+        /// Page to land on once the next chapter finishes loading; -1 = the end.
+        var pendingLanding: Int?
+        /// Last page the web view reported, so a state round-trip doesn't
+        /// re-issue a scroll it already performed.
+        private var reportedPage = 0
         /// Text of the live selection — what the chip and ⌘T act on.
         private var pendingSelection = ""
         let bookID: String
@@ -119,7 +153,21 @@ struct EPUBWebView: NSViewRepresentable {
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             // Fresh document — nothing of ours survived, so force a re-apply.
             appliedStyle = nil; appliedWords = nil
-            applyStyle(); applyMarks()
+            reportedPage = 0
+            applyStyle(); applyMarks()   // applyStyle paginates
+            // Queued after the two above, so the layout exists by the time we land.
+            let landing = pendingLanding ?? 0
+            pendingLanding = nil
+            webView.evaluateJavaScript(
+                landing < 0 ? "__glottyGoto(__glottyPages() - 1)" : "__glottyGoto(\(landing))",
+                completionHandler: nil)
+        }
+
+        /// Page the web view to `p` when SwiftUI asks for a page it isn't on.
+        func syncPage(_ p: Int) {
+            guard p != reportedPage else { return }
+            reportedPage = p
+            webView?.evaluateJavaScript("__glottyGoto(\(p))", completionHandler: nil)
         }
 
         func applyStyle() {
@@ -149,6 +197,16 @@ struct EPUBWebView: NSViewRepresentable {
             if (d["type"] as? String) == "preview", let term = d["term"] as? String {
                 let x = (d["x"] as? Double) ?? 0, y = (d["y"] as? Double) ?? 0
                 showPreview(term: term, at: CGPoint(x: x, y: y))
+                return
+            }
+            if (d["type"] as? String) == "pagination" {
+                let p = (d["page"] as? Int) ?? 0, n = (d["pages"] as? Int) ?? 1
+                reportedPage = p
+                onPagination(p, max(1, n))
+                return
+            }
+            if (d["type"] as? String) == "chapterFlip" {
+                onChapterFlip((d["dir"] as? Int) ?? 1)
                 return
             }
             if (d["type"] as? String) == "selection" {
@@ -244,20 +302,137 @@ struct EPUBWebView: NSViewRepresentable {
     (function () {
       if (window.__glottyReady) return; window.__glottyReady = true;
 
+      // Paged layout, Apple-Books style: `html` is the fixed frame (padding =
+      // the page margin, clips the overflow), `body` is a multi-column box that
+      // overflows horizontally and is paged with scrollLeft. Two columns once
+      // the window is wide enough, so a big window isn't mostly dead margin.
       window.__glottyStyle = function (scale, bg, fg, lineHeight, letterSpacing, font) {
         var st = document.getElementById('glotty-style');
         if (!st) { st = document.createElement('style'); st.id = 'glotty-style'; (document.head || document.documentElement).appendChild(st); }
         var ff = font ? ('font-family:' + font + ' !important;') : '';
         st.textContent =
-          'html,body{background:' + bg + ' !important; color:' + fg + ' !important;' + ff +
+          // `body` is the scroll container; `#glotty-page` inside it is the
+          // multi-column box. The split matters: a scroll container SCROLLS its
+          // overflow instead of fragmenting it into overflow columns, so the
+          // multicol box must not be the scroller itself.
+          'html{height:100%; overflow:hidden; margin:0; padding:0;' +
+          'background:' + bg + ' !important;}' +
+          'html,body{color:' + fg + ' !important;' + ff +
           'font-size:' + (scale * 100) + '% !important; line-height:' + lineHeight + ' !important;' +
           'letter-spacing:' + letterSpacing + 'em !important; -webkit-text-size-adjust:none;}' +
-          'body{max-width:42em; margin:0 auto; padding:28px 24px 64px;}' +
-          'img{max-width:100% !important; height:auto !important;}' +
+          'body{background:' + bg + ' !important; height:100%; margin:0; padding:0;' +
+          'overflow:hidden;}' +
+          'body::-webkit-scrollbar{display:none;}' +
+          '#glotty-page{height:100%; box-sizing:border-box; padding:30px 0 34px;' +
+          'column-fill:auto;}' +
+          // Nothing may outgrow one column-height, or it creates a blank page.
+          'img,svg,table{max-width:100% !important; max-height:100% !important; height:auto !important;}' +
           'a{color:#3b82f6;}' +
           'span.glotty-seen{text-decoration:underline; text-decoration-color:#3b82f6;' +
           'text-decoration-thickness:2px; text-underline-offset:3px; cursor:pointer;}';
+        __glottyWrap();
+        __glottyPaginate();
       };
+
+      // Move the chapter's content into our own multicol box. Done once per
+      // document — the EPUB's own CSS targets body, which we leave alone.
+      window.__glottyWrap = function () {
+        if (document.getElementById('glotty-page')) return;
+        var b = document.body; if (!b) return;
+        var wrap = document.createElement('div');
+        wrap.id = 'glotty-page';
+        while (b.firstChild) wrap.appendChild(b.firstChild);
+        b.appendChild(wrap);
+      };
+
+      // --- paging -----------------------------------------------------------
+      // A "page" is the visible body box; the next page starts one gap later,
+      // so advancing means scrolling by clientWidth + columnGap.
+      window.__glottyGap = function () {
+        var w = document.getElementById('glotty-page');
+        return w ? (parseFloat(getComputedStyle(w).columnGap) || 0) : 0;
+      };
+      window.__glottyStep = function () {
+        var b = document.body; if (!b) return 0;
+        return b.clientWidth + __glottyGap();
+      };
+      window.__glottyPages = function () {
+        var b = document.body; if (!b) return 1;
+        var step = __glottyStep(); if (step <= 0) return 1;
+        // P pages span P*clientWidth + (P-1)*gap  ==  P*step - gap.
+        return Math.max(1, Math.round((b.scrollWidth + __glottyGap()) / step));
+      };
+      window.__glottyPage = function () {
+        var b = document.body, step = __glottyStep();
+        return step > 0 ? Math.round(b.scrollLeft / step) : 0;
+      };
+      window.__glottyReport = function () {
+        window.webkit.messageHandlers.glotty.postMessage(
+          { type: 'pagination', page: __glottyPage(), pages: __glottyPages() });
+      };
+      window.__glottyGoto = function (page) {
+        var b = document.body; if (!b) return;
+        var p = Math.max(0, Math.min(__glottyPages() - 1, page));
+        b.scrollLeft = p * __glottyStep();
+        __glottyReport();
+      };
+      // Step one page; at either end hand off to Swift for a chapter change.
+      window.__glottyFlip = function (dir) {
+        var next = __glottyPage() + dir;
+        if (next < 0 || next >= __glottyPages()) {
+          window.webkit.messageHandlers.glotty.postMessage({ type: 'chapterFlip', dir: dir });
+          return;
+        }
+        __glottyGoto(next);
+      };
+      window.__glottyPaginate = function (keepPage) {
+        var wrap = document.getElementById('glotty-page'); if (!wrap) return;
+        var w = window.innerWidth;
+        // Two columns only when each still gets a readable measure.
+        var cols = w >= 820 ? 2 : 1;
+        var gap = Math.round(Math.min(76, Math.max(36, w * 0.045)));
+        wrap.style.columnGap = gap + 'px';
+        // Sized via column-WIDTH, never column-count: WebKit only produces the
+        // horizontal overflow columns paging depends on when the width is what's
+        // specified. `column-count:1` lays the chapter out as one 20000px-tall
+        // column that just gets clipped — i.e. most of the text disappears.
+        wrap.style.columnCount = 'auto';
+        var avail = wrap.clientWidth || w;
+        // floor, not ceil: the browser fits floor((W+gap)/(colW+gap)) columns,
+        // so rounding colW *up* by a pixel drops the count to one.
+        wrap.style.columnWidth =
+          Math.max(120, Math.floor((avail - gap * (cols - 1)) / cols)) + 'px';
+        if (typeof keepPage === 'number') __glottyGoto(keepPage); else __glottyReport();
+      };
+
+      document.addEventListener('keydown', function (e) {
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+          __glottyFlip(1); e.preventDefault();
+        } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+          __glottyFlip(-1); e.preventDefault();
+        }
+      }, true);
+
+      // Wheel / two-finger swipe pages instead of scrolling. Accumulated with a
+      // threshold + cooldown so one gesture doesn't fly through several pages.
+      var wheelAcc = 0, wheelLock = 0;
+      window.addEventListener('wheel', function (e) {
+        e.preventDefault();
+        var now = Date.now();
+        if (now < wheelLock) return;
+        wheelAcc += Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+        if (Math.abs(wheelAcc) < 60) return;
+        __glottyFlip(wheelAcc > 0 ? 1 : -1);
+        wheelAcc = 0; wheelLock = now + 320;
+      }, { passive: false });
+
+      var reflowTimer = null;
+      window.addEventListener('resize', function () {
+        clearTimeout(reflowTimer);
+        var at = __glottyPage();
+        reflowTimer = setTimeout(function () { __glottyPaginate(at); }, 120);
+      });
 
       window.__glottyMark = function (words) {
         document.querySelectorAll('span.glotty-seen').forEach(function (s) {
