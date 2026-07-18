@@ -59,6 +59,7 @@ struct ReaderView: View {
                         ReaderMark.capture = state.queryCapture(term: word, kind: "explain")
                         ReaderCore.services?.lookUp(word)
                     },
+                    onRemoveUnderline: { state.unmarkLookedUp($0) },
                     onTranslate: translateSelection,
                     onAsk: { text in
                         chat.attach(text)

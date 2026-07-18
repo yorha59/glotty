@@ -19,6 +19,8 @@ struct EPUBWebView: NSViewRepresentable {
     let fontCSS: String
     let lookedUp: Set<String>
     let onLookup: (String) -> Void
+    /// Clear a word's underline (from the preview popover's delete action).
+    let onRemoveUnderline: (String) -> Void
     let onTranslate: (String) -> Void
     let onAsk: (String) -> Void
     /// Fires whenever the selection changes so the window can offer a
@@ -87,6 +89,7 @@ struct EPUBWebView: NSViewRepresentable {
         guard let web = c.webView else { return }
         container.layer?.backgroundColor = NSColor(Color(readerHex: bg)).cgColor
         c.onLookup = onLookup
+        c.onRemoveUnderline = onRemoveUnderline
         c.onTranslate = onTranslate
         c.onAsk = onAsk
         c.onSelectionChange = onSelectionChange
@@ -119,6 +122,7 @@ struct EPUBWebView: NSViewRepresentable {
         weak var overlay: NSView?
         var chip: NSHostingView<SelectionChip>?
         var onLookup: (String) -> Void
+        var onRemoveUnderline: (String) -> Void = { _ in }
         var onTranslate: (String) -> Void = { _ in }
         var onAsk: (String) -> Void = { _ in }
         var onSelectionChange: (String) -> Void = { _ in }
@@ -285,10 +289,16 @@ struct EPUBWebView: NSViewRepresentable {
             pop.behavior = .transient
             let term = term
             pop.contentViewController = NSHostingController(
-                rootView: QueryPreviewView(record: record) { [weak self] in
-                    self?.previewPopover?.performClose(nil)
-                    self?.onLookup(term)
-                })
+                rootView: QueryPreviewView(
+                    record: record,
+                    onLookAgain: { [weak self] in
+                        self?.previewPopover?.performClose(nil)
+                        self?.onLookup(term)
+                    },
+                    onRemoveUnderline: { [weak self] in
+                        self?.previewPopover?.performClose(nil)
+                        self?.onRemoveUnderline(term)
+                    }))
             pop.show(relativeTo: NSRect(x: pt.x, y: pt.y, width: 1, height: 1),
                      of: web, preferredEdge: .maxY)
             previewPopover = pop
@@ -514,6 +524,8 @@ struct EPUBWebView: NSViewRepresentable {
 struct QueryPreviewView: View {
     let record: QueryRecord
     let onLookAgain: () -> Void
+    /// Clear this word's underline. The look-up stays in the library.
+    let onRemoveUnderline: () -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
@@ -530,10 +542,18 @@ struct QueryPreviewView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxHeight: 240)
-            HStack {
+            HStack(spacing: 10) {
                 Text(record.date, format: .dateTime.month().day().hour().minute())
                     .font(.caption2).foregroundStyle(.secondary)
                 Spacer()
+                // Icon-only: the full label doesn't fit beside "Look up again"
+                // in the popover's width.
+                Button(role: .destructive, action: onRemoveUnderline) {
+                    Image(systemName: "trash")
+                }
+                .font(.caption)
+                .accessibilityLabel("Remove underline")
+                .help("Remove this word's underline. The look-up stays in the library.")
                 Button("Look up again", action: onLookAgain).font(.caption)
             }
         }

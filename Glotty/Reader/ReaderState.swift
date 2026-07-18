@@ -278,6 +278,14 @@ final class ReaderState: ObservableObject {
         UserDefaults.standard.set(Array(lookedUp), forKey: Self.wordsKey(b.identifier))
     }
 
+    /// Drop a word's underline. The library keeps the look-up itself — this
+    /// only clears the mark on the page.
+    func unmarkLookedUp(_ word: String) {
+        let w = word.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard let b = book, lookedUp.remove(w) != nil else { return }
+        UserDefaults.standard.set(Array(lookedUp), forKey: Self.wordsKey(b.identifier))
+    }
+
     // MARK: - Persistence keys
 
     private static func progressKey(_ id: String) -> String { "glotty.reader.progress.\(id)" }
