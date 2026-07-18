@@ -12,6 +12,8 @@ struct ReaderView: View {
     @State private var showChat = true
     @AppStorage("glotty.reader.chatWidth") private var chatWidth: Double = 380
     @State private var chatDragStart: Double?
+    /// Live EPUB selection, mirrored out of the web view so ⌘T can act on it.
+    @State private var epubSelection = ""
 
     var body: some View {
         Group {
@@ -46,14 +48,21 @@ struct ReaderView: View {
                     fontCSS: state.font.css ?? "",
                     lookedUp: state.lookedUp,
                     onLookup: { word in
-                        // Tapping looks up the meaning; the result is captured
-                        // into the library + the word underlined (see the popup).
+                        // The result is captured into the library + the word
+                        // underlined (see the popup).
                         ReaderMark.pending = word
                         ReaderMark.capture = state.queryCapture(term: word, kind: "explain")
                         ReaderCore.services?.lookUp(word)
-                    }
+                    },
+                    onTranslate: translateSelection,
+                    onAsk: { text in
+                        chat.attach(text)
+                        withAnimation(.easeInOut(duration: 0.18)) { showChat = true }
+                    },
+                    onSelectionChange: { epubSelection = $0 }
                 )
                 .id(book.identifier)   // fresh web view per book
+                .background(translateShortcut)
             }
             if showChat {
                 chatResizeHandle
@@ -62,6 +71,26 @@ struct ReaderView: View {
                     .transition(.move(edge: .trailing))
             }
         }
+    }
+
+    /// Translate a selected passage in Glotty's popup, recording it against the
+    /// book so it shows up underlined + in the library.
+    private func translateSelection(_ text: String) {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        ReaderMark.capture = state.queryCapture(term: text, kind: "translate")
+        ReaderCore.services?.translate(text)
+    }
+
+    /// Keyboard path for the chip's Translate button. Zero-sized and behind the
+    /// content — it exists only to own the ⌘T shortcut.
+    private var translateShortcut: some View {
+        Button("Translate Selection") { translateSelection(epubSelection) }
+            .keyboardShortcut("t", modifiers: .command)
+            .disabled(epubSelection.isEmpty)
+            .opacity(0)
+            .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
     }
 
     private func pdfBody(_ pdf: PDFDocument) -> some View {
@@ -88,8 +117,7 @@ struct ReaderView: View {
                         // Show the result in Glotty's standard translate popup (a
                         // floating window) rather than an inline band — the popup
                         // owns the working Apple-translation path.
-                        ReaderMark.capture = state.queryCapture(term: text, kind: "translate")
-                        ReaderCore.services?.translate(text)
+                        translateSelection(text)
                     },
                     onAsk: { text in
                         chat.attach(text)

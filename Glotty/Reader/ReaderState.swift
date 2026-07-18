@@ -263,9 +263,16 @@ final class ReaderState: ObservableObject {
     /// Underline a word the user deliberately marked (the popup's Mark button);
     /// persists per book. Requires a letter so a stray punctuation tap (a lone
     /// quote) can't be marked.
+    /// Longest term we'll underline. Selection-translate can hand us a whole
+    /// paragraph; recording it in the library is useful, but underlining it
+    /// would stripe the entire page. Longer passages are still saved — they
+    /// just don't get a mark.
+    private static let maxMarkLength = 40
+
     func markLookedUp(_ word: String) {
         let w = word.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !w.isEmpty, w.contains(where: \.isLetter), let b = book else { return }
+        guard !w.isEmpty, w.count <= Self.maxMarkLength,
+              w.contains(where: \.isLetter), let b = book else { return }
         guard !lookedUp.contains(w) else { return }
         lookedUp.insert(w)
         UserDefaults.standard.set(Array(lookedUp), forKey: Self.wordsKey(b.identifier))

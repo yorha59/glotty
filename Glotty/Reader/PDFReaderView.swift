@@ -201,8 +201,9 @@ struct PDFReaderView: NSViewRepresentable {
 }
 
 /// Overlay that only captures clicks on its subviews (the chip); empty areas
-/// fall through to the PDFView so selection still works.
-private final class PassthroughView: NSView {
+/// fall through to the content view so selection still works. Shared by the
+/// PDF and EPUB readers.
+final class PassthroughView: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? {
         let hit = super.hitTest(point)
         return hit === self ? nil : hit

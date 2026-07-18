@@ -2,10 +2,11 @@ import SwiftUI
 import WebKit
 
 /// Renders one EPUB chapter in a `WKWebView`. Because we own the DOM we can do
-/// what's impossible inside Books.app: a tap on any word fires Glotty's lookup
-/// popup, and previously looked-up words are underlined (and re-tappable). Type
-/// size + theme are applied by injecting a stylesheet. Resources (CSS / images /
-/// fonts) resolve via file URLs scoped to the book's extraction directory.
+/// what's impossible inside Books.app: selecting a passage floats a
+/// Translate/Ask chip over it, and previously looked-up words are underlined
+/// (click one to preview what was saved). Type size + theme are applied by
+/// injecting a stylesheet. Resources (CSS / images / fonts) resolve via file
+/// URLs scoped to the book's extraction directory.
 struct EPUBWebView: NSViewRepresentable {
     let book: EPUBBook
     let bookID: String
@@ -18,10 +19,15 @@ struct EPUBWebView: NSViewRepresentable {
     let fontCSS: String
     let lookedUp: Set<String>
     let onLookup: (String) -> Void
+    let onTranslate: (String) -> Void
+    let onAsk: (String) -> Void
+    /// Fires whenever the selection changes so the window can offer a
+    /// keyboard path (⌘T) for the same action the chip exposes.
+    let onSelectionChange: (String) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(onLookup: onLookup, bookID: bookID) }
 
-    func makeNSView(context: Context) -> WKWebView {
+    func makeNSView(context: Context) -> NSView {
         let cfg = WKWebViewConfiguration()
         let ucc = WKUserContentController()
         ucc.add(context.coordinator, name: "glotty")
@@ -32,17 +38,47 @@ struct EPUBWebView: NSViewRepresentable {
         web.navigationDelegate = context.coordinator
         web.setValue(false, forKey: "drawsBackground")   // let chapter/theme bg show
         context.coordinator.webView = web
-        return web
+
+        // Web view + a click-through overlay that hosts the selection chip, so
+        // the chip floats above the text without blocking selection elsewhere.
+        let container = NSView()
+        let overlay = PassthroughView()
+        for v in [web, overlay] as [NSView] {
+            v.translatesAutoresizingMaskIntoConstraints = false
+            container.addSubview(v)
+            NSLayoutConstraint.activate([
+                v.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+                v.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+                v.topAnchor.constraint(equalTo: container.topAnchor),
+                v.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            ])
+        }
+        let c = context.coordinator
+        let chip = NSHostingView(rootView: SelectionChip(
+            onTranslate: { [weak c] in c?.translateTapped() },
+            onAsk: { [weak c] in c?.askTapped() }))
+        chip.isHidden = true
+        overlay.addSubview(chip)
+        c.overlay = overlay
+        c.chip = chip
+        return container
     }
 
-    func updateNSView(_ web: WKWebView, context: Context) {
+    func updateNSView(_ container: NSView, context: Context) {
         let c = context.coordinator
+        guard let web = c.webView else { return }
         c.onLookup = onLookup
+        c.onTranslate = onTranslate
+        c.onAsk = onAsk
+        c.onSelectionChange = onSelectionChange
         c.style = Coordinator.Style(scale: fontScale, lineHeight: lineHeight,
                                     letterSpacing: letterSpacing, bg: bg, fg: fg, font: fontCSS)
-        c.words = Array(lookedUp)
+        c.words = lookedUp.sorted()   // stable order — the dirty check compares it
         if c.loadedChapter != chapterIndex, book.chapters.indices.contains(chapterIndex) {
             c.loadedChapter = chapterIndex
+            // Drop the old chapter's selection, else the chip stays floating over
+            // the new text and Translate/⌘T would act on the previous chapter.
+            c.resetSelection()
             web.loadFileURL(book.chapters[chapterIndex].url, allowingReadAccessTo: book.rootDir)
             // style + marks are (re)applied in didFinish for the fresh document
         } else {
@@ -53,26 +89,42 @@ struct EPUBWebView: NSViewRepresentable {
 
     final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         weak var webView: WKWebView?
+        weak var overlay: NSView?
+        var chip: NSHostingView<SelectionChip>?
         var onLookup: (String) -> Void
+        var onTranslate: (String) -> Void = { _ in }
+        var onAsk: (String) -> Void = { _ in }
+        var onSelectionChange: (String) -> Void = { _ in }
+        /// Text of the live selection — what the chip and ⌘T act on.
+        private var pendingSelection = ""
         let bookID: String
         private var previewPopover: NSPopover?
         var loadedChapter = -1
-        struct Style {
+        struct Style: Equatable {
             var scale = 1.0, lineHeight = 1.65, letterSpacing = 0.0
             var bg = "#ffffff", fg = "#111111", font = ""
         }
         var style = Style()
         var words: [String] = []
+        /// Last values actually pushed into the DOM. Re-marking is destructive —
+        /// it replaces the text nodes the user's selection is anchored in, which
+        /// wipes the live highlight — so only push when something really changed.
+        private var appliedStyle: Style?
+        private var appliedWords: [String]?
 
         init(onLookup: @escaping (String) -> Void, bookID: String) {
             self.onLookup = onLookup; self.bookID = bookID
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            // Fresh document — nothing of ours survived, so force a re-apply.
+            appliedStyle = nil; appliedWords = nil
             applyStyle(); applyMarks()
         }
 
         func applyStyle() {
+            guard appliedStyle != style else { return }
+            appliedStyle = style
             let s = style
             webView?.evaluateJavaScript(
                 "window.__glottyStyle && __glottyStyle(\(s.scale), \(Self.jsString(s.bg)), \(Self.jsString(s.fg)), \(s.lineHeight), \(s.letterSpacing), \(Self.jsString(s.font)))",
@@ -84,6 +136,8 @@ struct EPUBWebView: NSViewRepresentable {
             "\"" + s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
         }
         func applyMarks() {
+            guard appliedWords != words else { return }
+            appliedWords = words
             let json = (try? JSONSerialization.data(withJSONObject: words))
                 .flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
             webView?.evaluateJavaScript(
@@ -97,7 +151,70 @@ struct EPUBWebView: NSViewRepresentable {
                 showPreview(term: term, at: CGPoint(x: x, y: y))
                 return
             }
+            if (d["type"] as? String) == "selection" {
+                let text = ((d["text"] as? String) ?? "")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                pendingSelection = text
+                onSelectionChange(text)
+                guard !text.isEmpty else { chip?.isHidden = true; return }
+                let x = (d["x"] as? Double) ?? 0, y = (d["y"] as? Double) ?? 0
+                let w = (d["w"] as? Double) ?? 0, h = (d["h"] as? Double) ?? 0
+                layoutChip(cssRect: CGRect(x: x, y: y, width: w, height: h))
+                return
+            }
             if let word = d["word"] as? String { onLookup(word) }
+        }
+
+        /// Place the chip just under the selection. The rect arrives in CSS
+        /// pixels (viewport-relative, origin top-left); the overlay is AppKit
+        /// (origin bottom-left), hence the flip.
+        private func layoutChip(cssRect r: CGRect) {
+            guard let overlay, let chip else { return }
+            let bounds = overlay.bounds
+            guard bounds.height > 0, bounds.width > 0 else { return }
+            // Selection scrolled out of view — an unclamped frame would draw the
+            // chip outside the reader (over the control bar), where it also
+            // wouldn't be clickable.
+            guard r.maxY > 0, r.minY < bounds.height else { chip.isHidden = true; return }
+            let size = chip.fittingSize
+            let x = min(max(2, r.maxX - size.width), max(2, bounds.width - size.width - 2))
+            // AppKit y of the selection's bottom edge, then drop the chip below it.
+            var y = bounds.height - r.maxY - size.height - 4
+            if y < 2 { y = bounds.height - r.minY + 4 }   // no room below → go above
+            y = min(max(2, y), max(2, bounds.height - size.height - 2))
+            chip.frame = NSRect(x: x, y: y, width: size.width, height: size.height)
+            chip.isHidden = false
+        }
+
+        func translateTapped() {
+            let text = pendingSelection
+            guard !text.isEmpty else { return }
+            onTranslate(text)
+            clearSelectionUI()
+        }
+
+        func askTapped() {
+            let text = pendingSelection
+            guard !text.isEmpty else { return }
+            onAsk(text)
+            clearSelectionUI()
+        }
+
+        private func clearSelectionUI() {
+            resetSelection()
+            webView?.evaluateJavaScript("window.getSelection().removeAllRanges()",
+                                        completionHandler: nil)
+        }
+
+        /// Forget the current selection. Called on chapter change too, where it
+        /// runs inside `updateNSView` — hence the deferred `onSelectionChange`,
+        /// which writes SwiftUI state and must not fire during a view update.
+        func resetSelection() {
+            chip?.isHidden = true
+            guard !pendingSelection.isEmpty else { return }
+            pendingSelection = ""
+            let notify = onSelectionChange
+            DispatchQueue.main.async { notify("") }
         }
 
         /// Popover previewing the saved look-up for an underlined word. Falls
@@ -142,8 +259,6 @@ struct EPUBWebView: NSViewRepresentable {
           'text-decoration-thickness:2px; text-underline-offset:3px; cursor:pointer;}';
       };
 
-      var isWord = function (c) { return c && /[\p{L}\p{M}'’\-]/u.test(c); };
-
       window.__glottyMark = function (words) {
         document.querySelectorAll('span.glotty-seen').forEach(function (s) {
           s.replaceWith(document.createTextNode(s.textContent));
@@ -175,25 +290,46 @@ struct EPUBWebView: NSViewRepresentable {
         });
       };
 
+      // Left-click on an already-looked-up (underlined) word → preview the saved
+      // record. A bare click no longer fires a look-up: reading the book used to
+      // trip the popup constantly. Translation is selection-driven now (chip/⌘T).
       document.addEventListener('click', function (e) {
-        // Click on an already-looked-up (underlined) word → preview the record.
+        if (e.button !== 0) return;                 // never the secondary button
         var seen = e.target && e.target.closest ? e.target.closest('span.glotty-seen') : null;
-        if (seen) {
-          window.webkit.messageHandlers.glotty.postMessage(
-            { type: 'preview', term: seen.textContent, x: e.clientX, y: e.clientY });
-          e.preventDefault(); e.stopPropagation();
+        if (!seen) return;
+        window.webkit.messageHandlers.glotty.postMessage(
+          { type: 'preview', term: seen.textContent, x: e.clientX, y: e.clientY });
+        e.preventDefault(); e.stopPropagation();
+      }, true);
+
+      // Report the current selection (with its viewport rect) so Swift can float
+      // the Translate/Ask chip over it — same interaction the PDF reader uses.
+      var postSel = function () {
+        var sel = window.getSelection();
+        var text = sel ? String(sel).trim() : '';
+        if (!text || !sel.rangeCount) {
+          window.webkit.messageHandlers.glotty.postMessage({ type: 'selection', text: '' });
           return;
         }
-        var r = document.caretRangeFromPoint ? document.caretRangeFromPoint(e.clientX, e.clientY) : null;
-        if (!r) return;
-        var node = r.startContainer;
-        if (!node || node.nodeType !== 3) return;
-        var text = node.textContent, i = r.startOffset, s = i, en = i;
-        while (s > 0 && isWord(text[s - 1])) s--;
-        while (en < text.length && isWord(text[en])) en++;
-        var word = text.slice(s, en).trim();
-        if (!/\p{L}/u.test(word)) return;   // need a letter — ignore lone punctuation
-        window.webkit.messageHandlers.glotty.postMessage({ type: 'lookup', word: word });
+        var r = sel.getRangeAt(0).getBoundingClientRect();
+        window.webkit.messageHandlers.glotty.postMessage(
+          { type: 'selection', text: text, x: r.left, y: r.top, w: r.width, h: r.height });
+      };
+      // Selection finishes on primary mouse-up; keyboard selection ends on keyup.
+      // Deferred a tick so the selection is settled when we read it.
+      document.addEventListener('mouseup', function (e) {
+        if (e.button !== 0) return;
+        setTimeout(postSel, 0);
+      }, true);
+      document.addEventListener('keyup', function () { setTimeout(postSel, 0); }, true);
+      // Keep the chip glued to the text while the page moves. Coalesced to one
+      // report per frame — getBoundingClientRect forces layout, and a raw scroll
+      // listener fires far more often than the chip needs to move.
+      var selQueued = false;
+      window.addEventListener('scroll', function () {
+        if (selQueued) return;
+        selQueued = true;
+        requestAnimationFrame(function () { selQueued = false; postSel(); });
       }, true);
     })();
     """#
