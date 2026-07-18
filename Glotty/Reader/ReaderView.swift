@@ -387,15 +387,21 @@ private struct ColorField: View {
     @State private var draft = ""
     @FocusState private var focused: Bool
 
+    /// The stored hex, as a `Color` the system picker can drive. Writing back
+    /// goes through the same hex string the presets and the field use, so all
+    /// three stay in sync.
+    private var pickerColor: Binding<Color> {
+        Binding(get: { Color(readerHex: hex) }, set: { hex = $0.readerHex })
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text(title).font(.subheadline)
                 Spacer()
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color(readerHex: hex))
-                    .frame(width: 26, height: 18)
-                    .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(.secondary.opacity(0.4)))
+                ColorPicker("", selection: pickerColor, supportsOpacity: false)
+                    .labelsHidden()
+                    .help("Pick any color")
                 TextField("#RRGGBB", text: $draft)
                     .focused($focused)
                     .textFieldStyle(.roundedBorder)
