@@ -104,7 +104,9 @@ struct EPUBWebView: NSViewRepresentable {
         c.words = lookedUp.sorted()   // stable order — the dirty check compares it
         if c.loadedChapter != chapterIndex, book.chapters.indices.contains(chapterIndex) {
             c.loadedChapter = chapterIndex
-            c.pendingLanding = landOnLastPage ? -1 : 0
+            // `page` is 0 for a forward flip and the restored position when a
+            // book is reopened, so landing on it covers both.
+            c.pendingLanding = landOnLastPage ? -1 : page
             // Drop the old chapter's selection, else the chip stays floating over
             // the new text and Translate/⌘T would act on the previous chapter.
             c.resetSelection()

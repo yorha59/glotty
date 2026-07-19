@@ -14,8 +14,8 @@ struct ReaderView: View {
     @State private var chatDragStart: Double?
     /// Live EPUB selection, mirrored out of the web view so ⌘T can act on it.
     @State private var epubSelection = ""
-    /// Paged-layout position within the current chapter.
-    @State private var epubPage = 0
+    /// Page count for the current chapter; the position itself lives in
+    /// ReaderState so it persists with the chapter.
     @State private var epubPageCount = 1
     /// Set when the reader pages backwards into a chapter, so it opens at the end.
     @State private var landOnLastPage = false
@@ -66,7 +66,7 @@ struct ReaderView: View {
                         withAnimation(.easeInOut(duration: 0.18)) { showChat = true }
                     },
                     onSelectionChange: { epubSelection = $0 },
-                    page: $epubPage,
+                    page: $state.pageIndex,
                     pageCount: $epubPageCount,
                     onChapterFlip: { dir in flipChapter(book, dir) },
                     landOnLastPage: landOnLastPage
@@ -87,15 +87,15 @@ struct ReaderView: View {
     /// Page counter under the text, Books-style: position in the chapter and
     /// how much of it is left. Paging past either end moves chapter.
     private func pageBar(_ book: EPUBBook) -> some View {
-        let left = max(0, epubPageCount - epubPage - 1)
+        let left = max(0, epubPageCount - state.pageIndex - 1)
         return HStack(spacing: 12) {
             Button { turnPage(book, -1) } label: {
                 Image(systemName: "chevron.left")
             }
             .buttonStyle(.plain)
-            .disabled(epubPage == 0 && state.chapterIndex == 0)
+            .disabled(state.pageIndex == 0 && state.chapterIndex == 0)
             Spacer()
-            Text("\(epubPage + 1) of \(epubPageCount)")
+            Text("\(state.pageIndex + 1) of \(epubPageCount)")
             Spacer()
             Text(left == 0 ? "End of chapter" : "^[\(left) page](inflect: true) left in chapter")
             Spacer()
@@ -103,7 +103,7 @@ struct ReaderView: View {
                 Image(systemName: "chevron.right")
             }
             .buttonStyle(.plain)
-            .disabled(epubPage >= epubPageCount - 1
+            .disabled(state.pageIndex >= epubPageCount - 1
                       && state.chapterIndex >= book.chapters.count - 1)
         }
         .font(.caption)
@@ -114,15 +114,15 @@ struct ReaderView: View {
 
     /// Turn one page, rolling over into the neighbouring chapter at the ends.
     private func turnPage(_ book: EPUBBook, _ dir: Int) {
-        let next = epubPage + dir
-        if next < 0 || next >= epubPageCount { flipChapter(book, dir) } else { epubPage = next }
+        let next = state.pageIndex + dir
+        if next < 0 || next >= epubPageCount { flipChapter(book, dir) } else { state.pageIndex = next }
     }
 
     private func flipChapter(_ book: EPUBBook, _ dir: Int) {
         let next = state.chapterIndex + dir
         guard book.chapters.indices.contains(next) else { return }
         landOnLastPage = dir < 0     // arriving backwards → open at the end
-        epubPage = 0
+        state.pageIndex = 0
         state.chapterIndex = next
     }
 
@@ -275,6 +275,36 @@ struct ReaderView: View {
         .listStyle(.sidebar)
     }
 
+    /// Bookmarks: the icon shows whether this page is saved, clicking toggles
+    /// it, and the menu lists every saved spot to jump back to. Reading
+    /// position is restored automatically — bookmarks are for going back to a
+    /// place deliberately, not for resuming.
+    private var bookmarkMenu: some View {
+        Menu {
+            Button(state.currentIsBookmarked ? "Remove bookmark" : "Bookmark this page") {
+                state.toggleBookmark()
+            }
+            if !state.bookmarks.isEmpty {
+                Divider()
+                ForEach(state.bookmarks) { b in
+                    Button("\(b.label) — p.\(b.page + 1)") { state.goToBookmark(b) }
+                }
+                Divider()
+                Menu("Remove") {
+                    ForEach(state.bookmarks) { b in
+                        Button("\(b.label) — p.\(b.page + 1)") { state.removeBookmark(b) }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: state.currentIsBookmarked ? "bookmark.fill" : "bookmark")
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(state.bookmarks.isEmpty ? "Bookmarks" : "Bookmarks (\(state.bookmarks.count))")
+    }
+
     private func controlBar(_ book: EPUBBook) -> some View {
         HStack(spacing: 12) {
             Button { withAnimation(.easeInOut(duration: 0.18)) { showTOC.toggle() } } label: {
@@ -293,6 +323,8 @@ struct ReaderView: View {
                 .disabled(state.chapterIndex >= state.chapterCount - 1)
 
             Spacer()
+
+            bookmarkMenu
 
             Button { showCustomize.toggle() } label: {
                 Text("Aa").font(.system(size: 16, weight: .medium))
@@ -379,29 +411,105 @@ struct ReaderView: View {
 /// or paste a code into, and a row of preset swatches — no full system color
 /// panel. Accepts `#rgb` / `#rrggbb` (with or without the `#`); invalid input
 /// reverts on commit.
+/// The kind of picker htmlcolorcodes.com uses: a saturation × brightness
+/// square with a hue strip under it, inline in the panel. Deliberately not the
+/// system `ColorPicker`, which throws up a separate window with wheel, palette,
+/// image and crayon tabs.
+private struct SimpleColorPicker: View {
+    @Binding var hex: String
+    @State private var hue = 0.0
+    @State private var sat = 0.0
+    @State private var bri = 0.0
+
+    private static let hues = stride(from: 0.0, through: 1.0, by: 1.0 / 12)
+        .map { Color(hue: $0, saturation: 1, brightness: 1) }
+
+    var body: some View {
+        VStack(spacing: 7) {
+            GeometryReader { geo in
+                ZStack(alignment: .topLeading) {
+                    Color(hue: hue, saturation: 1, brightness: 1)
+                    LinearGradient(colors: [.white, .white.opacity(0)],
+                                   startPoint: .leading, endPoint: .trailing)
+                    LinearGradient(colors: [.black.opacity(0), .black],
+                                   startPoint: .top, endPoint: .bottom)
+                    knob.position(x: sat * geo.size.width, y: (1 - bri) * geo.size.height)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .contentShape(Rectangle())
+                .gesture(DragGesture(minimumDistance: 0).onChanged { v in
+                    sat = clamp(v.location.x / geo.size.width)
+                    bri = 1 - clamp(v.location.y / geo.size.height)
+                    push()
+                })
+            }
+            .frame(height: 84)
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    LinearGradient(colors: Self.hues, startPoint: .leading, endPoint: .trailing)
+                    knob.position(x: hue * geo.size.width, y: geo.size.height / 2)
+                }
+                .clipShape(Capsule())
+                .contentShape(Rectangle())
+                .gesture(DragGesture(minimumDistance: 0).onChanged { v in
+                    hue = clamp(v.location.x / geo.size.width)
+                    push()
+                })
+            }
+            .frame(height: 12)
+        }
+        .onAppear(perform: pull)
+        .onChange(of: hex) { _, _ in pull() }
+    }
+
+    private var knob: some View {
+        Circle()
+            .strokeBorder(.white, lineWidth: 2)
+            .background(Circle().fill(.clear))
+            .frame(width: 12, height: 12)
+            .shadow(color: .black.opacity(0.5), radius: 1)
+    }
+
+    private func clamp(_ v: Double) -> Double { min(max(0, v), 1) }
+
+    private func push() { hex = Color(hue: hue, saturation: sat, brightness: bri).readerHex }
+
+    /// Adopt an externally-set hex (preset button, typed code). Skipped when it
+    /// already matches what our own HSB produces — otherwise picking a grey or
+    /// a black would snap the hue knob back to red, since those have no hue.
+    private func pull() {
+        guard Color(hue: hue, saturation: sat, brightness: bri).readerHex.lowercased()
+                != hex.lowercased() else { return }
+        let ns = NSColor(Color(readerHex: hex)).usingColorSpace(.sRGB) ?? .black
+        hue = ns.hueComponent; sat = ns.saturationComponent; bri = ns.brightnessComponent
+    }
+}
+
 private struct ColorField: View {
     let title: LocalizedStringKey
     @Binding var hex: String
     let presets: [String]
 
     @State private var draft = ""
+    @State private var picking = false
     @FocusState private var focused: Bool
-
-    /// The stored hex, as a `Color` the system picker can drive. Writing back
-    /// goes through the same hex string the presets and the field use, so all
-    /// three stay in sync.
-    private var pickerColor: Binding<Color> {
-        Binding(get: { Color(readerHex: hex) }, set: { hex = $0.readerHex })
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text(title).font(.subheadline)
                 Spacer()
-                ColorPicker("", selection: pickerColor, supportsOpacity: false)
-                    .labelsHidden()
-                    .help("Pick any color")
+                Button { withAnimation(.easeInOut(duration: 0.15)) { picking.toggle() } } label: {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color(readerHex: hex))
+                        .frame(width: 26, height: 18)
+                        .overlay(RoundedRectangle(cornerRadius: 4)
+                            .strokeBorder(picking ? Color.accentColor : .secondary.opacity(0.4),
+                                          lineWidth: picking ? 2 : 1))
+                }
+                .buttonStyle(.plain)
+                .help("Pick a color")
                 TextField("#RRGGBB", text: $draft)
                     .focused($focused)
                     .textFieldStyle(.roundedBorder)
@@ -410,6 +518,7 @@ private struct ColorField: View {
                     .onSubmit(commit)
                     .onChange(of: focused) { _, f in if !f { commit() } }
             }
+            if picking { SimpleColorPicker(hex: $hex) }
             HStack(spacing: 6) {
                 ForEach(presets, id: \.self) { p in
                     Button { hex = p } label: {

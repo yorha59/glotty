@@ -60,7 +60,22 @@ final class ReaderState: ObservableObject {
 
     @Published private(set) var book: EPUBBook?
     @Published var chapterIndex: Int = 0 { didSet { saveProgress() } }
+    /// Page within the current chapter, in the paged layout. Persisted with the
+    /// chapter so reopening a book returns to the exact page, not the chapter
+    /// opening.
+    @Published var pageIndex: Int = 0 { didSet { saveProgress() } }
     @Published var openError: String?
+
+    /// A place the reader saved deliberately, so they can jump back to it.
+    struct Bookmark: Codable, Identifiable, Equatable {
+        var id = UUID()
+        var chapter: Int
+        var page: Int
+        /// Chapter title, for the jump list.
+        var label: String
+        var date = Date()
+    }
+    @Published private(set) var bookmarks: [Bookmark] = []
 
     // PDF backend — books are EPUB (reflowable, WKWebView); PDFs render fixed via
     // PDFKit, so font / theme / spacing don't apply, but tap-to-look-up + the
@@ -71,6 +86,9 @@ final class ReaderState: ObservableObject {
     @Published var pdfPage: Int = 0 { didSet { savePDFPage() } }
     private var pdfURL: URL?
     private var bookURL: URL?
+    /// True while a book's saved position is being restored, so the partial
+    /// assignments don't save over what's still being read.
+    private var restoring = false
 
     struct BookInfo: Equatable { let id: String; let title: String; let path: String? }
     /// Identity of the open book/PDF, for the chat + library.
@@ -219,8 +237,15 @@ final class ReaderState: ObservableObject {
             openError = nil
             lookedUp = Self.loadWords(b.identifier)
             BookLibrary.touch(bookID: b.identifier, title: b.title, path: url.path)
-            chapterIndex = min(max(0, UserDefaults.standard.integer(forKey: Self.progressKey(b.identifier))),
-                               b.chapters.count - 1)
+            bookmarks = Self.loadBookmarks(b.identifier)
+            // Read both stored values before assigning either — see saveProgress.
+            let savedChapter = min(max(0, UserDefaults.standard.integer(forKey: Self.progressKey(b.identifier))),
+                                   b.chapters.count - 1)
+            let savedPage = max(0, UserDefaults.standard.integer(forKey: Self.pageKey(b.identifier)))
+            restoring = true
+            chapterIndex = savedChapter
+            pageIndex = savedPage
+            restoring = false
         } catch {
             book = nil
             openError = String(format: String(localized: "Couldn't open this book: %@"),
@@ -289,6 +314,8 @@ final class ReaderState: ObservableObject {
     // MARK: - Persistence keys
 
     private static func progressKey(_ id: String) -> String { "glotty.reader.progress.\(id)" }
+    private static func pageKey(_ id: String) -> String { "glotty.reader.page.\(id)" }
+    private static func bookmarksKey(_ id: String) -> String { "glotty.reader.bookmarks.\(id)" }
     // New key namespace (was ".words.") — abandons the old auto-marked flood so
     // only deliberately-marked words underline going forward.
     private static func wordsKey(_ id: String) -> String { "glotty.reader.marks.\(id)" }
@@ -296,8 +323,56 @@ final class ReaderState: ObservableObject {
         Set((UserDefaults.standard.array(forKey: wordsKey(id)) as? [String]) ?? [])
     }
     private func saveProgress() {
-        guard let b = book else { return }
+        // Restoring assigns chapter and page one at a time; without this guard
+        // the first assignment's didSet would write the half-restored pair back
+        // over the stored one, losing the page we were about to read.
+        guard !restoring, let b = book else { return }
         UserDefaults.standard.set(chapterIndex, forKey: Self.progressKey(b.identifier))
+        UserDefaults.standard.set(pageIndex, forKey: Self.pageKey(b.identifier))
+    }
+
+    // MARK: - Bookmarks
+
+    private static func loadBookmarks(_ id: String) -> [Bookmark] {
+        guard let d = UserDefaults.standard.data(forKey: bookmarksKey(id)) else { return [] }
+        return (try? JSONDecoder().decode([Bookmark].self, from: d)) ?? []
+    }
+    private func saveBookmarks() {
+        guard let b = book, let d = try? JSONEncoder().encode(bookmarks) else { return }
+        UserDefaults.standard.set(d, forKey: Self.bookmarksKey(b.identifier))
+    }
+
+    /// Is the spot currently on screen already bookmarked?
+    var currentIsBookmarked: Bool {
+        bookmarks.contains { $0.chapter == chapterIndex && $0.page == pageIndex }
+    }
+
+    /// Bookmark the current page, or clear it if it's already bookmarked.
+    func toggleBookmark() {
+        guard book != nil else { return }
+        if let i = bookmarks.firstIndex(where: { $0.chapter == chapterIndex && $0.page == pageIndex }) {
+            bookmarks.remove(at: i)
+        } else {
+            // Nearest TOC entry at or before this chapter — chapters have no
+            // title of their own, the TOC is what names them.
+            let label = book?.toc.last { ($0.chapterIndex ?? .max) <= chapterIndex }?.label
+                ?? String(localized: "Chapter \(chapterIndex + 1)")
+            bookmarks.append(Bookmark(chapter: chapterIndex, page: pageIndex, label: label))
+            bookmarks.sort { ($0.chapter, $0.page) < ($1.chapter, $1.page) }
+        }
+        saveBookmarks()
+    }
+
+    func removeBookmark(_ b: Bookmark) {
+        bookmarks.removeAll { $0.id == b.id }
+        saveBookmarks()
+    }
+
+    /// Jump to a saved spot. Same-chapter jumps only move the page, so the web
+    /// view pages rather than reloading.
+    func goToBookmark(_ b: Bookmark) {
+        if chapterIndex != b.chapter { chapterIndex = b.chapter }
+        pageIndex = b.page
     }
 
     // MARK: - PDF helpers
