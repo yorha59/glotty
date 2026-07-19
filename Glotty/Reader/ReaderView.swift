@@ -275,6 +275,36 @@ struct ReaderView: View {
         .listStyle(.sidebar)
     }
 
+    /// Themes as swatches rather than a segmented control — there are too many
+    /// to fit as segments, and a chip rendered in the theme's own colors says
+    /// what it does better than its name.
+    private var themeGrid: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 4),
+                  spacing: 6) {
+            ForEach(ReaderState.Theme.allCases) { t in
+                let selected = state.theme == t
+                Button { state.theme = t } label: {
+                    VStack(spacing: 3) {
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(Color(readerHex: t.bg))
+                            .frame(height: 30)
+                            .overlay(Text("Aa").font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Color(readerHex: t.fg)))
+                            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(
+                                selected ? Color.accentColor : .secondary.opacity(0.35),
+                                lineWidth: selected ? 2 : 1))
+                        Text(t.label)
+                            .font(.system(size: 9))
+                            .foregroundStyle(selected ? Color.accentColor : .secondary)
+                            .lineLimit(1)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
     /// Bookmarks: the icon shows whether this page is saved, clicking toggles
     /// it, and the menu lists every saved spot to jump back to. Reading
     /// position is restored automatically — bookmarks are for going back to a
@@ -355,11 +385,7 @@ struct ReaderView: View {
             Divider()
 
             Text("Background & Text").font(.headline)
-            Picker("Theme", selection: $state.theme) {
-                ForEach(ReaderState.Theme.allCases) { Text($0.label).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            themeGrid
             ColorField(title: "Background", hex: $state.bgColorHex, presets: Self.bgPresets)
             ColorField(title: "Text", hex: $state.fgColorHex, presets: Self.fgPresets)
 

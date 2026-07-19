@@ -8,23 +8,48 @@ import AppKit
 /// launches — font/theme globally, progress + looked-up words per book id.
 @MainActor
 final class ReaderState: ObservableObject {
+    /// Reading themes, ordered lightest to darkest. `light`/`sepia`/`dark` keep
+    /// their raw values so existing preferences still resolve.
     enum Theme: String, CaseIterable, Identifiable {
-        case light, sepia, dark
+        case light, paper, sepia, solarized, gray, nord, dark, black
         var id: String { rawValue }
         var label: String {
             switch self {
-            case .light: return String(localized: "Light")
-            case .sepia: return String(localized: "Sepia")
-            case .dark:  return String(localized: "Dark")
+            case .light:     return String(localized: "Light")
+            case .paper:     return String(localized: "Paper")
+            case .sepia:     return String(localized: "Sepia")
+            case .solarized: return String(localized: "Solarized")
+            case .gray:      return String(localized: "Gray")
+            case .nord:      return String(localized: "Nord")
+            case .dark:      return String(localized: "Dark")
+            case .black:     return String(localized: "Black")
             }
         }
         /// Preset background / text colors. Selecting a theme applies these to
         /// the color wells (which the user can then fine-tune).
         var bg: String {
-            switch self { case .light: return "#ffffff"; case .sepia: return "#f4ecd8"; case .dark: return "#1c1c1e" }
+            switch self {
+            case .light:     return "#ffffff"
+            case .paper:     return "#faf6ef"
+            case .sepia:     return "#f4ecd8"
+            case .solarized: return "#fdf6e3"
+            case .gray:      return "#3a3a3c"
+            case .nord:      return "#2e3440"
+            case .dark:      return "#1c1c1e"
+            case .black:     return "#000000"
+            }
         }
         var fg: String {
-            switch self { case .light: return "#111111"; case .sepia: return "#5b4636"; case .dark: return "#d8d8d8" }
+            switch self {
+            case .light:     return "#111111"
+            case .paper:     return "#33302b"
+            case .sepia:     return "#5b4636"
+            case .solarized: return "#55606b"
+            case .gray:      return "#dcdcdc"
+            case .nord:      return "#d8dee9"
+            case .dark:      return "#d8d8d8"
+            case .black:     return "#a8a8a8"
+            }
         }
     }
 
