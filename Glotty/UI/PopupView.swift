@@ -1295,12 +1295,11 @@ struct PopupView: View {
                                     .foregroundStyle(PopupTokens.accent)
                             }
                             if !section.body.isEmpty {
-                                Text(section.body)
+                                Self.markdownBlock(section.body)
                                     .font(.system(size: PopupTokens.bodySize))
                                     .foregroundStyle(PopupTokens.primaryText)
                                     .textSelection(.enabled)
                                     .lineSpacing(2)
-                                    .fixedSize(horizontal: false, vertical: true)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
@@ -4399,6 +4398,52 @@ struct PopupView: View {
             return Text(attr)
         }
         return Text(raw)
+    }
+
+    /// Leading list marker of `line` (`- `, `* `, `1. `…), or nil. Returned so
+    /// the caller can draw a real bullet and drop the literal marker.
+    static func listMarker(_ line: String) -> (marker: String, content: String)? {
+        for p in ["- ", "* ", "• ", "+ "] where line.hasPrefix(p) {
+            return ("•", String(line.dropFirst(p.count)))
+        }
+        // "1. " / "12) " — keep the author's own numbering.
+        if let dot = line.firstIndex(where: { $0 == "." || $0 == ")" }) {
+            let head = line[line.startIndex..<dot]
+            if !head.isEmpty, head.allSatisfy(\.isNumber),
+               line.index(after: dot) < line.endIndex, line[line.index(after: dot)] == " " {
+                return (String(head) + ".",
+                        String(line[line.index(dot, offsetBy: 2)...]))
+            }
+        }
+        return nil
+    }
+
+    /// Render a block of LLM prose as Markdown. `markdownText` alone handles
+    /// the inline syntax but leaves `- ` markers as literal characters, so
+    /// lines are laid out individually here: list items get a real bullet and
+    /// a hanging indent, everything else is inline-styled.
+    @ViewBuilder
+    static func markdownBlock(_ raw: String) -> some View {
+        let lines = raw.components(separatedBy: "\n")
+        VStack(alignment: .leading, spacing: 3) {
+            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                if trimmed.isEmpty {
+                    Color.clear.frame(height: 3)
+                } else if let (marker, content) = listMarker(trimmed) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        markdownText(marker)
+                        markdownText(content)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                } else {
+                    markdownText(trimmed)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
     }
 
     private static func dbg(_ msg: String, file: String = #fileID, line: Int = #line) {
