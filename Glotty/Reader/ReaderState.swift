@@ -288,6 +288,13 @@ final class ReaderState: ObservableObject {
         pdfURL = url
         pdf = doc
         openError = nil
+        // PDFs have no natural bookID (no manifest identifier like EPUB) — the
+        // filename is already what pageKey/ReaderTranslationStore key on for
+        // this exact file, so reuse it here too. Without this, opened PDFs
+        // never showed up in the Library — only EPUBs did.
+        BookLibrary.touch(bookID: url.lastPathComponent,
+                         title: url.deletingPathExtension().lastPathComponent,
+                         path: url.path)
         pdfTOC = Self.buildPDFTOC(doc)
         // Many PDFs (arXiv papers especially) ship no bookmark outline. Fall
         // back to a TOC synthesized from section headings so the sidebar is

@@ -39,6 +39,16 @@ final class ReaderWindowController: NSObject, NSWindowDelegate {
         else { panel.begin(completionHandler: complete) }
     }
 
+    /// Closing the reader (traffic light or ⌘W) returns to the Library instead
+    /// of quitting — Books-style: the book you were reading is the thing that
+    /// closes, not the app. Bringing the Library window up before the reader
+    /// actually closes means it's never the *last* window, so AppKit's
+    /// applicationShouldTerminateAfterLastWindowClosed never fires for this.
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        LibraryWindowController.shared.show()
+        return true
+    }
+
     private func ensureWindow() {
         if window != nil { return }
         let w = NSWindow(
