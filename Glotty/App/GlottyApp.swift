@@ -380,6 +380,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         entry.write(id)
     }
 
+    /// Switch which service answers. Settings can do this too, but changing
+    /// provider is as routine as changing model, and the menu only offered the
+    /// latter — so picking a different service meant a trip through Settings.
+    @objc private func setProvider(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? String else { return }
+        dbg("setProvider invoked (menu bar) -> \(id)")
+        LLMRegistry.setCurrentProviderID(id)
+    }
+
     @objc private func openMemorySettings() {
         settingsWindow.show(selecting: .memory)
     }
@@ -441,6 +450,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         practice.image = NSImage(
             systemSymbolName: "checkmark.rectangle.stack", accessibilityDescription: nil)
         menu.addItem(practice)
+
+        // Provider submenu — which service answers. Built from the same list
+        // the reader's picker uses, so both show exactly the providers that are
+        // actually usable (a key is set) rather than everything compiled in.
+        let providers = GlottyReaderServices.configuredProviders()
+        if providers.count > 1 {
+            let activeName = providers.first(where: \.isActive)?.name ?? "—"
+            let providerItem = NSMenuItem(
+                title: "\("Provider".t): \(activeName)", action: nil, keyEquivalent: "")
+            providerItem.image = NSImage(systemSymbolName: "cloud", accessibilityDescription: nil)
+            let sub = NSMenu()
+            for p in providers {
+                let it = NSMenuItem(title: p.name, action: #selector(setProvider(_:)), keyEquivalent: "")
+                it.target = self
+                it.representedObject = p.id
+                it.state = p.isActive ? .on : .off
+                sub.addItem(it)
+            }
+            providerItem.submenu = sub
+            menu.addItem(providerItem)
+        }
 
         // Model submenu — switch the active provider's model inline (built from
         // the same registry the chat's set_setting uses). Omitted when the

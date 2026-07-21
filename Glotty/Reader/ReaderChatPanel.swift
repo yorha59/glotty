@@ -163,22 +163,27 @@ struct ReaderChatPanel: View {
     }
 
     private var composer: some View {
-        HStack(alignment: .bottom, spacing: 8) {
+        // Text on top, controls along the bottom edge: the picker belongs at
+        // the bottom-left of the box, not squeezed beside the send button.
+        VStack(alignment: .leading, spacing: 6) {
             TextField("Ask about the passage…", text: $chat.input, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(.callout)
-                .frame(maxWidth: .infinity, minHeight: 200, alignment: .topLeading)
+                .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
                 .focused($inputFocused)
                 .onSubmit(chat.send)
-            modelPicker
-            if chat.isStreaming {
-                Button(action: chat.stop) { Image(systemName: "stop.circle.fill").font(.title2) }
-                    .buttonStyle(.plain).foregroundStyle(.secondary)
-            } else {
-                Button(action: chat.send) { Image(systemName: "arrow.up.circle.fill").font(.title2) }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(chat.input.trimmingCharacters(in: .whitespaces).isEmpty ? Color.secondary : Color.accentColor)
-                    .disabled(chat.input.trimmingCharacters(in: .whitespaces).isEmpty)
+            HStack(spacing: 8) {
+                modelPicker
+                Spacer(minLength: 0)
+                if chat.isStreaming {
+                    Button(action: chat.stop) { Image(systemName: "stop.circle.fill").font(.title2) }
+                        .buttonStyle(.plain).foregroundStyle(.secondary)
+                } else {
+                    Button(action: chat.send) { Image(systemName: "arrow.up.circle.fill").font(.title2) }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(chat.input.trimmingCharacters(in: .whitespaces).isEmpty ? Color.secondary : Color.accentColor)
+                        .disabled(chat.input.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
             }
         }
         .padding(.horizontal, 12).padding(.vertical, 9)
