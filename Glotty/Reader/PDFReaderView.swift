@@ -72,10 +72,8 @@ struct PDFReaderView: NSViewRepresentable {
     }
 
     func updateNSView(_ v: NSView, context: Context) {
-        let c = context.coordinator
-        c.parent = self
-        if c.translationsChanged { c.rebuild(initial: false) }
-        else { c.goToOriginalIfNeeded(page) }
+        context.coordinator.parent = self
+        context.coordinator.syncToParent()
     }
 
     final class Coordinator: NSObject {
@@ -88,10 +86,31 @@ struct PDFReaderView: NSViewRepresentable {
         private var originalToDerived: [Int: Int] = [:]
         private var lastIDs: [UUID] = []
         private var pendingSelection: (page: PDFPage, rect: CGRect, text: String)?
+        /// The document the view was last built from. Identity, not equality:
+        /// PDFDocument has no useful `==`, and two different files can share a
+        /// page count, so only "is this the same object" is meaningful.
+        private weak var builtFrom: PDFDocument?
 
         init(_ parent: PDFReaderView) { self.parent = parent }
 
         var translationsChanged: Bool { parent.translations.map(\.id) != lastIDs }
+        var documentChanged: Bool { builtFrom !== parent.doc }
+
+        /// Bring the view in line with `parent`. This is the whole of what
+        /// `updateNSView` does, factored out so the self-test can drive the
+        /// real decision instead of a copy of it — a test that reimplements
+        /// the branch it's checking passes just as happily when the branch is
+        /// wrong, which is exactly how the bug below survived.
+        ///
+        /// A different document must rebuild even when nothing else changed.
+        /// Rebuilding only on `translationsChanged` left the previous PDF
+        /// rendered — two documents with no translations compare equal — while
+        /// the TOC, page count and progress all switched to the new one.
+        func syncToParent() {
+            if documentChanged { rebuild(initial: true) }
+            else if translationsChanged { rebuild(initial: false) }
+            else { goToOriginalIfNeeded(parent.page) }
+        }
 
         // MARK: build / reflow
 
@@ -100,6 +119,7 @@ struct PDFReaderView: NSViewRepresentable {
             let keepOriginal = currentOriginalPage()
             derived = ReflowPDF.build(original: parent.doc, translations: parent.translations)
             lastIDs = parent.translations.map(\.id)
+            builtFrom = parent.doc
             originalToDerived.removeAll()
             for (d, o) in derived.originalIndex.enumerated() where originalToDerived[o] == nil {
                 originalToDerived[o] = d

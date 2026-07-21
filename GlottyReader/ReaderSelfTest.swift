@@ -1,5 +1,6 @@
 import AppKit
 import PDFKit
+import SwiftUI
 
 /// Headless regression checks for the reader's state layer — the parts that
 /// have actually broken: PDF identity, progress isolation across document
@@ -41,8 +42,10 @@ enum ReaderSelfTest {
         let pdfs = paths.filter { $0.pathExtension.lowercased() == "pdf" }
         let epubs = paths.filter { $0.pathExtension.lowercased() == "epub" }
 
-        if pdfs.count >= 2 { checkDocumentSwap(pdfs[0], pdfs[1]) }
-        else { print("  skip document-swap check — needs 2 PDFs") }
+        if pdfs.count >= 2 {
+            checkDocumentSwap(pdfs[0], pdfs[1])
+            checkRenderedDocumentFollows(pdfs[0], pdfs[1])
+        } else { print("  skip document-swap checks — needs 2 PDFs") }
         if let p = pdfs.first { checkPDFIdentityAndBookmarks(p) }
         else { print("  skip PDF checks — none supplied") }
         if let e = epubs.first { checkEPUB(e) }
@@ -78,6 +81,38 @@ enum ReaderSelfTest {
               "B's position is inside B (\(recB?.currentPosition ?? -1) < \(docB.pageCount))")
         // A's record must be untouched by opening B.
         eq(BookLibrary.load(ReaderState.pdfBookID(a))?.currentPosition, lastA, "A's position survives the swap")
+    }
+
+    /// The view must render the document it was handed. Rebuilding only when
+    /// the *translations* changed left the previous PDF on screen — two
+    /// documents with no translations compare equal — while the sidebar, page
+    /// count and progress all switched. The visible page said one book, every
+    /// other part of the UI said another.
+    private static func checkRenderedDocumentFollows(_ a: URL, _ b: URL) {
+        print("\nrendered document follows the state")
+        guard let docA = PDFDocument(url: a), let docB = PDFDocument(url: b) else {
+            return check(false, "both PDFs load")
+        }
+        var page = 0
+        let binding = Binding(get: { page }, set: { page = $0 })
+        func view(_ d: PDFDocument) -> PDFReaderView {
+            PDFReaderView(doc: d, page: binding, translations: [],
+                          onLookup: { _ in }, onTranslate: { _, _, _ in },
+                          onAsk: { _ in }, onRemove: { _ in })
+        }
+        let pdfView = PDFView()          // retained here; the coordinator holds it weakly
+        let c = view(docA).makeCoordinator()
+        c.pdfView = pdfView
+        c.parent = view(docA)
+        // Drive `syncToParent` — the same entry point updateNSView uses — so
+        // this checks the real decision, not a restatement of it.
+        c.syncToParent()
+        eq(pdfView.document?.pageCount, docA.pageCount, "renders A after syncing to A")
+
+        c.parent = view(docB)            // what opening another book does
+        c.syncToParent()
+        eq(pdfView.document?.pageCount, docB.pageCount, "renders B after syncing to B")
+        check(!c.documentChanged, "B is now the built document")
     }
 
     private static func checkPDFIdentityAndBookmarks(_ url: URL) {
