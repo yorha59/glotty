@@ -86,6 +86,7 @@ private struct BookDetailView: View {
                         }
                         .padding(.top, 2)
                     }
+                    pathRow
                 }
                 Spacer()
                 if let path = book.path, FileManager.default.fileExists(atPath: path) {
@@ -115,6 +116,28 @@ private struct BookDetailView: View {
             }
         }
         .task(id: book.id) { await loadCover() }
+    }
+
+    /// Where the file actually lives. Truncated in the middle so both the
+    /// folder and the filename stay readable; the full path is selectable and
+    /// in the tooltip. A record outlives the file it points at (moved, renamed,
+    /// deleted), so say so rather than showing a path that no longer resolves.
+    @ViewBuilder
+    private var pathRow: some View {
+        if let path = book.path {
+            let exists = FileManager.default.fileExists(atPath: path)
+            HStack(spacing: 4) {
+                Image(systemName: exists ? "folder" : "exclamationmark.triangle.fill")
+                Text(path)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+            }
+            .font(.caption2)
+            .foregroundStyle(exists ? Color.secondary : Color.orange)
+            .help(exists ? path : String(localized: "File not found at \(path)"))
+            .padding(.top, 2)
+        }
     }
 
     private var coverView: some View {

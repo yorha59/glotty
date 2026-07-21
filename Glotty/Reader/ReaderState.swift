@@ -94,9 +94,11 @@ final class ReaderState: ObservableObject {
     /// A place the reader saved deliberately, so they can jump back to it.
     struct Bookmark: Codable, Identifiable, Equatable {
         var id = UUID()
+        /// EPUB chapter index. PDFs have no chapters, so they leave this 0 and
+        /// carry the whole position in `page`.
         var chapter: Int
         var page: Int
-        /// Chapter title, for the jump list.
+        /// Chapter title (EPUB) or nearest outline entry (PDF), for the jump list.
         var label: String
         var date = Date()
     }
@@ -115,13 +117,27 @@ final class ReaderState: ObservableObject {
     /// assignments don't save over what's still being read.
     private var restoring = false
 
+    /// Text of the page currently on screen. EPUB pushes this from the web view
+    /// (only the visible columns); PDF derives it from the current page. The
+    /// chat sends it as context so questions can be about what's being read
+    /// rather than only about an explicitly selected passage.
+    @Published var visiblePageText: String = ""
+
+    /// The one id a PDF is known by — library record, look-ups, chat threads,
+    /// bookmarks, progress. The `pdf:` namespace keeps a file called `X.pdf`
+    /// from colliding with an EPUB whose `dc:identifier` is literally "X.pdf".
+    /// Everything that identifies a PDF must go through this: using the bare
+    /// filename in some places and this in others gave one file two library
+    /// records.
+    static func pdfBookID(_ url: URL) -> String { "pdf:" + url.lastPathComponent }
+    static func pdfTitle(_ url: URL) -> String { url.deletingPathExtension().lastPathComponent }
+
     struct BookInfo: Equatable { let id: String; let title: String; let path: String? }
     /// Identity of the open book/PDF, for the chat + library.
     var bookInfo: BookInfo? {
         if let b = book { return BookInfo(id: b.identifier, title: b.title, path: bookURL?.path) }
         if let u = pdfURL {
-            return BookInfo(id: "pdf:" + u.lastPathComponent,
-                            title: u.deletingPathExtension().lastPathComponent, path: u.path)
+            return BookInfo(id: Self.pdfBookID(u), title: Self.pdfTitle(u), path: u.path)
         }
         return nil
     }
@@ -134,8 +150,7 @@ final class ReaderState: ObservableObject {
                                       term: term, kind: kind, chapter: chapterIndex)
         }
         if let u = pdfURL {
-            return ReaderMark.Capture(bookID: "pdf:" + u.lastPathComponent,
-                                      title: u.deletingPathExtension().lastPathComponent, path: u.path,
+            return ReaderMark.Capture(bookID: Self.pdfBookID(u), title: Self.pdfTitle(u), path: u.path,
                                       term: term, kind: kind, chapter: pdfPage)
         }
         return nil
@@ -293,13 +308,13 @@ final class ReaderState: ObservableObject {
         pdfURL = url
         pdf = doc
         openError = nil
-        // PDFs have no natural bookID (no manifest identifier like EPUB) — the
-        // filename is already what pageKey/ReaderTranslationStore key on for
-        // this exact file, so reuse it here too. Without this, opened PDFs
-        // never showed up in the Library — only EPUBs did.
-        BookLibrary.touch(bookID: url.lastPathComponent,
-                         title: url.deletingPathExtension().lastPathComponent,
-                         path: url.path)
+        // PDFs have no manifest identifier like EPUB, so they're keyed by
+        // filename under the `pdf:` namespace — see pdfBookID.
+        let id = Self.pdfBookID(url)
+        BookLibrary.mergeLegacyPDFRecord(filename: url.lastPathComponent, into: id)
+        Self.migrateLegacyBookmarks(from: url.lastPathComponent, to: id)
+        BookLibrary.touch(bookID: id, title: Self.pdfTitle(url), path: url.path)
+        bookmarks = Self.loadBookmarks(id)
         pdfTOC = Self.buildPDFTOC(doc)
         // Many PDFs (arXiv papers especially) ship no bookmark outline. Fall
         // back to a TOC synthesized from section headings so the sidebar is
@@ -310,6 +325,7 @@ final class ReaderState: ObservableObject {
         pdfPage = min(max(0, UserDefaults.standard.integer(forKey: Self.pdfPageKey(url))),
                       max(0, doc.pageCount - 1))
         syncLibraryProgress()
+        refreshPDFPageText()   // pdfPage's didSet is a no-op when the value didn't change
     }
 
     /// Keep the Library's stored reading position current — chapter index for
@@ -319,7 +335,7 @@ final class ReaderState: ObservableObject {
         if let b = book {
             BookLibrary.updateProgress(bookID: b.identifier, current: chapterIndex, total: b.chapters.count)
         } else if let url = pdfURL, let doc = pdf {
-            BookLibrary.updateProgress(bookID: url.lastPathComponent, current: pdfPage, total: doc.pageCount)
+            BookLibrary.updateProgress(bookID: Self.pdfBookID(url), current: pdfPage, total: doc.pageCount)
         }
     }
 
@@ -383,31 +399,61 @@ final class ReaderState: ObservableObject {
 
     // MARK: - Bookmarks
 
+    /// Bookmarks briefly landed under a PDF's bare filename before the id was
+    /// unified; move them so they aren't orphaned. No-op after the first run.
+    private static func migrateLegacyBookmarks(from legacyID: String, to newID: String) {
+        guard legacyID != newID,
+              let old = UserDefaults.standard.data(forKey: bookmarksKey(legacyID)) else { return }
+        if UserDefaults.standard.data(forKey: bookmarksKey(newID)) == nil {
+            UserDefaults.standard.set(old, forKey: bookmarksKey(newID))
+        }
+        UserDefaults.standard.removeObject(forKey: bookmarksKey(legacyID))
+    }
+
     private static func loadBookmarks(_ id: String) -> [Bookmark] {
         guard let d = UserDefaults.standard.data(forKey: bookmarksKey(id)) else { return [] }
         return (try? JSONDecoder().decode([Bookmark].self, from: d)) ?? []
     }
     private func saveBookmarks() {
-        guard let b = book, let d = try? JSONEncoder().encode(bookmarks) else { return }
-        UserDefaults.standard.set(d, forKey: Self.bookmarksKey(b.identifier))
+        guard let t = bookmarkTarget, let d = try? JSONEncoder().encode(bookmarks) else { return }
+        UserDefaults.standard.set(d, forKey: Self.bookmarksKey(t.id))
+    }
+
+    /// Identity + position of whatever is open, so one set of bookmark
+    /// functions serves both formats: EPUB is chapter+page, PDF is a page
+    /// alone. PDFs key on the filename, matching how their reading position,
+    /// translations, and Library record are already keyed.
+    private var bookmarkTarget: (id: String, chapter: Int, page: Int)? {
+        if let b = book { return (b.identifier, chapterIndex, pageIndex) }
+        if let u = pdfURL { return (Self.pdfBookID(u), 0, pdfPage) }
+        return nil
+    }
+
+    /// Name for a new bookmark: the nearest outline/TOC entry at or before the
+    /// current position, since neither EPUB chapters nor PDF pages carry a
+    /// title of their own.
+    private var bookmarkLabel: String {
+        if book != nil {
+            return book?.toc.last { ($0.chapterIndex ?? .max) <= chapterIndex }?.label
+                ?? String(localized: "Chapter \(chapterIndex + 1)")
+        }
+        return pdfTOC.last { $0.pageIndex <= pdfPage }?.label
+            ?? String(localized: "Page \(pdfPage + 1)")
     }
 
     /// Is the spot currently on screen already bookmarked?
     var currentIsBookmarked: Bool {
-        bookmarks.contains { $0.chapter == chapterIndex && $0.page == pageIndex }
+        guard let t = bookmarkTarget else { return false }
+        return bookmarks.contains { $0.chapter == t.chapter && $0.page == t.page }
     }
 
     /// Bookmark the current page, or clear it if it's already bookmarked.
     func toggleBookmark() {
-        guard book != nil else { return }
-        if let i = bookmarks.firstIndex(where: { $0.chapter == chapterIndex && $0.page == pageIndex }) {
+        guard let t = bookmarkTarget else { return }
+        if let i = bookmarks.firstIndex(where: { $0.chapter == t.chapter && $0.page == t.page }) {
             bookmarks.remove(at: i)
         } else {
-            // Nearest TOC entry at or before this chapter — chapters have no
-            // title of their own, the TOC is what names them.
-            let label = book?.toc.last { ($0.chapterIndex ?? .max) <= chapterIndex }?.label
-                ?? String(localized: "Chapter \(chapterIndex + 1)")
-            bookmarks.append(Bookmark(chapter: chapterIndex, page: pageIndex, label: label))
+            bookmarks.append(Bookmark(chapter: t.chapter, page: t.page, label: bookmarkLabel))
             bookmarks.sort { ($0.chapter, $0.page) < ($1.chapter, $1.page) }
         }
         saveBookmarks()
@@ -421,6 +467,10 @@ final class ReaderState: ObservableObject {
     /// Jump to a saved spot. Same-chapter jumps only move the page, so the web
     /// view pages rather than reloading.
     func goToBookmark(_ b: Bookmark) {
+        if pdf != nil {
+            pdfPage = b.page
+            return
+        }
         if chapterIndex != b.chapter { chapterIndex = b.chapter }
         pageIndex = b.page
     }
@@ -432,6 +482,14 @@ final class ReaderState: ObservableObject {
         guard let u = pdfURL else { return }
         UserDefaults.standard.set(pdfPage, forKey: Self.pdfPageKey(u))
         syncLibraryProgress()
+        refreshPDFPageText()
+    }
+
+    /// PDFKit hands us the page's text directly — no web view involved, so
+    /// unlike EPUB this is pulled rather than pushed.
+    private func refreshPDFPageText() {
+        guard let doc = pdf, pdfPage >= 0, pdfPage < doc.pageCount else { return }
+        visiblePageText = doc.page(at: pdfPage)?.string ?? ""
     }
     private static func buildPDFTOC(_ doc: PDFDocument) -> [PDFTOCItem] {
         guard let root = doc.outlineRoot else { return [] }

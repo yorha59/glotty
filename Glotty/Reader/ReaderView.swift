@@ -26,7 +26,12 @@ struct ReaderView: View {
             else if let pdf = state.pdf { pdfBody(pdf) }
             else { emptyState }
         }
-        .onAppear { chat.setBook(state.bookInfo) }
+        .onAppear {
+            chat.setBook(state.bookInfo)
+            // Read at send time, so a question is answered about the page the
+            // user is on right then — not the one open when the panel appeared.
+            chat.pageTextProvider = { [weak state] in state?.visiblePageText ?? "" }
+        }
         .onChange(of: state.bookInfo) { _, info in chat.setBook(info) }
     }
 
@@ -69,6 +74,7 @@ struct ReaderView: View {
                     page: $state.pageIndex,
                     pageCount: $epubPageCount,
                     onChapterFlip: { dir in flipChapter(book, dir) },
+                    onPageText: { state.visiblePageText = $0 },
                     landOnLastPage: landOnLastPage
                 )
                 .id(book.identifier)   // fresh web view per book
@@ -243,6 +249,9 @@ struct ReaderView: View {
             Button { if state.pdfPage < pdf.pageCount - 1 { state.pdfPage += 1 } } label: { Image(systemName: "chevron.right") }
                 .disabled(state.pdfPage >= pdf.pageCount - 1)
             Spacer()
+
+            bookmarkMenu
+
             Button { withAnimation(.easeInOut(duration: 0.18)) { showChat.toggle() } } label: {
                 Image(systemName: showChat ? "bubble.left.and.bubble.right.fill" : "bubble.left.and.bubble.right")
             }

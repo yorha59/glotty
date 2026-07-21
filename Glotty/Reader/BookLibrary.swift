@@ -149,4 +149,34 @@ enum BookLibrary {
     static func delete(bookID: String) {
         try? FileManager.default.removeItem(at: fileURL(bookID))
     }
+
+    /// PDFs were briefly registered under their bare filename while look-ups
+    /// and chat threads used the `pdf:` namespace, so a single file could show
+    /// up as two rows in the Library — one holding the reading position, the
+    /// other the look-ups. Fold the stray record into the namespaced one and
+    /// delete it. No-op once a file has been migrated.
+    static func mergeLegacyPDFRecord(filename: String, into canonicalID: String) {
+        guard filename != canonicalID, let legacy = load(filename) else { return }
+        var target = load(canonicalID)
+            ?? BookRecord(bookID: canonicalID, title: legacy.title,
+                          path: legacy.path, lastOpened: legacy.lastOpened)
+        // Prefer whichever record actually has each piece: the split meant one
+        // side got the progress and the other the queries.
+        if target.path == nil { target.path = legacy.path }
+        target.lastOpened = max(target.lastOpened, legacy.lastOpened)
+        if target.currentPosition == nil {
+            target.currentPosition = legacy.currentPosition
+            target.totalPositions = legacy.totalPositions
+        }
+        for q in legacy.queries where !target.queries.contains(where: { $0.term == q.term && $0.kind == q.kind }) {
+            target.queries.append(q)
+        }
+        var dialogues = target.dialogues ?? []
+        for d in legacy.dialogueList where !dialogues.contains(where: { $0.id == d.id }) {
+            dialogues.append(d)
+        }
+        if !dialogues.isEmpty { target.dialogues = dialogues }
+        save(target)
+        delete(bookID: filename)
+    }
 }
