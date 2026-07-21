@@ -52,13 +52,9 @@ struct BookRecord: Codable, Identifiable {
 /// of the book id (ids can contain path-unsafe characters).
 @MainActor
 enum BookLibrary {
-    private static var dir: URL {
-        let base = (FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-                    ?? URL(fileURLWithPath: NSHomeDirectory()))
-            .appendingPathComponent("Glotty/Library", isDirectory: true)
-        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
-        return base
-    }
+    /// Redirected wholesale by ReaderStore so a self-test never writes into
+    /// the real library.
+    private static var dir: URL { ReaderStore.libraryDirectory }
 
     private static func fileURL(_ bookID: String) -> URL {
         let hash = SHA256.hash(data: Data(bookID.utf8)).map { String(format: "%02x", $0) }.joined()

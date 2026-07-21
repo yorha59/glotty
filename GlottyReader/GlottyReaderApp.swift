@@ -18,6 +18,20 @@ struct GlottyReaderApp: App {
 @MainActor
 final class ReaderAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Headless: run the state-layer checks with no window, no Dock icon and
+        // no activation, against a throwaway store, then exit. Lets the reader
+        // be tested without windows appearing over whatever the user is doing.
+        //   .../Glotty Reader --headless [file.pdf …]
+        let args = CommandLine.arguments
+        if args.contains("--headless") {
+            NSApp.setActivationPolicy(.prohibited)   // nothing on screen, no Dock tile
+            ReaderCore.services = nil                // never reach out to Glotty over IPC
+            let paths = args.dropFirst()
+                .filter { !$0.hasPrefix("--") }
+                .map { URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath) }
+                .filter { FileManager.default.fileExists(atPath: $0.path) }
+            exit(ReaderSelfTest.run(paths: paths))
+        }
         ReaderCore.services = IPCReaderServices()
         NSApp.setActivationPolicy(.regular)
         ReaderWindowController.shared.show()

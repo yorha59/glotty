@@ -32,13 +32,13 @@ enum ReaderTranslationStore {
     }
 
     static func load(_ url: URL) -> [ReaderTranslation] {
-        guard let data = UserDefaults.standard.data(forKey: key(url)),
+        guard let data = ReaderStore.defaults.data(forKey: key(url)),
               let items = try? JSONDecoder().decode([ReaderTranslation].self, from: data)
         else { return [] }
         return items
     }
 
     static func save(_ items: [ReaderTranslation], for url: URL) {
-        UserDefaults.standard.set(try? JSONEncoder().encode(items), forKey: key(url))
+        ReaderStore.defaults.set(try? JSONEncoder().encode(items), forKey: key(url))
     }
 }

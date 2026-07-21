@@ -203,11 +203,11 @@ final class ReaderState: ObservableObject {
     }
 
     @Published var fontScale: Double {
-        didSet { UserDefaults.standard.set(fontScale, forKey: Self.fontKey) }
+        didSet { ReaderStore.defaults.set(fontScale, forKey: Self.fontKey) }
     }
     @Published var theme: Theme {
         didSet {
-            UserDefaults.standard.set(theme.rawValue, forKey: Self.themeKey)
+            ReaderStore.defaults.set(theme.rawValue, forKey: Self.themeKey)
             // A theme IS its palette — picking one drives the color wells (the
             // color pickers are bound to bgColorHex/fgColorHex, so they update
             // in step). The user can still fine-tune either color afterward.
@@ -216,19 +216,19 @@ final class ReaderState: ObservableObject {
         }
     }
     @Published var font: ReaderFont {
-        didSet { UserDefaults.standard.set(font.rawValue, forKey: Self.fontFamilyKey) }
+        didSet { ReaderStore.defaults.set(font.rawValue, forKey: Self.fontFamilyKey) }
     }
     @Published var lineHeight: Double {
-        didSet { UserDefaults.standard.set(lineHeight, forKey: Self.lineKey) }
+        didSet { ReaderStore.defaults.set(lineHeight, forKey: Self.lineKey) }
     }
     @Published var letterSpacing: Double {
-        didSet { UserDefaults.standard.set(letterSpacing, forKey: Self.letterKey) }
+        didSet { ReaderStore.defaults.set(letterSpacing, forKey: Self.letterKey) }
     }
     @Published var bgColorHex: String {
-        didSet { UserDefaults.standard.set(bgColorHex, forKey: Self.bgKey) }
+        didSet { ReaderStore.defaults.set(bgColorHex, forKey: Self.bgKey) }
     }
     @Published var fgColorHex: String {
-        didSet { UserDefaults.standard.set(fgColorHex, forKey: Self.fgKey) }
+        didSet { ReaderStore.defaults.set(fgColorHex, forKey: Self.fgKey) }
     }
     @Published private(set) var lookedUp: Set<String> = []
 
@@ -241,7 +241,7 @@ final class ReaderState: ObservableObject {
     private static let fgKey = "glotty.reader.fgColor"
 
     init() {
-        let d = UserDefaults.standard
+        let d = ReaderStore.defaults
         let f = d.double(forKey: Self.fontKey)
         fontScale = f > 0 ? f : 1.0
         let t = Theme(rawValue: d.string(forKey: Self.themeKey) ?? "") ?? .light
@@ -279,9 +279,9 @@ final class ReaderState: ObservableObject {
             BookLibrary.touch(bookID: b.identifier, title: b.title, path: url.path)
             bookmarks = Self.loadBookmarks(b.identifier)
             // Read both stored values before assigning either — see saveProgress.
-            let savedChapter = min(max(0, UserDefaults.standard.integer(forKey: Self.progressKey(b.identifier))),
+            let savedChapter = min(max(0, ReaderStore.defaults.integer(forKey: Self.progressKey(b.identifier))),
                                    b.chapters.count - 1)
-            let savedPage = max(0, UserDefaults.standard.integer(forKey: Self.pageKey(b.identifier)))
+            let savedPage = max(0, ReaderStore.defaults.integer(forKey: Self.pageKey(b.identifier)))
             restoring = true
             chapterIndex = savedChapter
             pageIndex = savedPage
@@ -322,7 +322,7 @@ final class ReaderState: ObservableObject {
         if pdfTOC.isEmpty { pdfTOC = Self.synthesizePDFTOC(doc) }
         pdfTranslations = ReaderTranslationStore.load(url)
         pendingPDFTranslation = nil
-        pdfPage = min(max(0, UserDefaults.standard.integer(forKey: Self.pdfPageKey(url))),
+        pdfPage = min(max(0, ReaderStore.defaults.integer(forKey: Self.pdfPageKey(url))),
                       max(0, doc.pageCount - 1))
         syncLibraryProgress()
         refreshPDFPageText()   // pdfPage's didSet is a no-op when the value didn't change
@@ -369,7 +369,7 @@ final class ReaderState: ObservableObject {
               w.contains(where: \.isLetter), let b = book else { return }
         guard !lookedUp.contains(w) else { return }
         lookedUp.insert(w)
-        UserDefaults.standard.set(Array(lookedUp), forKey: Self.wordsKey(b.identifier))
+        ReaderStore.defaults.set(Array(lookedUp), forKey: Self.wordsKey(b.identifier))
     }
 
     /// Drop a word's underline. The library keeps the look-up itself — this
@@ -377,7 +377,7 @@ final class ReaderState: ObservableObject {
     func unmarkLookedUp(_ word: String) {
         let w = word.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard let b = book, lookedUp.remove(w) != nil else { return }
-        UserDefaults.standard.set(Array(lookedUp), forKey: Self.wordsKey(b.identifier))
+        ReaderStore.defaults.set(Array(lookedUp), forKey: Self.wordsKey(b.identifier))
     }
 
     // MARK: - Persistence keys
@@ -389,15 +389,15 @@ final class ReaderState: ObservableObject {
     // only deliberately-marked words underline going forward.
     private static func wordsKey(_ id: String) -> String { "glotty.reader.marks.\(id)" }
     private static func loadWords(_ id: String) -> Set<String> {
-        Set((UserDefaults.standard.array(forKey: wordsKey(id)) as? [String]) ?? [])
+        Set((ReaderStore.defaults.array(forKey: wordsKey(id)) as? [String]) ?? [])
     }
     private func saveProgress() {
         // Restoring assigns chapter and page one at a time; without this guard
         // the first assignment's didSet would write the half-restored pair back
         // over the stored one, losing the page we were about to read.
         guard !restoring, let b = book else { return }
-        UserDefaults.standard.set(chapterIndex, forKey: Self.progressKey(b.identifier))
-        UserDefaults.standard.set(pageIndex, forKey: Self.pageKey(b.identifier))
+        ReaderStore.defaults.set(chapterIndex, forKey: Self.progressKey(b.identifier))
+        ReaderStore.defaults.set(pageIndex, forKey: Self.pageKey(b.identifier))
         syncLibraryProgress()
     }
 
@@ -407,20 +407,20 @@ final class ReaderState: ObservableObject {
     /// unified; move them so they aren't orphaned. No-op after the first run.
     private static func migrateLegacyBookmarks(from legacyID: String, to newID: String) {
         guard legacyID != newID,
-              let old = UserDefaults.standard.data(forKey: bookmarksKey(legacyID)) else { return }
-        if UserDefaults.standard.data(forKey: bookmarksKey(newID)) == nil {
-            UserDefaults.standard.set(old, forKey: bookmarksKey(newID))
+              let old = ReaderStore.defaults.data(forKey: bookmarksKey(legacyID)) else { return }
+        if ReaderStore.defaults.data(forKey: bookmarksKey(newID)) == nil {
+            ReaderStore.defaults.set(old, forKey: bookmarksKey(newID))
         }
-        UserDefaults.standard.removeObject(forKey: bookmarksKey(legacyID))
+        ReaderStore.defaults.removeObject(forKey: bookmarksKey(legacyID))
     }
 
     private static func loadBookmarks(_ id: String) -> [Bookmark] {
-        guard let d = UserDefaults.standard.data(forKey: bookmarksKey(id)) else { return [] }
+        guard let d = ReaderStore.defaults.data(forKey: bookmarksKey(id)) else { return [] }
         return (try? JSONDecoder().decode([Bookmark].self, from: d)) ?? []
     }
     private func saveBookmarks() {
         guard let t = bookmarkTarget, let d = try? JSONEncoder().encode(bookmarks) else { return }
-        UserDefaults.standard.set(d, forKey: Self.bookmarksKey(t.id))
+        ReaderStore.defaults.set(d, forKey: Self.bookmarksKey(t.id))
     }
 
     /// Identity + position of whatever is open, so one set of bookmark
@@ -487,7 +487,7 @@ final class ReaderState: ObservableObject {
         // page index the current document doesn't have, or reopening would
         // restore a position from whatever was read before it.
         guard let u = pdfURL, let doc = pdf, pdfPage < doc.pageCount else { return }
-        UserDefaults.standard.set(pdfPage, forKey: Self.pdfPageKey(u))
+        ReaderStore.defaults.set(pdfPage, forKey: Self.pdfPageKey(u))
         syncLibraryProgress()
         refreshPDFPageText()
     }
