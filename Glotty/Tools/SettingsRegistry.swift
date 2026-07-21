@@ -433,27 +433,31 @@ enum SettingsRegistry {
         let modelSpec: (options: [(id: String, name: String)],
                         userDefaultsKey: String,
                         description: String)?
+        // `availableModels()` everywhere, never the raw hardcoded `models` —
+        // it merges in whatever the provider's /models endpoint returned, which
+        // is what Settings shows. Using the bundled list here made the menu bar
+        // and the chat's set_setting offer a stale subset of Settings' picker.
         if let preset = OpenAIStockPresets.find(id: activeProviderID) {
             modelSpec = (
-                options: preset.models.map { ($0.id, $0.displayName) },
+                options: preset.availableModels().map { ($0.id, $0.displayName) },
                 userDefaultsKey: preset.modelUserDefaultsKey,
                 description: "The \(preset.displayName) model used for polish, explain, and chat. Switching takes effect on the next LLM call."
             )
         } else if activeProviderID == "deepseek" {
             modelSpec = (
-                options: DeepSeekProvider.supportedModels.map { ($0.id, $0.displayName) },
+                options: DeepSeekProvider.availableModels().map { ($0.id, $0.displayName) },
                 userDefaultsKey: "glotty.deepseek.model",
                 description: "The DeepSeek model used for polish, explain, and chat. Switching takes effect on the next LLM call."
             )
         } else if activeProviderID == "kimi-coding" {
             modelSpec = (
-                options: KimiCodingProvider.supportedModels.map { ($0.id, $0.displayName) },
+                options: KimiCodingProvider.availableModels().map { ($0.id, $0.displayName) },
                 userDefaultsKey: "glotty.kimi.model",
                 description: "The Kimi model used for polish, explain, and chat. Switching takes effect on the next LLM call."
             )
         } else if activeProviderID == "minimax-coding" {
             modelSpec = (
-                options: MiniMaxCodingProvider.supportedModels.map { ($0.id, $0.displayName) },
+                options: MiniMaxCodingProvider.availableModels().map { ($0.id, $0.displayName) },
                 userDefaultsKey: "glotty.minimax.model",
                 description: "The MiniMax model used for polish, explain, and chat. Switching takes effect on the next LLM call."
             )
