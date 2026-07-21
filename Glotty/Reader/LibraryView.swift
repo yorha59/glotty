@@ -21,6 +21,10 @@ struct LibraryView: View {
         ReaderWindowController.shared.open(url: URL(fileURLWithPath: p))
     }
 
+    private func openPanel() {
+        ReaderWindowController.shared.chooseBook(over: LibraryWindowController.shared.window)
+    }
+
     var body: some View {
         NavigationSplitView {
             List(books, selection: $selectedID) { b in
@@ -47,9 +51,24 @@ struct LibraryView: View {
             }
             .navigationTitle(Text("Library"))
             .frame(minWidth: 250)
+            .toolbar {
+                // The Library is the app's start page, so it has to be able to
+                // open a file that isn't in it yet — otherwise a first run,
+                // with nothing recorded, is a dead end.
+                Button { openPanel() } label: { Label("Open Book…", systemImage: "plus") }
+                    .help("Open an EPUB or PDF")
+            }
         } detail: {
             if let b = books.first(where: { $0.id == selectedID }) {
                 BookDetailView(book: b)
+            } else if books.isEmpty {
+                ContentUnavailableView {
+                    Label("No books yet", systemImage: "books.vertical")
+                } description: {
+                    Text("Open an EPUB or PDF to start reading. Books you open show up here with their look-ups and conversations.")
+                } actions: {
+                    Button("Open Book…") { openPanel() }.buttonStyle(.borderedProminent)
+                }
             } else {
                 ContentUnavailableView("Select a book", systemImage: "books.vertical")
             }

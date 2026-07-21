@@ -34,21 +34,37 @@ final class ReaderAppDelegate: NSObject, NSApplicationDelegate {
         }
         ReaderCore.services = IPCReaderServices()
         NSApp.setActivationPolicy(.regular)
-        ReaderWindowController.shared.show()
+        // Start on the shelf, not an empty reader.
+        switch ReaderStartPage.forLaunch(openedDocument: openedDocumentAtLaunch) {
+        case .reader:  break   // application(_:open:) already opened the book
+        case .library: LibraryWindowController.shared.show()
+        }
     }
+
+    /// Set when launch was "open this file", so the start page is skipped.
+    private var openedDocumentAtLaunch = false
 
     /// Finder "Open With → Glotty Reader" / double-click / drop.
     func application(_ application: NSApplication, open urls: [URL]) {
         guard let doc = urls.first(where: { ["epub", "pdf"].contains($0.pathExtension.lowercased()) })
         else { return }
+        openedDocumentAtLaunch = true
         ReaderWindowController.shared.open(url: doc)
     }
 
+    /// Closing the reader shows the Library, so the reader is never the last
+    /// window and this doesn't fire for it. Closing the *Library* is the user
+    /// saying they're done — quit then.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
     /// Re-open the reader window when the Dock icon is clicked with no window.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if !flag { ReaderWindowController.shared.show() }
+        guard !flag else { return true }
+        let s = ReaderWindowController.shared.state
+        switch ReaderStartPage.forReopen(hasOpenBook: s.book != nil || s.pdf != nil) {
+        case .reader:  ReaderWindowController.shared.show()
+        case .library: LibraryWindowController.shared.show()
+        }
         return true
     }
 }

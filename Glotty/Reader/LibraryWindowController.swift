@@ -6,7 +6,8 @@ import SwiftUI
 @MainActor
 final class LibraryWindowController: NSObject, NSWindowDelegate {
     static let shared = LibraryWindowController()
-    private var window: NSWindow?
+    /// Readable so sheets (the file picker) can hang off the Library window.
+    private(set) var window: NSWindow?
 
     func show() {
         if window == nil {

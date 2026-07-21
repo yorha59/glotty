@@ -26,6 +26,13 @@ final class ReaderWindowController: NSObject, NSWindowDelegate {
     /// Bring up the reader and prompt for an `.epub` to open.
     func openBook() {
         show()
+        chooseBook(over: window)
+    }
+
+    /// File picker that opens straight into the reader. Presented from
+    /// whichever window asked, so the Library can offer it without the empty
+    /// reader flashing up first.
+    func chooseBook(over host: NSWindow?) {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.epub, .pdf]
         panel.allowsMultipleSelection = false
@@ -33,9 +40,9 @@ final class ReaderWindowController: NSObject, NSWindowDelegate {
         panel.message = String(localized: "Choose an EPUB or PDF")
         let complete: (NSApplication.ModalResponse) -> Void = { [weak self] resp in
             guard resp == .OK, let url = panel.url else { return }
-            self?.state.open(url)
+            self?.open(url: url)
         }
-        if let window { panel.beginSheetModal(for: window, completionHandler: complete) }
+        if let host { panel.beginSheetModal(for: host, completionHandler: complete) }
         else { panel.begin(completionHandler: complete) }
     }
 

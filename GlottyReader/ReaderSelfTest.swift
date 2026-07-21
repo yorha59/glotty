@@ -52,6 +52,7 @@ enum ReaderSelfTest {
         else { print("  skip EPUB checks — none supplied") }
         checkLibraryStore()
         checkChatDoesNotWedge()
+        checkStartPage()
 
         print("\n\(checks - failures.count)/\(checks) passed")
         if !failures.isEmpty {
@@ -208,6 +209,18 @@ enum ReaderSelfTest {
         check(chat.messages.contains { $0.text == "second question" },
               "a later message still goes through")
         chat.stop()
+    }
+
+    /// Launch routing. Checked as a decision rather than by launching windows —
+    /// the failure mode is the Library covering a book that was just opened
+    /// from Finder, and spotting that visually means putting windows on screen.
+    private static func checkStartPage() {
+        print("\nstart page")
+        eq(ReaderStartPage.forLaunch(openedDocument: false), .library, "plain launch lands on the Library")
+        eq(ReaderStartPage.forLaunch(openedDocument: true), .reader,
+           "launching with a file goes straight to the book, not the shelf")
+        eq(ReaderStartPage.forReopen(hasOpenBook: true), .reader, "reopen returns to the open book")
+        eq(ReaderStartPage.forReopen(hasOpenBook: false), .library, "reopen with nothing open shows the Library")
     }
 
     private static func checkLibraryStore() {
