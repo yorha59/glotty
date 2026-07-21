@@ -11,6 +11,16 @@ struct LibraryView: View {
     /// Non-nil is exactly "confirmation showing".
     @State private var pendingDelete: BookRecord?
 
+    private func fileExists(_ b: BookRecord) -> Bool {
+        guard let p = b.path else { return false }
+        return FileManager.default.fileExists(atPath: p)
+    }
+
+    private func open(_ b: BookRecord) {
+        guard let p = b.path, FileManager.default.fileExists(atPath: p) else { return }
+        ReaderWindowController.shared.open(url: URL(fileURLWithPath: p))
+    }
+
     var body: some View {
         NavigationSplitView {
             List(books, selection: $selectedID) { b in
@@ -20,7 +30,16 @@ struct LibraryView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 .tag(b.id)
+                // Double-click opens, the way any Mac list works. Without it
+                // the only way in is the detail pane's Open button, so a click
+                // that "did nothing" just surfaced whatever the reader window
+                // still had loaded — which reads as opening the wrong file.
+                .contentShape(Rectangle())
+                .onTapGesture(count: 2) { open(b) }
                 .contextMenu {
+                    Button { open(b) } label: { Label("Open", systemImage: "book") }
+                        .disabled(!fileExists(b))
+                    Divider()
                     Button(role: .destructive) { pendingDelete = b } label: {
                         Label("Delete…", systemImage: "trash")
                     }
@@ -37,6 +56,12 @@ struct LibraryView: View {
         }
         .frame(minWidth: 780, minHeight: 480)
         .onAppear { books = BookLibrary.all() }
+        // The list is a snapshot taken on appear; opening a book updates its
+        // record (position, last-opened), so re-read when we come back to it.
+        .onReceive(NotificationCenter.default.publisher(
+            for: NSApplication.didBecomeActiveNotification)) { _ in
+            books = BookLibrary.all()
+        }
         // Matches SettingsView's "Clear history…" confirmations — a question
         // title, a scope+irreversibility message, a repeat-the-verb destructive
         // button. Named in the message (not the title) since a right-click can

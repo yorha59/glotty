@@ -334,7 +334,11 @@ final class ReaderState: ObservableObject {
     private func syncLibraryProgress() {
         if let b = book {
             BookLibrary.updateProgress(bookID: b.identifier, current: chapterIndex, total: b.chapters.count)
-        } else if let url = pdfURL, let doc = pdf {
+        } else if let url = pdfURL, let doc = pdf, pdfPage < doc.pageCount {
+            // The page bound must belong to *this* document. Swapping documents
+            // installs the new one before PDFKit reports its first page, so the
+            // page-changed callback can fire with the previous document's index
+            // — that's how a 41-page paper ended up recorded at "page 194".
             BookLibrary.updateProgress(bookID: Self.pdfBookID(url), current: pdfPage, total: doc.pageCount)
         }
     }
@@ -479,7 +483,10 @@ final class ReaderState: ObservableObject {
 
     private static func pdfPageKey(_ url: URL) -> String { "glotty.reader.pdfpage.\(url.lastPathComponent)" }
     private func savePDFPage() {
-        guard let u = pdfURL else { return }
+        // Same document-swap hazard as syncLibraryProgress: don't persist a
+        // page index the current document doesn't have, or reopening would
+        // restore a position from whatever was read before it.
+        guard let u = pdfURL, let doc = pdf, pdfPage < doc.pageCount else { return }
         UserDefaults.standard.set(pdfPage, forKey: Self.pdfPageKey(u))
         syncLibraryProgress()
         refreshPDFPageText()

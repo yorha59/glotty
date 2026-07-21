@@ -139,8 +139,12 @@ enum BookLibrary {
     /// `touch()`'s job (once per open, not once per page).
     static func updateProgress(bookID: String, current: Int, total: Int) {
         guard var rec = load(bookID) else { return }
-        rec.currentPosition = current
-        rec.totalPositions = total
+        // Clamp rather than trust the caller: a position past the end is
+        // nonsense to show ("Page 194 of 41") and has happened for real when a
+        // stale page index outlived a document swap. Clamping here also
+        // repairs an already-corrupted record on the next write.
+        rec.currentPosition = max(0, min(current, max(0, total - 1)))
+        rec.totalPositions = max(0, total)
         save(rec)
     }
 
