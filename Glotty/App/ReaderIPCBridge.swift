@@ -29,6 +29,28 @@ enum ReaderIPCBridge {
         }
     }
 
+    /// Serve the reader's provider/model picker. The list is JSON-encoded into
+    /// a single userInfo string: distributed-notification payloads drop
+    /// oversized or non-plist values, and a nested provider→models structure is
+    /// exactly the shape that gets silently lost.
+    static func startProviderServer() {
+        let nc = DistributedNotificationCenter.default()
+        nc.addObserver(forName: ReaderIPC.providersRequestName, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated {
+                let list = GlottyReaderServices.configuredProviders()
+                let json = (try? JSONEncoder().encode(list)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+                post(ReaderIPC.providersReplyName, ["providers": json])
+            }
+        }
+        nc.addObserver(forName: ReaderIPC.selectModelName, object: nil, queue: .main) { note in
+            MainActor.assumeIsolated {
+                guard let provider = note.userInfo?["provider"] as? String else { return }
+                GlottyReaderServices.applySelection(
+                    providerID: provider, modelID: (note.userInfo?["model"] as? String) ?? "")
+            }
+        }
+    }
+
     private static func serveChat(id: String, prompt: String) {
         guard let provider = LLMRegistry.current() else {
             post(ReaderIPC.chatDoneName, ["requestID": id,

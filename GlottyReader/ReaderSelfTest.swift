@@ -53,6 +53,7 @@ enum ReaderSelfTest {
         checkLibraryStore()
         checkChatDoesNotWedge()
         checkStartPage()
+        checkProviderPayload()
 
         print("\n\(checks - failures.count)/\(checks) passed")
         if !failures.isEmpty {
@@ -184,6 +185,8 @@ enum ReaderSelfTest {
             func chatStream(prompt: String) -> AsyncThrowingStream<String, Error>? {
                 AsyncThrowingStream { _ in }   // held open forever
             }
+            func providers() async -> [ReaderProvider] { [] }
+            func selectModel(providerID: String, modelID: String) {}
         }
         let previous = ReaderCore.services
         ReaderCore.services = SilentServices()
@@ -221,6 +224,32 @@ enum ReaderSelfTest {
            "launching with a file goes straight to the book, not the shelf")
         eq(ReaderStartPage.forReopen(hasOpenBook: true), .reader, "reopen returns to the open book")
         eq(ReaderStartPage.forReopen(hasOpenBook: false), .library, "reopen with nothing open shows the Library")
+    }
+
+    /// The provider list crosses to the Reader as JSON inside a distributed
+    /// notification, because nested provider→models data is exactly what those
+    /// payloads drop silently. Check it survives the trip — a picker that
+    /// decodes to nothing just shows an empty menu with no error.
+    private static func checkProviderPayload() {
+        print("\nprovider list survives the IPC encoding")
+        let sample = [
+            ReaderProvider(id: "zai", name: "Z.AI (GLM)",
+                           models: [.init(id: "glm-5.1", name: "GLM-5.1"),
+                                    .init(id: "glm-4.7", name: "GLM-4.7")],
+                           isActive: true, activeModelID: "glm-5.1"),
+            ReaderProvider(id: "custom", name: "My Server", models: [],
+                           isActive: false, activeModelID: nil),
+        ]
+        guard let data = try? JSONEncoder().encode(sample),
+              let json = String(data: data, encoding: .utf8) else {
+            return check(false, "encodes")
+        }
+        let back = (try? JSONDecoder().decode([ReaderProvider].self, from: Data(json.utf8))) ?? []
+        eq(back.count, 2, "both providers round-trip")
+        eq(back.first?.models.count, 2, "models survive")
+        eq(back.first?.activeModelID, "glm-5.1", "current model survives")
+        eq(back.first(where: { $0.isActive })?.id, "zai", "active provider survives")
+        check(back.last?.models.isEmpty == true, "a provider with no model list is still listed")
     }
 
     private static func checkLibraryStore() {

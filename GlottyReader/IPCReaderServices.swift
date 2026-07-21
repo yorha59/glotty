@@ -18,6 +18,7 @@ final class IPCReaderServices: NSObject, ReaderServices {
         nc.addObserver(self, selector: #selector(onResult(_:)), name: ReaderIPC.resultName, object: nil)
         nc.addObserver(self, selector: #selector(onChatChunk(_:)), name: ReaderIPC.chatChunkName, object: nil)
         nc.addObserver(self, selector: #selector(onChatDone(_:)), name: ReaderIPC.chatDoneName, object: nil)
+        nc.addObserver(self, selector: #selector(onProviders(_:)), name: ReaderIPC.providersReplyName, object: nil)
     }
 
     // MARK: look-up / translate
@@ -74,6 +75,39 @@ final class IPCReaderServices: NSObject, ReaderServices {
         }
         chatConts[id] = nil
         chatAccum[id] = nil
+    }
+
+    // MARK: providers / model picker
+
+    private var providerWaiters: [CheckedContinuation<[ReaderProvider], Never>] = []
+
+    func providers() async -> [ReaderProvider] {
+        guard isGlottyRunning else { return [] }
+        return await withCheckedContinuation { cont in
+            providerWaiters.append(cont)
+            post(ReaderIPC.providersRequestName, [:])
+            // Same fire-and-forget hazard as chat: if Glotty doesn't answer,
+            // resume with an empty list rather than leaving the menu hanging.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                self?.resumeProviderWaiters(with: [])
+            }
+        }
+    }
+
+    @objc private func onProviders(_ note: Notification) {
+        let json = (note.userInfo?["providers"] as? String) ?? "[]"
+        let list = (try? JSONDecoder().decode([ReaderProvider].self, from: Data(json.utf8))) ?? []
+        resumeProviderWaiters(with: list)
+    }
+
+    private func resumeProviderWaiters(with list: [ReaderProvider]) {
+        let waiting = providerWaiters
+        providerWaiters.removeAll()
+        for c in waiting { c.resume(returning: list) }
+    }
+
+    func selectModel(providerID: String, modelID: String) {
+        post(ReaderIPC.selectModelName, ["provider": providerID, "model": modelID])
     }
 
     // MARK: transport

@@ -130,6 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self, selector: #selector(handleReaderIPCRequest(_:)),
             name: ReaderIPC.requestName, object: nil)
         ReaderIPCBridge.startChatServer()
+        ReaderIPCBridge.startProviderServer()
         // Apply the saved appearance (Light / Dark / System) before any
         // window renders so onboarding + popups open in the chosen theme.
         Theme.apply()

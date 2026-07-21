@@ -181,7 +181,15 @@ final class ReaderChat: ObservableObject {
         // opposite of what they want a question answered in. Asking in Chinese
         // used to get an English reply.
         p += "Answer clearly and concisely, and ALWAYS reply in the same language "
-        p += "the user writes their question in.\n\n"
+        p += "the user writes their question in.\n"
+        // Without this the model treats the page as the only permitted source
+        // and refuses anything it doesn't cover ("this material only explains
+        // X, you'd need to consult other documentation") — which reads as no
+        // answer at all. The page is context, not a fence.
+        p += "The page below is context, not a limit on what you may say. When it "
+        p += "doesn't cover the question, answer from your own knowledge anyway — "
+        p += "note in one short clause that the passage doesn't cover it, then give "
+        p += "the answer. Never reply with only a refusal.\n\n"
         // What's on screen right now. The user asks about what they're reading,
         // usually without selecting anything first; without this the model only
         // saw the attached snippet and would answer that it can't see the rest.

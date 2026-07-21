@@ -3,6 +3,8 @@ import SwiftUI
 /// The reader's right-hand tutor panel: an attached passage chip, a streaming
 /// message list, and a composer. Reuses `LLMProvider.current()` via `ReaderChat`.
 struct ReaderChatPanel: View {
+    /// Providers as last reported by Glotty; refreshed when the picker opens.
+    @State private var providers: [ReaderProvider] = []
     @ObservedObject var chat: ReaderChat
     let width: CGFloat
     let onClose: () -> Void
@@ -97,6 +99,69 @@ struct ReaderChatPanel: View {
         .frame(maxWidth: .infinity, alignment: m.role == .user ? .trailing : .leading)
     }
 
+    /// Provider + model picker, in the composer's bottom-left. Lists every
+    /// configured provider with its models; picking one switches Glotty's
+    /// active provider/model, the same setting the menu bar shows.
+    private var modelPicker: some View {
+        Menu {
+            if providers.isEmpty {
+                Text("No providers available")
+            }
+            ForEach(providers) { p in
+                if p.models.isEmpty {
+                    // Custom / on-device: nothing to enumerate, so the provider
+                    // itself is the choice.
+                    Button { select(p, "") } label: {
+                        if p.isActive { Label(p.name, systemImage: "checkmark") } else { Text(p.name) }
+                    }
+                } else {
+                    Menu(p.name) {
+                        ForEach(p.models) { m in
+                            Button { select(p, m.id) } label: {
+                                if p.isActive && m.id == p.activeModelID {
+                                    Label(m.name, systemImage: "checkmark")
+                                } else {
+                                    Text(m.name)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "cpu").font(.system(size: 10))
+                Text(activeLabel).font(.caption2).lineLimit(1)
+            }
+            .foregroundStyle(.secondary)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Language model used for these answers")
+        .task { providers = await ReaderCore.services?.providers() ?? [] }
+    }
+
+    /// What the picker shows when closed: the model in use, or the provider
+    /// when it has no model list.
+    private var activeLabel: String {
+        guard let p = providers.first(where: \.isActive) else { return String(localized: "Model") }
+        if let m = p.models.first(where: { $0.id == p.activeModelID }) { return m.name }
+        return p.name
+    }
+
+    private func select(_ p: ReaderProvider, _ modelID: String) {
+        ReaderCore.services?.selectModel(providerID: p.id, modelID: modelID)
+        // Reflect the pick immediately; the source of truth is Glotty, which
+        // we re-read next time the menu opens.
+        providers = providers.map { row in
+            var r = row
+            r.isActive = row.id == p.id
+            if row.id == p.id, !modelID.isEmpty { r.activeModelID = modelID }
+            return r
+        }
+    }
+
     private var composer: some View {
         HStack(alignment: .bottom, spacing: 8) {
             TextField("Ask about the passage…", text: $chat.input, axis: .vertical)
@@ -105,6 +170,7 @@ struct ReaderChatPanel: View {
                 .frame(maxWidth: .infinity, minHeight: 200, alignment: .topLeading)
                 .focused($inputFocused)
                 .onSubmit(chat.send)
+            modelPicker
             if chat.isStreaming {
                 Button(action: chat.stop) { Image(systemName: "stop.circle.fill").font(.title2) }
                     .buttonStyle(.plain).foregroundStyle(.secondary)

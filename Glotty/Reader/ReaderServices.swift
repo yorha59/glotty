@@ -13,6 +13,28 @@ protocol ReaderServices: AnyObject {
     func translate(_ text: String)
     /// Stream a chat completion for `prompt`; nil when no provider is available.
     func chatStream(prompt: String) -> AsyncThrowingStream<String, Error>?
+    /// Providers the user has configured, with their models and which is live.
+    /// Async because the standalone Reader has to ask Glotty over IPC — it
+    /// doesn't link the LLM registry.
+    func providers() async -> [ReaderProvider]
+    /// Switch the active provider and/or model.
+    func selectModel(providerID: String, modelID: String)
+}
+
+/// One configured provider as the reader sees it — enough to render a menu,
+/// nothing about how it's reached.
+struct ReaderProvider: Identifiable, Equatable, Codable {
+    struct Model: Identifiable, Equatable, Codable {
+        let id: String
+        let name: String
+    }
+    let id: String
+    let name: String
+    let models: [Model]
+    /// True for the provider currently in use.
+    var isActive: Bool
+    /// Model id currently selected for this provider, when it has one.
+    var activeModelID: String?
 }
 
 /// Set once at launch by whichever app hosts the reader window.
@@ -34,5 +56,12 @@ enum ReaderIPC {
     static let chatRequestName = Notification.Name("com.ruojunye.glotty.reader.chat.request")
     static let chatChunkName   = Notification.Name("com.ruojunye.glotty.reader.chat.chunk")
     static let chatDoneName    = Notification.Name("com.ruojunye.glotty.reader.chat.done")
+    /// Reader → Glotty: "what providers/models are configured?"; Glotty replies
+    /// on `providersReplyName` with a JSON payload (userInfo values have to be
+    /// small strings, so the list travels encoded rather than as a dictionary).
+    static let providersRequestName = Notification.Name("com.ruojunye.glotty.reader.providers.request")
+    static let providersReplyName   = Notification.Name("com.ruojunye.glotty.reader.providers.reply")
+    /// Reader → Glotty: switch provider/model. userInfo: `["provider", "model"]`.
+    static let selectModelName = Notification.Name("com.ruojunye.glotty.reader.model.select")
     static let glottyBundleID = "com.ruojunye.glotty"
 }
