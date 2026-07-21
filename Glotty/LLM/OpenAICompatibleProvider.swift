@@ -76,8 +76,7 @@ struct OpenAICompatibleProvider: LLMProvider {
         // `MainActor.assumeIsolated`; this Task isn't main-actor-isolated,
         // so we hop explicitly before building the prompt.
         let prompt = await MainActor.run { PolishPrompt.build(text: text, mode: mode) }
-        let bodyData = try makeBody(prompt: prompt, temperature: 0.3)
-        let bytes = try await openSSEStream(apiKey: apiKey, body: bodyData)
+        let bytes = try await openJSONStream(apiKey: apiKey, prompt: prompt, temperature: 0.3)
 
         var accumulated = ""
         for try await line in bytes.lines {
@@ -127,7 +126,15 @@ struct OpenAICompatibleProvider: LLMProvider {
 
     /// Build the request body. Merges `extraBodyJSON` last so preset-specific
     /// extensions can override defaults if a future preset needs to.
-    private func makeBody(prompt: String, temperature: Double) throws -> Data {
+    /// Whether this exact model has already rejected `response_format`, so the
+    /// probe only ever costs one extra round-trip per model.
+    private var jsonModeRejectedKey: String { "glotty.jsonMode.rejected.\(id).\(model)" }
+    private var jsonModeRejected: Bool {
+        UserDefaults.standard.bool(forKey: jsonModeRejectedKey)
+    }
+
+    private func makeBody(prompt: String, temperature: Double,
+                          jsonMode: Bool = false) throws -> Data {
         var body: [String: Any] = [
             "model": model,
             "messages": [["role": "user", "content": prompt]],
@@ -140,11 +147,43 @@ struct OpenAICompatibleProvider: LLMProvider {
             "stream": true,
             "stream_options": OpenAIUsageStream.streamOptions,
         ]
+        // Ask for guaranteed-parseable JSON where the caller needs it (polish).
+        // Not set for prose replies — explain/chat must stay Markdown.
+        if jsonMode { body["response_format"] = ["type": "json_object"] }
         if let extraBodyJSON,
            let extra = try? JSONSerialization.jsonObject(with: extraBodyJSON) as? [String: Any] {
             for (k, v) in extra { body[k] = v }
         }
         return try JSONSerialization.data(withJSONObject: body)
+    }
+
+    /// Open the stream asking for JSON mode, degrading gracefully if this model
+    /// doesn't support `response_format`.
+    ///
+    /// Which models accept it can't be known up front: Z.AI documents
+    /// glm-4.5/4.6/4.7/5, but the preset also offers glm-5.1, glm-5-turbo and
+    /// glm-4.5-air, which the docs don't name — and custom providers are a
+    /// complete unknown. Rather than hardcode a list that goes stale, ask once
+    /// and remember a rejection, so an unsupported model costs one extra
+    /// request ever instead of failing outright.
+    private func openJSONStream(apiKey: String, prompt: String,
+                                temperature: Double) async throws -> URLSession.AsyncBytes {
+        guard !jsonModeRejected else {
+            return try await openSSEStream(
+                apiKey: apiKey,
+                body: try makeBody(prompt: prompt, temperature: temperature))
+        }
+        do {
+            return try await openSSEStream(
+                apiKey: apiKey,
+                body: try makeBody(prompt: prompt, temperature: temperature, jsonMode: true))
+        } catch let LLMError.httpError(status, body) where status == 400 &&
+                    body.lowercased().contains("response_format") {
+            UserDefaults.standard.set(true, forKey: jsonModeRejectedKey)
+            return try await openSSEStream(
+                apiKey: apiKey,
+                body: try makeBody(prompt: prompt, temperature: temperature))
+        }
     }
 
     /// Open the SSE byte stream and validate the HTTP response. Centralises

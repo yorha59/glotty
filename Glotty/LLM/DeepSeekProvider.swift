@@ -184,8 +184,7 @@ struct DeepSeekProvider: LLMProvider {
         let prompt = await MainActor.run { PolishPrompt.build(text: text, mode: mode) }
         // Polish output is JSON — disable thinking so v4 models don't
         // waste tokens on a chain-of-thought we'd discard anyway.
-        let body = try makeBody(prompt: prompt, temperature: 0.3, enableThinking: false)
-        let bytes = try await openStream(apiKey: apiKey, body: body)
+        let bytes = try await openJSONStream(apiKey: apiKey, prompt: prompt, temperature: 0.3)
 
         var accumulated = ""
         for try await line in bytes.lines {
@@ -256,9 +255,36 @@ struct DeepSeekProvider: LLMProvider {
 
     // MARK: - HTTP / SSE helpers
 
+    /// Whether this exact model has already rejected `response_format`, so the
+    /// probe only ever costs one extra round-trip per model.
+    private var jsonModeRejectedKey: String { "glotty.jsonMode.rejected.deepseek.\(modelID)" }
+    private var jsonModeRejected: Bool {
+        UserDefaults.standard.bool(forKey: jsonModeRejectedKey)
+    }
+
+    /// Open the polish stream asking for guaranteed-parseable JSON, falling
+    /// back once (and remembering it) if this model rejects `response_format`.
+    private func openJSONStream(apiKey: String, prompt: String,
+                                temperature: Double) async throws -> URLSession.AsyncBytes {
+        guard !jsonModeRejected else {
+            return try await openStream(apiKey: apiKey, body: try makeBody(
+                prompt: prompt, temperature: temperature, enableThinking: false))
+        }
+        do {
+            return try await openStream(apiKey: apiKey, body: try makeBody(
+                prompt: prompt, temperature: temperature, enableThinking: false, jsonMode: true))
+        } catch let LLMError.httpError(status, body) where status == 400 &&
+                    body.lowercased().contains("response_format") {
+            UserDefaults.standard.set(true, forKey: jsonModeRejectedKey)
+            return try await openStream(apiKey: apiKey, body: try makeBody(
+                prompt: prompt, temperature: temperature, enableThinking: false))
+        }
+    }
+
     private func makeBody(prompt: String,
                           temperature: Double,
-                          enableThinking: Bool = true) throws -> Data {
+                          enableThinking: Bool = true,
+                          jsonMode: Bool = false) throws -> Data {
         // Reasoner models ignore temperature server-side; passing it anyway
         // is harmless and keeps polish/chat consistent.
         var body: [String: Any] = [
@@ -277,6 +303,9 @@ struct DeepSeekProvider: LLMProvider {
         if !enableThinking {
             body["thinking"] = ["type": "disabled"]
         }
+        // Polish parses the reply as JSON; ask the server to guarantee it.
+        // Never set for chat/explain, which must stay prose.
+        if jsonMode { body["response_format"] = ["type": "json_object"] }
         return try JSONSerialization.data(withJSONObject: body)
     }
 
