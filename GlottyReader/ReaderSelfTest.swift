@@ -51,6 +51,7 @@ enum ReaderSelfTest {
         if let e = epubs.first { checkEPUB(e) }
         else { print("  skip EPUB checks — none supplied") }
         checkLibraryStore()
+        checkChatDoesNotWedge()
 
         print("\n\(checks - failures.count)/\(checks) passed")
         if !failures.isEmpty {
@@ -165,6 +166,48 @@ enum ReaderSelfTest {
 
         // Cover lookup shouldn't need a full extraction.
         check(EPUBBook.coverData(at: url) != nil || true, "cover lookup runs without throwing")
+    }
+
+    /// A reply that never arrives must not wedge the panel. The request goes
+    /// out as a fire-and-forget notification, so if Glotty isn't listening it
+    /// vanishes silently — and `send()` refuses to run while `isStreaming`, so
+    /// one lost reply used to swallow every later message with no clue why.
+    private static func checkChatDoesNotWedge() {
+        print("\nchat recovers from a lost reply")
+        let chat = ReaderChat()
+        // A service whose stream never yields and never finishes — exactly what
+        // a dropped notification looks like from this side.
+        final class SilentServices: ReaderServices {
+            func lookUp(_ text: String) {}
+            func translate(_ text: String) {}
+            func chatStream(prompt: String) -> AsyncThrowingStream<String, Error>? {
+                AsyncThrowingStream { _ in }   // held open forever
+            }
+        }
+        let previous = ReaderCore.services
+        ReaderCore.services = SilentServices()
+        defer { ReaderCore.services = previous }
+
+        chat.firstChunkTimeout = 1      // seconds, so the watchdog is observable
+        chat.input = "hello"
+        chat.send()
+        check(chat.isStreaming, "streaming starts")
+        check(chat.phase == .waiting, "reports waiting rather than a bare placeholder")
+        check(!chat.statusLine.isEmpty, "status line says what's happening: \"\(chat.statusLine)\"")
+
+        // The point of the fix: it recovers on its own, with no user action.
+        // Spin the runloop so the watchdog timer can fire.
+        RunLoop.current.run(until: Date().addingTimeInterval(2.5))
+        check(!chat.isStreaming, "gives up on its own instead of hanging forever")
+        let reported = chat.messages.last?.text ?? ""
+        check(reported.contains("No reply"), "says why it gave up: \"\(reported)\"")
+
+        // And a later message must go through — the wedge was that it didn't.
+        chat.input = "second question"
+        chat.send()
+        check(chat.messages.contains { $0.text == "second question" },
+              "a later message still goes through")
+        chat.stop()
     }
 
     private static func checkLibraryStore() {

@@ -32,6 +32,8 @@ struct EPUBWebView: NSViewRepresentable {
     @Binding var pageCount: Int
     /// Paging past either end of a chapter — `dir` is +1 or -1.
     let onChapterFlip: (Int) -> Void
+    /// Text of the page now on screen, for the chat's context.
+    let onPageText: (String) -> Void
     /// Where to land after a chapter load: the end, when the reader arrived by
     /// paging backwards.
     let landOnLastPage: Bool
@@ -94,6 +96,7 @@ struct EPUBWebView: NSViewRepresentable {
         c.onAsk = onAsk
         c.onSelectionChange = onSelectionChange
         c.onChapterFlip = onChapterFlip
+        c.onPageText = onPageText
         let pageB = $page, countB = $pageCount
         c.onPagination = { p, n in
             if pageB.wrappedValue != p { pageB.wrappedValue = p }
@@ -130,6 +133,11 @@ struct EPUBWebView: NSViewRepresentable {
         var onSelectionChange: (String) -> Void = { _ in }
         var onPagination: (Int, Int) -> Void = { _, _ in }
         var onChapterFlip: (Int) -> Void = { _ in }
+        var onPageText: (String) -> Void = { _ in }
+        /// Page whose text was last pulled — pagination also reports on every
+        /// scroll frame, and re-extracting the same page's text each frame
+        /// would be pure waste.
+        private var lastTextPage = -1
         /// Page to land on once the next chapter finishes loading; -1 = the end.
         var pendingLanding: Int?
         /// Last page the web view reported, so a state round-trip doesn't
@@ -160,6 +168,7 @@ struct EPUBWebView: NSViewRepresentable {
             // Fresh document — nothing of ours survived, so force a re-apply.
             appliedStyle = nil; appliedWords = nil
             reportedPage = 0
+            lastTextPage = -1   // new chapter: its text hasn't been read yet
             applyStyle(); applyMarks()   // applyStyle paginates
             // Queued after the two above, so the layout exists by the time we land.
             let landing = pendingLanding ?? 0
@@ -167,6 +176,15 @@ struct EPUBWebView: NSViewRepresentable {
             webView.evaluateJavaScript(
                 landing < 0 ? "__glottyGoto(__glottyPages() - 1)" : "__glottyGoto(\(landing))",
                 completionHandler: nil)
+        }
+
+        /// Pull the on-screen text so the chat can answer about what's actually
+        /// being read.
+        private func fetchPageText() {
+            webView?.evaluateJavaScript("window.__glottyPageText ? __glottyPageText() : ''") { [weak self] r, _ in
+                guard let s = r as? String else { return }
+                self?.onPageText(s)
+            }
         }
 
         /// Page the web view to `p` when SwiftUI asks for a page it isn't on.
@@ -209,6 +227,10 @@ struct EPUBWebView: NSViewRepresentable {
                 let p = (d["page"] as? Int) ?? 0, n = (d["pages"] as? Int) ?? 1
                 reportedPage = p
                 onPagination(p, max(1, n))
+                if p != lastTextPage {
+                    lastTextPage = p
+                    fetchPageText()
+                }
                 return
             }
             if (d["type"] as? String) == "chapterFlip" {
@@ -381,6 +403,28 @@ struct EPUBWebView: NSViewRepresentable {
       window.__glottyReport = function () {
         window.webkit.messageHandlers.glotty.postMessage(
           { type: 'pagination', page: __glottyPage(), pages: __glottyPages() });
+      };
+
+      // Text of the columns currently on screen. The paged layout scrolls
+      // horizontally, so "visible" is a rect test, not a scroll offset —
+      // everything before/after the current page sits outside the viewport.
+      window.__glottyPageText = function () {
+        var out = [], seen = new Set();
+        var blocks = document.querySelectorAll('p, li, h1, h2, h3, h4, h5, h6, blockquote, td, pre, figcaption');
+        for (var i = 0; i < blocks.length; i++) {
+          var el = blocks[i];
+          var r = el.getBoundingClientRect();
+          if (r.width === 0 && r.height === 0) continue;
+          var visible = r.right > 0 && r.left < window.innerWidth &&
+                        r.bottom > 0 && r.top < window.innerHeight;
+          if (!visible) continue;
+          var t = (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
+          // Nested blocks (li inside blockquote, etc.) would repeat their text.
+          if (!t || seen.has(t)) continue;
+          seen.add(t);
+          out.push(t);
+        }
+        return out.join('\n');
       };
       window.__glottyGoto = function (page) {
         var b = document.body; if (!b) return;

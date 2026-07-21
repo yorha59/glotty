@@ -73,13 +73,25 @@ struct ReaderChatPanel: View {
     private func bubble(_ m: ReaderChat.Msg) -> some View {
         HStack {
             if m.role == .user { Spacer(minLength: 28) }
-            Text(m.text.isEmpty ? "…" : LocalizedStringKey(m.text))
-                .font(.callout)
-                .textSelection(.enabled)
-                .foregroundStyle(m.role == .user ? Color.white : Color.primary)
-                .padding(.horizontal, 10).padding(.vertical, 7)
-                .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(m.role == .user ? Color.accentColor : Color.primary.opacity(0.07)))
+            Group {
+                // An empty assistant bubble is the one still being answered.
+                // Say what's happening and for how long — a bare "…" looks the
+                // same whether the model is thinking or the request was lost.
+                if m.text.isEmpty, m.role == .assistant, chat.isStreaming {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.small).scaleEffect(0.7)
+                        Text(chat.statusLine).font(.caption).foregroundStyle(.secondary)
+                    }
+                } else {
+                    Text(m.text.isEmpty ? "…" : LocalizedStringKey(m.text))
+                        .font(.callout)
+                        .textSelection(.enabled)
+                        .foregroundStyle(m.role == .user ? Color.white : Color.primary)
+                }
+            }
+            .padding(.horizontal, 10).padding(.vertical, 7)
+            .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(m.role == .user ? Color.accentColor : Color.primary.opacity(0.07)))
             if m.role == .assistant { Spacer(minLength: 28) }
         }
         .frame(maxWidth: .infinity, alignment: m.role == .user ? .trailing : .leading)

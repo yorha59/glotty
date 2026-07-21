@@ -17,6 +17,29 @@ final class ReaderChat: ObservableObject {
     @Published var input: String = ""
     @Published var isStreaming = false
 
+    /// What the reply is doing, so the panel can say so instead of showing a
+    /// bare "…" that reads identically whether the model is thinking, the
+    /// request was dropped, or the app is wedged.
+    enum Phase { case idle, waiting, writing }
+    @Published private(set) var phase: Phase = .idle
+    /// Seconds since the question was sent, ticked once a second while active.
+    @Published private(set) var elapsed: TimeInterval = 0
+
+    private var startedAt: Date?
+    private var lastChunkAt: Date?
+    private var ticker: Timer?
+
+    /// One line describing the in-flight reply, e.g. "Waiting for Glotty… 3s".
+    /// The elapsed count is the point: it distinguishes slow from stuck.
+    var statusLine: String {
+        let secs = Int(elapsed)
+        switch phase {
+        case .idle:    return ""
+        case .waiting: return String(localized: "Waiting for Glotty… \(secs)s")
+        case .writing: return String(localized: "Writing… \(secs)s")
+        }
+    }
+
     // Book the conversation is about — used to persist the thread.
     private var bookID: String?
     private var bookTitle = ""
@@ -24,6 +47,11 @@ final class ReaderChat: ObservableObject {
     private var threadID = UUID()
 
     private var task: Task<Void, Never>?
+
+    /// Text of the page the reader is looking at, pulled fresh at send time so
+    /// the answer is about wherever they are now — not wherever they were when
+    /// the panel opened.
+    var pageTextProvider: (() -> String)?
 
     /// Bind the chat to the open book; a different book starts a fresh thread.
     func setBook(_ info: ReaderState.BookInfo?) {
@@ -55,11 +83,21 @@ final class ReaderChat: ObservableObject {
         messages.append(Msg(role: .assistant, text: ""))
         let idx = messages.count - 1
         isStreaming = true
+        phase = .waiting
+        startedAt = Date()
+        startTicking()
         task = Task { [weak self] in
             do {
                 for try await snapshot in stream {
                     guard let self else { return }
+                    if self.phase == .waiting { self.phase = .writing }
+                    self.lastChunkAt = Date()
                     if self.messages.indices.contains(idx) { self.messages[idx].text = snapshot }
+                }
+                // A stream that ends without ever producing text isn't a reply.
+                if let self, self.messages.indices.contains(idx),
+                   self.messages[idx].text.isEmpty {
+                    self.messages[idx].text = String(localized: "No reply came back. Try again.")
                 }
             } catch is CancellationError {
                 // stopped by the user
@@ -68,12 +106,52 @@ final class ReaderChat: ObservableObject {
                     self.messages[idx].text = String(localized: "Couldn't get a reply: ") + error.localizedDescription
                 }
             }
-            self?.isStreaming = false
-            self?.saveThread()
+            self?.finish()
         }
     }
 
-    func stop() { task?.cancel(); isStreaming = false }
+    /// Give up when nothing has arrived for a while. The reply travels as a
+    /// distributed notification, which is fire-and-forget: if Glotty isn't
+    /// listening at that moment (restarting, quit, crashed) the request is
+    /// dropped with no error at all. Without this the stream never ends, so
+    /// `isStreaming` stays true and `send`'s guard silently swallows every
+    /// later message — the panel wedges until the app restarts.
+    /// Instance properties, not constants, so the headless self-test can dial
+    /// them down and actually observe the recovery instead of assuming it.
+    var firstChunkTimeout: TimeInterval = 45
+    var stallTimeout: TimeInterval = 60
+
+    private func startTicking() {
+        ticker?.invalidate()
+        ticker = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, self.isStreaming else { return }
+                self.elapsed = Date().timeIntervalSince(self.startedAt ?? Date())
+                let idle = Date().timeIntervalSince(self.lastChunkAt ?? self.startedAt ?? Date())
+                let limit = self.phase == .waiting ? self.firstChunkTimeout : self.stallTimeout
+                guard idle > limit else { return }
+                self.task?.cancel()
+                if let i = self.messages.indices.last, self.messages[i].role == .assistant,
+                   self.messages[i].text.isEmpty {
+                    self.messages[i].text = String(localized:
+                        "No reply after \(Int(idle))s — is Glotty running? Send again to retry.")
+                }
+                self.finish()
+            }
+        }
+    }
+
+    private func finish() {
+        ticker?.invalidate(); ticker = nil
+        isStreaming = false
+        phase = .idle
+        elapsed = 0
+        startedAt = nil
+        lastChunkAt = nil
+        saveThread()
+    }
+
+    func stop() { task?.cancel(); finish() }
 
     func reset() {
         stop()
@@ -97,14 +175,24 @@ final class ReaderChat: ObservableObject {
     }
 
     private func buildPrompt() -> String {
-        let langCode = UserDefaults.standard.string(forKey: "glotty.targetLang").flatMap { $0.isEmpty ? nil : $0 }
-            ?? Locale.current.language.languageCode?.identifier ?? "en"
-        let lang = Locale.current.localizedString(forLanguageCode: langCode) ?? "the reader's language"
-
         var p = "You are a patient reading tutor helping someone understand a document. "
-        p += "Answer clearly and concisely in \(lang). Use the selected passage as the main context.\n\n"
+        // Reply in the question's language, not `glotty.targetLang` — that's the
+        // translation target (what the user is learning), which is usually the
+        // opposite of what they want a question answered in. Asking in Chinese
+        // used to get an English reply.
+        p += "Answer clearly and concisely, and ALWAYS reply in the same language "
+        p += "the user writes their question in.\n\n"
+        // What's on screen right now. The user asks about what they're reading,
+        // usually without selecting anything first; without this the model only
+        // saw the attached snippet and would answer that it can't see the rest.
+        // Capped for token cost, not transport — a dense PDF page's text can run
+        // long, and the tail matters less than what's on screen at the top.
+        let page = String((pageTextProvider?() ?? "").prefix(4000))
+        if !page.isEmpty {
+            p += "The page the user is currently reading:\n\"\"\"\n\(page)\n\"\"\"\n\n"
+        }
         if let ctx = context, !ctx.isEmpty {
-            p += "Selected passage:\n\"\"\"\n\(ctx)\n\"\"\"\n\n"
+            p += "The user specifically selected this passage from that page:\n\"\"\"\n\(ctx)\n\"\"\"\n\n"
         }
         for m in messages {   // ends with the user's latest question
             p += (m.role == .user ? "User: " : "Assistant: ") + m.text + "\n"
