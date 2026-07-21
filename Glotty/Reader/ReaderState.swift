@@ -271,6 +271,11 @@ final class ReaderState: ObservableObject {
             chapterIndex = savedChapter
             pageIndex = savedPage
             restoring = false
+            // The restore above is guarded out of saveProgress() (see its own
+            // comment), so the Library's position needs its own explicit sync
+            // here — otherwise it would show whatever was last saved from
+            // in-book navigation, not the position we actually just restored to.
+            syncLibraryProgress()
         } catch {
             book = nil
             openError = String(format: String(localized: "Couldn't open this book: %@"),
@@ -304,6 +309,18 @@ final class ReaderState: ObservableObject {
         pendingPDFTranslation = nil
         pdfPage = min(max(0, UserDefaults.standard.integer(forKey: Self.pdfPageKey(url))),
                       max(0, doc.pageCount - 1))
+        syncLibraryProgress()
+    }
+
+    /// Keep the Library's stored reading position current — chapter index for
+    /// EPUB (page count is dynamic/reflowable, not a stable total; chapter
+    /// count is), page index for PDF (a genuinely fixed total).
+    private func syncLibraryProgress() {
+        if let b = book {
+            BookLibrary.updateProgress(bookID: b.identifier, current: chapterIndex, total: b.chapters.count)
+        } else if let url = pdfURL, let doc = pdf {
+            BookLibrary.updateProgress(bookID: url.lastPathComponent, current: pdfPage, total: doc.pageCount)
+        }
     }
 
     var chapterCount: Int { book?.chapters.count ?? 0 }
@@ -361,6 +378,7 @@ final class ReaderState: ObservableObject {
         guard !restoring, let b = book else { return }
         UserDefaults.standard.set(chapterIndex, forKey: Self.progressKey(b.identifier))
         UserDefaults.standard.set(pageIndex, forKey: Self.pageKey(b.identifier))
+        syncLibraryProgress()
     }
 
     // MARK: - Bookmarks
@@ -413,6 +431,7 @@ final class ReaderState: ObservableObject {
     private func savePDFPage() {
         guard let u = pdfURL else { return }
         UserDefaults.standard.set(pdfPage, forKey: Self.pdfPageKey(u))
+        syncLibraryProgress()
     }
     private static func buildPDFTOC(_ doc: PDFDocument) -> [PDFTOCItem] {
         guard let root = doc.outlineRoot else { return [] }

@@ -115,6 +115,51 @@ struct EPUBBook {
                         rootDir: root, chapters: chapters, toc: toc)
     }
 
+    /// Cover image bytes only, for a Library-style listing that shows many
+    /// books' covers without actually opening them for reading. `open()`
+    /// extracts the whole archive to a fresh temp directory every call and
+    /// nothing ever removes it — fine for the one book you're reading, but
+    /// browsing a list would leak a full unzipped copy per book per click.
+    /// This reads the zip in memory (`MiniZip` never touches disk) and
+    /// decompresses only the cover entry.
+    static func coverData(at epubURL: URL) -> Data? {
+        guard let zip = MiniZip(url: epubURL),
+              let containerXML = zip.string("META-INF/container.xml"),
+              let opfPath = Self.firstAttribute(in: containerXML, element: "rootfile", attribute: "full-path"),
+              let opfXML = zip.string(opfPath),
+              let opf = try? XMLDocument(xmlString: opfXML, options: [.nodePreserveWhitespace])
+        else { return nil }
+        let opfDir = (opfPath as NSString).deletingLastPathComponent
+        var manifest: [String: (href: String, props: String, type: String)] = [:]
+        for node in (try? opf.nodes(forXPath: "//*[local-name()='item']")) ?? [] {
+            guard let el = node as? XMLElement, let id = el.attribute(forName: "id")?.stringValue,
+                  let href = el.attribute(forName: "href")?.stringValue else { continue }
+            manifest[id] = (href, el.attribute(forName: "properties")?.stringValue ?? "",
+                            el.attribute(forName: "media-type")?.stringValue ?? "")
+        }
+        guard let href = Self.resolveCoverHref(manifest: manifest, opf: opf) else { return nil }
+        let rel = opfDir.isEmpty ? href : "\(opfDir)/\(href)"
+        return zip.data(rel)
+    }
+
+    /// EPUB3 marks the cover directly (`<item properties="cover-image">`);
+    /// EPUB2 points to it indirectly (`<meta name="cover" content="{manifest id}">`,
+    /// itself referring to a manifest item). Try both; returns the cover's href.
+    private static func resolveCoverHref(
+        manifest: [String: (href: String, props: String, type: String)], opf: XMLDocument
+    ) -> String? {
+        if let coverItem = manifest.values.first(where: { $0.props.contains("cover-image") }) {
+            return coverItem.href
+        }
+        if let metaCover = (try? opf.nodes(forXPath: "//*[local-name()='meta'][@name='cover']"))?.first
+                    as? XMLElement,
+           let coverID = metaCover.attribute(forName: "content")?.stringValue,
+           let item = manifest[coverID] {
+            return item.href
+        }
+        return nil
+    }
+
     // MARK: - XML helpers
 
     private static func text(_ doc: XMLDocument, _ xpath: String) -> String? {

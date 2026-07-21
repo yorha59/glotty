@@ -38,6 +38,11 @@ struct BookRecord: Codable, Identifiable {
     var lastOpened: Date
     var queries: [QueryRecord] = []
     var dialogues: [SavedDialogue]?
+    /// Reading position — chapter index for EPUB, page index for PDF (both
+    /// 0-based), and the total to measure it against (chapter count / page
+    /// count). Optional so records written before this existed still decode.
+    var currentPosition: Int?
+    var totalPositions: Int?
 
     var dialogueList: [SavedDialogue] { dialogues ?? [] }
 }
@@ -127,5 +132,21 @@ enum BookLibrary {
         load(bookID)?.queries
             .filter { $0.term == term }
             .max(by: { $0.date < $1.date })
+    }
+
+    /// Keep the Library's stored reading position current. Fired on open and
+    /// on every page/chapter turn — does not touch `lastOpened`, which is
+    /// `touch()`'s job (once per open, not once per page).
+    static func updateProgress(bookID: String, current: Int, total: Int) {
+        guard var rec = load(bookID) else { return }
+        rec.currentPosition = current
+        rec.totalPositions = total
+        save(rec)
+    }
+
+    /// Remove a book's record entirely — its look-ups, saved dialogues, and
+    /// reading position. Does not touch the book file itself.
+    static func delete(bookID: String) {
+        try? FileManager.default.removeItem(at: fileURL(bookID))
     }
 }
