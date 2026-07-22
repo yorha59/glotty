@@ -152,7 +152,7 @@ struct ReaderChatPanel: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
                     if chat.messages.isEmpty {
-                        Text("Select text in the document and tap **Ask** to quote it here, then type your question.")
+                        Text("Select text in the document, then **What is this** to have it explained, or **Add** to ask your own question about it.")
                             .font(.callout).foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 8)
                     }

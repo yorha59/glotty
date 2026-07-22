@@ -267,7 +267,7 @@ struct SelectionChip: View {
         HStack(spacing: 0) {
             button("globe", "Translate", onTranslate)
             Divider().frame(height: 16).overlay(Color.white.opacity(0.35))
-            button("bubble.left.and.bubble.right", "Ask", onAsk)
+            button("bubble.left.and.bubble.right", "What is this", onAsk)
             Divider().frame(height: 16).overlay(Color.white.opacity(0.35))
             button("text.append", "Add", onAdd)
         }
