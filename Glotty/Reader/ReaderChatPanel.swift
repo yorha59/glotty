@@ -10,8 +10,10 @@ struct ReaderChatPanel: View {
     @State private var renaming: SavedDialogue?
     @State private var renameText = ""
     /// Whether the conversations rail is open. Persisted so it stays the way
-    /// it was left, like the chat panel's own width.
-    @AppStorage("glotty.reader.chatSessionsShown") private var showSessions = false
+    /// it was left, like the chat panel's own width. Open by default: shipped
+    /// collapsed, it's a feature nobody finds — the toggle is the only clue it
+    /// exists, and one click hides it for good if it's not wanted.
+    @AppStorage("glotty.reader.chatSessionsShown") private var showSessions = true
 
     @ObservedObject var chat: ReaderChat
     let width: CGFloat
