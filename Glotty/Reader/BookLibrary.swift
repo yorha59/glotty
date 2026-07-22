@@ -123,6 +123,29 @@ enum BookLibrary {
         save(rec)
     }
 
+    /// Every saved conversation for a book, newest first.
+    static func dialogues(bookID: String) -> [SavedDialogue] {
+        (load(bookID)?.dialogues ?? []).sorted { $0.date > $1.date }
+    }
+
+    static func deleteDialogue(bookID: String, id: UUID) {
+        guard var rec = load(bookID) else { return }
+        rec.dialogues = (rec.dialogues ?? []).filter { $0.id != id }
+        save(rec)
+    }
+
+    /// Rename a conversation. Titles are auto-derived from the first question,
+    /// which is often a poor label for a thread that wandered.
+    static func renameDialogue(bookID: String, id: UUID, title: String) {
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty, var rec = load(bookID) else { return }
+        var list = rec.dialogues ?? []
+        guard let i = list.firstIndex(where: { $0.id == id }) else { return }
+        list[i].title = title
+        rec.dialogues = list
+        save(rec)
+    }
+
     /// The most recent record for a term (for the click-preview).
     static func record(bookID: String, term: String) -> QueryRecord? {
         load(bookID)?.queries

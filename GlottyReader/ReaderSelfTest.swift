@@ -54,6 +54,7 @@ enum ReaderSelfTest {
         checkChatDoesNotWedge()
         checkStartPage()
         checkProvidersOverIPC()
+        checkChatSessions()
         checkProviderPayload()
 
         print("\n\(checks - failures.count)/\(checks) passed")
@@ -284,6 +285,53 @@ enum ReaderSelfTest {
         }
         check(list.contains { $0.isActive }, "one provider is marked active")
         check(list.contains { !$0.models.isEmpty }, "at least one provider exposes models")
+    }
+
+    /// Conversations must outlive the panel. The reported bug was that a book
+    /// reopened with an empty chat even though the thread was on disk — saved
+    /// but never read back — and that there was only ever one thread.
+    private static func checkChatSessions() {
+        print("\nchat sessions")
+        let info = ReaderState.BookInfo(id: "selftest:sessions", title: "T", path: "/tmp/t.pdf")
+
+        // A conversation, saved the way a real reply saves it.
+        let first = ReaderChat()
+        first.setBook(info)
+        first.messages = [.init(role: .user, text: "question one"),
+                          .init(role: .assistant, text: "answer one")]
+        first.saveThreadForTesting()
+        let firstID = first.currentSessionID
+
+        // A second, separate conversation on the same book.
+        first.startNewSession()
+        check(first.currentSessionID != firstID, "new conversation gets its own id")
+        first.messages = [.init(role: .user, text: "question two"),
+                          .init(role: .assistant, text: "answer two")]
+        first.saveThreadForTesting()
+
+        // Reopening the book is a fresh ReaderChat — the panel's situation.
+        let reopened = ReaderChat()
+        reopened.setBook(info)
+        eq(reopened.sessions.count, 2, "both conversations are listed after reopening")
+        check(!reopened.messages.isEmpty, "reopening restores a conversation instead of an empty panel")
+        eq(reopened.messages.last?.text, "answer two", "resumes the most recent one")
+
+        // Switching back to the older thread.
+        guard let older = reopened.sessions.first(where: { $0.id == firstID }) else {
+            return check(false, "the earlier conversation is still listed")
+        }
+        reopened.load(older)
+        eq(reopened.messages.last?.text, "answer one", "switching loads that conversation's messages")
+
+        // Rename must survive the next save, which re-derives titles by default.
+        reopened.rename(older, to: "Custom name")
+        reopened.saveThreadForTesting()
+        eq(reopened.sessions.first { $0.id == firstID }?.title, "Custom name",
+           "a renamed conversation keeps its title when saved again")
+
+        reopened.delete(older)
+        check(!reopened.sessions.contains { $0.id == firstID }, "deleting removes it")
+        eq(reopened.sessions.count, 1, "the other conversation is untouched")
     }
 
     private static func checkLibraryStore() {

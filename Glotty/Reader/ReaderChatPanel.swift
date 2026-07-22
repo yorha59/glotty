@@ -5,6 +5,11 @@ import SwiftUI
 struct ReaderChatPanel: View {
     /// Providers as last reported by Glotty; refreshed when the picker opens.
     @State private var providers: [ReaderProvider] = []
+    /// Conversation awaiting a delete confirmation; non-nil is "asking".
+    @State private var pendingDelete: SavedDialogue?
+    @State private var renaming: SavedDialogue?
+    @State private var renameText = ""
+
     @ObservedObject var chat: ReaderChat
     let width: CGFloat
     let onClose: () -> Void
@@ -20,6 +25,40 @@ struct ReaderChatPanel: View {
         }
         .frame(width: width)
         .background(Color(nsColor: .windowBackgroundColor))
+        // Same shape as the Library's delete: a question, the scope, and a
+        // repeat-the-verb destructive button.
+        .confirmationDialog(
+            "Delete this conversation?",
+            isPresented: Binding(get: { pendingDelete != nil },
+                                 set: { if !$0 { pendingDelete = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let s = pendingDelete { chat.delete(s) }
+                pendingDelete = nil
+            }
+            Button("Cancel", role: .cancel) { pendingDelete = nil }
+        } message: {
+            if let s = pendingDelete {
+                Text("This removes \u{201C}\(s.title)\u{201D} and its \(s.messages.count) messages. Cannot be undone.")
+            }
+        }
+        .sheet(item: $renaming) { s in
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Rename conversation").font(.headline)
+                TextField("Title", text: $renameText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 260)
+                HStack {
+                    Spacer()
+                    Button("Cancel") { renaming = nil }
+                    Button("Rename") { chat.rename(s, to: renameText); renaming = nil }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(renameText.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+            .padding(16)
+        }
     }
 
     private var header: some View {
@@ -27,16 +66,55 @@ struct ReaderChatPanel: View {
             Image(systemName: "bubble.left.and.bubble.right.fill").foregroundStyle(.tint)
             Text("Chat").font(.headline)
             Spacer()
-            if !chat.messages.isEmpty {
-                Button(action: chat.reset) { Image(systemName: "trash") }
-                    .buttonStyle(.plain).foregroundStyle(.secondary)
-                    .help("Clear conversation")
-            }
+            sessionsMenu
+            Button { chat.startNewSession() } label: { Image(systemName: "square.and.pencil") }
+                .buttonStyle(.plain).foregroundStyle(.secondary)
+                .help("New conversation")
             Button(action: onClose) { Image(systemName: "sidebar.right") }
                 .buttonStyle(.plain).foregroundStyle(.secondary)
                 .help("Hide chat")
         }
         .padding(10)
+    }
+
+    /// Saved conversations for this book: switch, rename, delete. Every reply
+    /// is written as it arrives, so switching away never loses anything.
+    private var sessionsMenu: some View {
+        Menu {
+            if chat.sessions.isEmpty {
+                Text("No saved conversations")
+            }
+            ForEach(chat.sessions) { s in
+                Button { chat.load(s) } label: {
+                    let label = "\(s.title) — \(s.date.formatted(.relative(presentation: .named)))"
+                    if s.id == chat.currentSessionID {
+                        Label(label, systemImage: "checkmark")
+                    } else {
+                        Text(label)
+                    }
+                }
+            }
+            if !chat.sessions.isEmpty {
+                Divider()
+                Menu("Rename") {
+                    ForEach(chat.sessions) { s in
+                        Button(s.title) { renaming = s; renameText = s.title }
+                    }
+                }
+                Menu("Delete") {
+                    ForEach(chat.sessions) { s in
+                        Button(s.title, role: .destructive) { pendingDelete = s }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "clock.arrow.circlepath")
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .foregroundStyle(.secondary)
+        .help(chat.sessions.isEmpty ? "Conversations" : "Conversations (\(chat.sessions.count))")
     }
 
     private var messages: some View {

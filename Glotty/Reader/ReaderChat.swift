@@ -53,12 +53,74 @@ final class ReaderChat: ObservableObject {
     /// the panel opened.
     var pageTextProvider: (() -> String)?
 
-    /// Bind the chat to the open book; a different book starts a fresh thread.
+    /// Conversations saved for this book, newest first.
+    @Published private(set) var sessions: [SavedDialogue] = []
+    /// Which saved conversation is on screen, so the picker can mark it.
+    var currentSessionID: UUID { threadID }
+
+    /// Bind the chat to the open book and pick up where it left off. Opening a
+    /// book used to hand back an empty panel even though the conversation was
+    /// on disk — the thread was saved but never read back.
     func setBook(_ info: ReaderState.BookInfo?) {
-        if info?.id != bookID { reset() }
+        let changed = info?.id != bookID
         bookID = info?.id
         bookTitle = info?.title ?? ""
         bookPath = info?.path
+        guard changed else { return }
+        stop()
+        context = nil
+        refreshSessions()
+        if let latest = sessions.first { load(latest) } else { startNewSession() }
+    }
+
+    func refreshSessions() {
+        sessions = bookID.map { BookLibrary.dialogues(bookID: $0) } ?? []
+    }
+
+    /// Show a saved conversation. The in-flight reply (if any) belongs to the
+    /// thread being left, so it's cancelled rather than landing in this one.
+    func load(_ session: SavedDialogue) {
+        stop()
+        threadID = session.id
+        context = session.context
+        messages = session.messages.map {
+            Msg(role: $0.role == "user" ? .user : .assistant, text: $0.text)
+        }
+    }
+
+    /// Begin a new conversation. The previous one is already on disk — every
+    /// reply saves — so nothing is lost by switching away.
+    func startNewSession() {
+        stop()
+        messages.removeAll()
+        context = nil
+        threadID = UUID()
+        refreshSessions()
+    }
+
+    func delete(_ session: SavedDialogue) {
+        guard let bookID else { return }
+        let deletingOpenOne = session.id == threadID
+        if deletingOpenOne {
+            // Let go of the in-memory thread *before* deleting. Switching away
+            // saves whatever is on screen, so leaving these messages under the
+            // same id would write the record straight back after the delete.
+            stop()
+            messages.removeAll()
+            context = nil
+            threadID = UUID()
+        }
+        BookLibrary.deleteDialogue(bookID: bookID, id: session.id)
+        refreshSessions()
+        // Deleting the open conversation leaves nothing on screen — show the
+        // next most recent, or stay on the fresh empty one.
+        if deletingOpenOne, let next = sessions.first { load(next) }
+    }
+
+    func rename(_ session: SavedDialogue, to title: String) {
+        guard let bookID else { return }
+        BookLibrary.renameDialogue(bookID: bookID, id: session.id, title: title)
+        refreshSessions()
     }
 
     /// Attach a selection as the passage the conversation is about.
@@ -153,25 +215,29 @@ final class ReaderChat: ObservableObject {
 
     func stop() { task?.cancel(); finish() }
 
-    func reset() {
-        stop()
-        messages.removeAll()
-        context = nil
-        threadID = UUID()
-    }
+    /// Kept as the name the panel's "new conversation" control uses.
+    func reset() { startNewSession() }
+
+    /// Persist without going through a live reply — lets the headless suite
+    /// exercise saving/restoring without an LLM.
+    func saveThreadForTesting() { saveThread() }
 
     /// Persist the current thread into the book's saved dialogues.
     private func saveThread() {
         guard let bookID, !messages.isEmpty,
               messages.contains(where: { $0.role == .assistant && !$0.text.isEmpty }) else { return }
-        let title = messages.first(where: { $0.role == .user })?.text ?? context ?? "Conversation"
+        // Keep a title the user set: it's derived from the first question only
+        // as a default, and re-deriving on every save would undo a rename.
+        let existing = sessions.first { $0.id == threadID }?.title
+        let derived = messages.first(where: { $0.role == .user })?.text ?? context ?? "Conversation"
         let dialogue = SavedDialogue(
             id: threadID,
-            title: String(title.prefix(70)),
+            title: existing ?? String(derived.prefix(70)),
             date: Date(),
             context: context,
             messages: messages.map { SavedMessage(role: $0.role == .user ? "user" : "assistant", text: $0.text) })
         BookLibrary.saveDialogue(bookID: bookID, title: bookTitle, path: bookPath, dialogue)
+        refreshSessions()
     }
 
     private func buildPrompt() -> String {
