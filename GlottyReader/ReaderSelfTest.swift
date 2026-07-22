@@ -53,6 +53,7 @@ enum ReaderSelfTest {
         checkLibraryStore()
         checkChatDoesNotWedge()
         checkStartPage()
+        checkProvidersOverIPC()
         checkProviderPayload()
 
         print("\n\(checks - failures.count)/\(checks) passed")
@@ -250,6 +251,39 @@ enum ReaderSelfTest {
         eq(back.first?.activeModelID, "glm-5.1", "current model survives")
         eq(back.first(where: { $0.isActive })?.id, "zai", "active provider survives")
         check(back.last?.models.isEmpty == true, "a provider with no model list is still listed")
+    }
+
+    /// The model picker, exercised through the real IPC client against a real
+    /// running Glotty — not a stub and not a hand-written probe. This is the
+    /// path the picker actually uses, so it's the only thing that proves the
+    /// menu can populate. Skipped (not failed) when Glotty isn't running,
+    /// since that's an environment fact rather than a defect.
+    private static func checkProvidersOverIPC() {
+        print("\nmodel picker over IPC")
+        let glottyUp = !NSRunningApplication
+            .runningApplications(withBundleIdentifier: ReaderIPC.glottyBundleID).isEmpty
+        guard glottyUp else {
+            print("  skip — Glotty isn't running")
+            return
+        }
+        let svc = IPCReaderServices()
+        var result: [ReaderProvider]?
+        Task { result = await svc.providers() }
+        // Spin the runloop rather than block it: the reply arrives as a
+        // distributed notification on main, and a semaphore would deadlock the
+        // very thread that has to deliver it.
+        let deadline = Date().addingTimeInterval(10)
+        while result == nil, Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        guard let list = result else { return check(false, "providers() returned within 10s") }
+        check(!list.isEmpty, "picker gets a provider list (\(list.count) providers)")
+        for p in list {
+            print("     \(p.isActive ? "●" : "○") \(p.name) — \(p.models.count) models"
+                  + (p.activeModelID.map { " (\($0))" } ?? ""))
+        }
+        check(list.contains { $0.isActive }, "one provider is marked active")
+        check(list.contains { !$0.models.isEmpty }, "at least one provider exposes models")
     }
 
     private static func checkLibraryStore() {
