@@ -175,16 +175,31 @@ struct ReaderChatPanel: View {
         }
     }
 
+    /// One-line reminder of what's attached — you selected the passage, so it
+    /// only has to say which one, not reproduce it. The full text is in the
+    /// tooltip. Previously this showed four lines behind a full-height accent
+    /// bar: a `frame(width:)` with no height lets the shape take every point
+    /// offered, so a two-word selection ate half the panel.
     private func contextChip(_ ctx: String) -> some View {
-        HStack(alignment: .top, spacing: 6) {
-            RoundedRectangle(cornerRadius: 1.5).fill(.tint).frame(width: 3)
-            Text(ctx).font(.caption).foregroundStyle(.secondary).lineLimit(4)
+        HStack(spacing: 6) {
+            Image(systemName: "text.quote")
+                .font(.system(size: 10))
+                .foregroundStyle(.tint)
+            Text(ctx)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
             Spacer(minLength: 0)
             Button(action: chat.clearContext) { Image(systemName: "xmark.circle.fill") }
-                .buttonStyle(.plain).foregroundStyle(.tertiary)
+                .buttonStyle(.plain)
+                .foregroundStyle(.tertiary)
         }
-        .padding(8)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.05)))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Capsule().fill(Color.primary.opacity(0.06)))
+        .fixedSize(horizontal: false, vertical: true)
+        .help(ctx)
     }
 
     private func bubble(_ m: ReaderChat.Msg) -> some View {
