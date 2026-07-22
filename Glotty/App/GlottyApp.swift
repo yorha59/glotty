@@ -373,20 +373,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popup.show(sourceText: "", mode: .chat, practiceItems: items)
     }
 
-    @objc private func setModel(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? String,
-            let entry = SettingsRegistry.find(id: "model") else { return }
-        dbg("setModel invoked (menu bar) -> \(id)")
-        entry.write(id)
-    }
-
-    /// Switch which service answers. Settings can do this too, but changing
-    /// provider is as routine as changing model, and the menu only offered the
-    /// latter — so picking a different service meant a trip through Settings.
-    @objc private func setProvider(_ sender: NSMenuItem) {
-        guard let id = sender.representedObject as? String else { return }
-        dbg("setProvider invoked (menu bar) -> \(id)")
-        LLMRegistry.setCurrentProviderID(id)
+    /// Apply a provider+model pick from the menu bar. Routed through the same
+    /// helper the reader's picker uses, so both write the pair the same way.
+    @objc private func setProviderModel(_ sender: NSMenuItem) {
+        guard let d = sender.representedObject as? [String: String],
+              let provider = d["provider"] else { return }
+        dbg("setProviderModel (menu bar) -> \(provider) / \(d["model"] ?? "-")")
+        GlottyReaderServices.applySelection(providerID: provider, modelID: d["model"] ?? "")
     }
 
     @objc private func openMemorySettings() {
@@ -451,47 +444,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             systemSymbolName: "checkmark.rectangle.stack", accessibilityDescription: nil)
         menu.addItem(practice)
 
-        // Provider submenu — which service answers. Built from the same list
-        // the reader's picker uses, so both show exactly the providers that are
-        // actually usable (a key is set) rather than everything compiled in.
+        // Model submenu — provider and model in one place. They were two
+        // separate items, but picking a model is always picking it *from* a
+        // provider, so splitting them meant switching service took two trips
+        // through the menu. Providers nest their own models; one that has none
+        // (custom endpoint, on-device) is a leaf you select directly.
         let providers = GlottyReaderServices.configuredProviders()
-        if providers.count > 1 {
-            let activeName = providers.first(where: \.isActive)?.name ?? "—"
-            let providerItem = NSMenuItem(
-                title: "\("Provider".t): \(activeName)", action: nil, keyEquivalent: "")
-            providerItem.image = NSImage(systemSymbolName: "cloud", accessibilityDescription: nil)
+        if !providers.isEmpty {
+            let active = providers.first(where: \.isActive)
+            let activeModel = active.flatMap { p in
+                p.models.first { $0.id == p.activeModelID }?.name
+            }
+            let label = [active?.name, activeModel].compactMap { $0 }.joined(separator: " · ")
+            let modelItem = NSMenuItem(
+                title: "\("Model".t): \(label.isEmpty ? "—" : label)", action: nil, keyEquivalent: "")
+            modelItem.image = NSImage(systemSymbolName: "cpu", accessibilityDescription: nil)
             let sub = NSMenu()
             for p in providers {
-                let it = NSMenuItem(title: p.name, action: #selector(setProvider(_:)), keyEquivalent: "")
-                it.target = self
-                it.representedObject = p.id
-                it.state = p.isActive ? .on : .off
-                sub.addItem(it)
+                if p.models.isEmpty {
+                    let it = NSMenuItem(title: p.name, action: #selector(setProviderModel(_:)), keyEquivalent: "")
+                    it.target = self
+                    it.representedObject = ["provider": p.id, "model": ""]
+                    it.state = p.isActive ? .on : .off
+                    sub.addItem(it)
+                } else {
+                    let head = NSMenuItem(title: p.name, action: nil, keyEquivalent: "")
+                    head.state = p.isActive ? .on : .off
+                    let models = NSMenu()
+                    for m in p.models {
+                        let it = NSMenuItem(title: m.name, action: #selector(setProviderModel(_:)), keyEquivalent: "")
+                        it.target = self
+                        it.representedObject = ["provider": p.id, "model": m.id]
+                        it.state = (p.isActive && m.id == p.activeModelID) ? .on : .off
+                        models.addItem(it)
+                    }
+                    head.submenu = models
+                    sub.addItem(head)
+                }
             }
-            providerItem.submenu = sub
-            menu.addItem(providerItem)
-        }
-
-        // Model submenu — switch the active provider's model inline (built from
-        // the same registry the chat's set_setting uses). Omitted when the
-        // active provider has no enumerated model list (custom / on-device).
-        if let modelEntry = SettingsRegistry.find(id: "model"),
-            case .enumeration(let options, let display) = modelEntry.kind, !options.isEmpty {
-            let current = modelEntry.read()
-            let currentLabel = current.map { modelEntry.displayValue?($0) ?? $0 } ?? "—"
-            let modelItem = NSMenuItem(
-                title: "\("Model".t): \(currentLabel)", action: nil, keyEquivalent: "")
-            modelItem.image = NSImage(systemSymbolName: "cpu", accessibilityDescription: nil)
-            let modelSub = NSMenu()
-            for opt in options {
-                let it = NSMenuItem(
-                    title: display[opt] ?? opt, action: #selector(setModel(_:)), keyEquivalent: "")
-                it.target = self
-                it.representedObject = opt
-                it.state = (opt == current) ? .on : .off
-                modelSub.addItem(it)
-            }
-            modelItem.submenu = modelSub
+            modelItem.submenu = sub
             menu.addItem(modelItem)
         }
 
