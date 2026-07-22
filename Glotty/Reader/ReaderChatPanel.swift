@@ -103,12 +103,19 @@ struct ReaderChatPanel: View {
             .help(showSessions ? "Hide conversations" : "Show conversations")
             Text("Chat").font(.headline)
             Spacer()
-            Button { chat.startNewSession() } label: { Image(systemName: "square.and.pencil") }
+            // New-conversation lives in the rail's header when the rail is
+            // open; showing it in both places just gave two buttons for one
+            // action.
+            if !showSessions {
+                Button { chat.startNewSession() } label: { Image(systemName: "square.and.pencil") }
+                    .buttonStyle(.plain).foregroundStyle(.secondary)
+                    .help("New conversation")
+            }
+            // Closing the panel, not "some other sidebar" — an x reads as that,
+            // where a second sidebar glyph next to the rail toggle did not.
+            Button(action: onClose) { Image(systemName: "xmark") }
                 .buttonStyle(.plain).foregroundStyle(.secondary)
-                .help("New conversation")
-            Button(action: onClose) { Image(systemName: "sidebar.right") }
-                .buttonStyle(.plain).foregroundStyle(.secondary)
-                .help("Hide chat")
+                .help("Close chat")
         }
         .padding(10)
     }
