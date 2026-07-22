@@ -414,6 +414,11 @@ final class ReaderState: ObservableObject {
         ReaderStore.defaults.removeObject(forKey: bookmarksKey(legacyID))
     }
 
+    /// Bookmarks for a book that isn't open — the Library lists them beside
+    /// its look-ups and conversations, and shouldn't have to load the document
+    /// to do it.
+    static func savedBookmarks(for bookID: String) -> [Bookmark] { loadBookmarks(bookID) }
+
     private static func loadBookmarks(_ id: String) -> [Bookmark] {
         guard let d = ReaderStore.defaults.data(forKey: bookmarksKey(id)) else { return [] }
         return (try? JSONDecoder().decode([Bookmark].self, from: d)) ?? []

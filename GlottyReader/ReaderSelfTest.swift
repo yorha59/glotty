@@ -46,7 +46,7 @@ enum ReaderSelfTest {
             checkDocumentSwap(pdfs[0], pdfs[1])
             checkRenderedDocumentFollows(pdfs[0], pdfs[1])
         } else { print("  skip document-swap checks — needs 2 PDFs") }
-        if let p = pdfs.first { checkPDFIdentityAndBookmarks(p) }
+        if let p = pdfs.first { checkPDFIdentityAndBookmarks(p); checkBookmarksVisibleToLibrary(p) }
         else { print("  skip PDF checks — none supplied") }
         if let e = epubs.first { checkEPUB(e) }
         else { print("  skip EPUB checks — none supplied") }
@@ -439,6 +439,26 @@ enum ReaderSelfTest {
         eq(chat.messages.count, afterFailure, "the failed reply was replaced, not appended to")
         eq(chat.messages.filter { $0.role == .user }.count, 1, "the question wasn't duplicated")
         eq(chat.messages.first(where: { $0.role == .user })?.text, "why?", "and it's the same question")
+    }
+
+    /// The Library lists a book's bookmarks without opening it, so it has to
+    /// read them under the same id the reader wrote them under — the id
+    /// mismatch that gave PDFs two Library rows would show up here as an
+    /// always-empty list.
+    private static func checkBookmarksVisibleToLibrary(_ url: URL) {
+        print("\nbookmarks readable without opening the book")
+        let s = ReaderState()
+        s.open(url)
+        s.pdfPage = min(2, (s.pdf?.pageCount ?? 1) - 1)
+        s.toggleBookmark()
+        let id = ReaderState.pdfBookID(url)
+        let seen = ReaderState.savedBookmarks(for: id)
+        eq(seen.count, 1, "the Library reads the bookmark the reader just made")
+        eq(seen.first?.page, s.pdfPage, "at the right position")
+        check(!(seen.first?.label.isEmpty ?? true), "with a label to show")
+        // Clean up so later checks see the state they expect.
+        s.toggleBookmark()
+        eq(ReaderState.savedBookmarks(for: id).count, 0, "and clearing it is visible too")
     }
 
     private static func checkLibraryStore() {

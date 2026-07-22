@@ -34,16 +34,17 @@ struct LibraryView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 .tag(b.id)
-                // Double-click opens, the way any Mac list works. Without it
-                // the only way in is the detail pane's Open button, so a click
-                // that "did nothing" just surfaced whatever the reader window
-                // still had loaded — which reads as opening the wrong file.
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
-                // simultaneousGesture, not onTapGesture: a tap gesture on a row
-                // consumes the click before List's own selection sees it, so
-                // adding double-click-to-open stopped single-click selecting
-                // and the detail pane never changed.
-                .simultaneousGesture(TapGesture(count: 2).onEnded { open(b) })
+                // Selection is set here rather than left to `List(selection:)`,
+                // in one gesture that branches on the click count. Two tap
+                // gestures on a row (count 2 and count 1) leave SwiftUI to pick
+                // a winner, and the loser silently never fires — which is how a
+                // click came to land on a row and change nothing.
+                .onTapGesture {
+                    if (NSApp.currentEvent?.clickCount ?? 1) >= 2 { open(b) }
+                    else { selectedID = b.id }
+                }
                 .contextMenu {
                     Button { open(b) } label: { Label("Open", systemImage: "book") }
                         .disabled(!fileExists(b))
@@ -113,6 +114,7 @@ struct LibraryView: View {
 private struct BookDetailView: View {
     let book: BookRecord
     @State private var cover: NSImage?
+    @State private var bookmarks: [ReaderState.Bookmark] = []
 
     private var isPDF: Bool {
         (book.path.map { ($0 as NSString).pathExtension.lowercased() } ?? "") == "pdf"
@@ -145,11 +147,16 @@ private struct BookDetailView: View {
             }
             .padding()
             Divider()
-            if book.queries.isEmpty && book.dialogueList.isEmpty {
+            if book.queries.isEmpty && book.dialogueList.isEmpty && bookmarks.isEmpty {
                 ContentUnavailableView("Nothing recorded yet", systemImage: "text.magnifyingglass")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
+                    if !bookmarks.isEmpty {
+                        Section("Bookmarks") {
+                            ForEach(bookmarks) { bookmarkRow($0) }
+                        }
+                    }
                     if !book.queries.isEmpty {
                         Section("Look-ups") {
                             ForEach(book.queries.sorted { $0.date > $1.date }) { queryRow($0) }
@@ -163,7 +170,10 @@ private struct BookDetailView: View {
                 }
             }
         }
-        .task(id: book.id) { await loadCover() }
+        .task(id: book.id) {
+            bookmarks = ReaderState.savedBookmarks(for: book.bookID)
+            await loadCover()
+        }
     }
 
     /// Where the file actually lives. Truncated in the middle so both the
@@ -221,6 +231,33 @@ private struct BookDetailView: View {
         // before publishing, since Task.detached's cancellation is cooperative.
         guard !Task.isCancelled else { return }
         cover = img
+    }
+
+    /// A saved place, shown the way the reader's own list shows it: where it
+    /// is and when it was made. Clicking opens the book there rather than at
+    /// wherever reading last stopped.
+    private func bookmarkRow(_ b: ReaderState.Bookmark) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: "bookmark.fill").font(.caption2).foregroundStyle(.red)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(b.label).font(.callout.weight(.medium)).lineLimit(1)
+                Text(b.date.formatted(date: .abbreviated, time: .shortened))
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Text(isPDF ? "p.\(b.page + 1)" : "ch.\(b.chapter + 1) · p.\(b.page + 1)")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 3)
+        .contentShape(Rectangle())
+        .onTapGesture { openAt(b) }
+    }
+
+    /// Open the book and jump to the bookmark.
+    private func openAt(_ b: ReaderState.Bookmark) {
+        guard let p = book.path, FileManager.default.fileExists(atPath: p) else { return }
+        ReaderWindowController.shared.open(url: URL(fileURLWithPath: p))
+        ReaderWindowController.shared.state.goToBookmark(b)
     }
 
     private func queryRow(_ q: QueryRecord) -> some View {
