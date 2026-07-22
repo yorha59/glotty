@@ -276,10 +276,41 @@ struct ReaderChatPanel: View {
         }
     }
 
+    /// One staged passage, shown the way an attached file is: a small token
+    /// you can recognise and remove, with the full text on hover.
+    private func attachmentPill(_ a: ReaderChat.Attachment) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "text.quote").font(.system(size: 9))
+            Text(a.label).font(.caption2).lineLimit(1)
+            Text("\(a.text.count)").font(.system(size: 9)).foregroundStyle(.tertiary)
+            Button { chat.removeAttachment(a) } label: {
+                Image(systemName: "xmark").font(.system(size: 8, weight: .bold))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 6).padding(.vertical, 3)
+        .background(Capsule().fill(Color.accentColor.opacity(0.16)))
+        .foregroundStyle(.tint)
+        .help(a.text)
+    }
+
     private var composer: some View {
         // Text on top, controls along the bottom edge: the picker belongs at
         // the bottom-left of the box, not squeezed beside the send button.
         VStack(alignment: .leading, spacing: 6) {
+            // Staged passages sit above the field as compact references, so a
+            // long selection doesn't bury what you're typing and any one of
+            // them can be dropped on its own.
+            if !chat.attachments.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 5) {
+                        ForEach(chat.attachments) { attachmentPill($0) }
+                    }
+                    .padding(.bottom, 1)
+                }
+                .frame(maxHeight: 26)
+            }
             TextField("Ask about the passage…", text: $chat.input, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(.callout)

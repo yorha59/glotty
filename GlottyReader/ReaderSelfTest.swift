@@ -352,11 +352,26 @@ enum ReaderSelfTest {
         reopened.input = ""
         let sentBefore = reopened.messages.count
         reopened.quote("  first   passage ")
-        check(reopened.input.contains("first passage"), "Add puts the passage in the composer")
+        eq(reopened.attachments.count, 1, "Add stages the passage")
+        check(reopened.input.isEmpty, "and keeps it out of the input, where it would bury what you type")
         eq(reopened.messages.count, sentBefore, "Add sends nothing on its own")
         reopened.quote("second passage")
-        check(reopened.input.contains("first passage") && reopened.input.contains("second passage"),
-              "a second Add joins the first rather than replacing it")
+        eq(reopened.attachments.count, 2, "a second Add joins the first rather than replacing it")
+        check(reopened.attachments[0].label.contains("first"), "each is labelled recognisably")
+
+        // Any one can be dropped — the reason for holding them as references.
+        reopened.removeAttachment(reopened.attachments[0])
+        eq(reopened.attachments.count, 1, "one attachment can be removed on its own")
+        eq(reopened.attachments.first?.text, "second passage", "and the right one survives")
+
+        // Staged passages travel with the question as a single turn.
+        reopened.input = "why?"
+        reopened.send()
+        let sent = reopened.messages.last { $0.role == .user }?.text ?? ""
+        check(sent.contains("second passage") && sent.contains("why?"),
+              "the sent turn carries both the passage and the question")
+        check(reopened.attachments.isEmpty, "sending clears the staged passages")
+        reopened.stop()
         reopened.input = ""
 
         // A conversation you've just started has nothing to save, so it used to

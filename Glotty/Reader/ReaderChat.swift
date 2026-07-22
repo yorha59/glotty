@@ -117,6 +117,7 @@ final class ReaderChat: ObservableObject {
     /// thread being left, so it's cancelled rather than landing in this one.
     func load(_ session: SavedDialogue) {
         stop()
+        attachments.removeAll()
         threadID = session.id
         sessionStartedAt = session.date
         context = session.context
@@ -129,6 +130,7 @@ final class ReaderChat: ObservableObject {
     /// reply saves — so nothing is lost by switching away.
     func startNewSession() {
         stop()
+        attachments.removeAll()
         messages.removeAll()
         context = nil
         threadID = UUID()
@@ -176,16 +178,34 @@ final class ReaderChat: ObservableObject {
         deliver()
     }
 
-    /// Put a passage in the composer without sending. Ask answers "what does
-    /// this say?"; this is for when the question is something else and the
-    /// passage is only what it's about — several selections can be gathered
-    /// before asking.
+    /// A passage staged for the next question. Held as a reference rather than
+    /// pasted into the input: a paragraph of prose buries whatever you're
+    /// trying to type, and once it's plain text there's no way to drop just
+    /// one of several without editing around it.
+    struct Attachment: Identifiable, Equatable {
+        let id = UUID()
+        let text: String
+        /// Enough to recognise which selection this is, not the selection.
+        var label: String {
+            let flat = text.replacingOccurrences(of: "\n", with: " ")
+                .trimmingCharacters(in: .whitespaces)
+            return flat.count > 20 ? String(flat.prefix(20)) + "…" : flat
+        }
+    }
+    @Published private(set) var attachments: [Attachment] = []
+
+    /// Stage a passage for the next question. Ask answers "what does this
+    /// say?" on its own; this is for when the question is something else and
+    /// the passage is only what it's about. Several can be gathered.
     func quote(_ text: String) {
         let quote = ReaderState.cleanSelection(text)
         guard !quote.isEmpty else { return }
-        let typed = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        input = "\u{201C}\(quote)\u{201D}\n\n" + typed
+        attachments.append(Attachment(text: quote))
         focusRequests &+= 1
+    }
+
+    func removeAttachment(_ a: Attachment) {
+        attachments.removeAll { $0.id == a.id }
     }
 
     /// Bumped when the composer should take focus — after Add drops a passage
@@ -193,10 +213,17 @@ final class ReaderChat: ObservableObject {
     @Published private(set) var focusRequests = 0
 
     func send() {
-        let q = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty, !isStreaming else { return }
+        let typed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !typed.isEmpty || !attachments.isEmpty, !isStreaming else { return }
+        // The staged passages travel with the question as one turn, so the
+        // transcript keeps what was being discussed.
+        let quoted = attachments
+            .map { "\u{201C}\($0.text)\u{201D}" }
+            .joined(separator: "\n\n")
+        let full = [quoted, typed].filter { !$0.isEmpty }.joined(separator: "\n\n")
         input = ""
-        messages.append(Msg(role: .user, text: q))
+        attachments.removeAll()
+        messages.append(Msg(role: .user, text: full))
         deliver()
     }
 
