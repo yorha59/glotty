@@ -58,6 +58,30 @@ final class ReaderChat: ObservableObject {
     /// Which saved conversation is on screen, so the picker can mark it.
     var currentSessionID: UUID { threadID }
 
+    /// When the open conversation was started, for the placeholder row. Named
+    /// apart from `startedAt`, which times the in-flight reply.
+    private var sessionStartedAt = Date()
+
+    /// The open conversation has nothing worth keeping yet — no reply has
+    /// landed, so it was never written to disk.
+    private var currentIsUnsaved: Bool { !sessions.contains { $0.id == threadID } }
+
+    /// Rows for the rail: the saved conversations, plus the one just started.
+    /// A brand-new conversation has nothing to save, so it wouldn't appear at
+    /// all — clicking "new" looked like nothing happened. It's listed as a
+    /// placeholder and takes a real title once there's something in it; leave
+    /// without saying anything and it's simply never written.
+    var listedSessions: [SavedDialogue] {
+        guard currentIsUnsaved else { return sessions }
+        let placeholder = SavedDialogue(
+            id: threadID,
+            title: String(localized: "New conversation"),
+            date: sessionStartedAt,
+            context: context,
+            messages: [])
+        return [placeholder] + sessions
+    }
+
     /// Bind the chat to the open book and pick up where it left off. Opening a
     /// book used to hand back an empty panel even though the conversation was
     /// on disk — the thread was saved but never read back.
@@ -82,6 +106,7 @@ final class ReaderChat: ObservableObject {
     func load(_ session: SavedDialogue) {
         stop()
         threadID = session.id
+        sessionStartedAt = session.date
         context = session.context
         messages = session.messages.map {
             Msg(role: $0.role == "user" ? .user : .assistant, text: $0.text)
@@ -95,6 +120,7 @@ final class ReaderChat: ObservableObject {
         messages.removeAll()
         context = nil
         threadID = UUID()
+        sessionStartedAt = Date()
         refreshSessions()
     }
 

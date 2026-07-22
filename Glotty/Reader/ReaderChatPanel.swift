@@ -117,7 +117,7 @@ struct ReaderChatPanel: View {
             Text("Conversations").font(.caption).foregroundStyle(.secondary)
                 .padding(.horizontal, 10).padding(.vertical, 8)
             Divider()
-            if chat.sessions.isEmpty {
+            if chat.listedSessions.isEmpty {
                 Text("No conversations yet")
                     .font(.caption).foregroundStyle(.tertiary)
                     .padding(10)
@@ -125,7 +125,7 @@ struct ReaderChatPanel: View {
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 2) {
-                        ForEach(chat.sessions) { s in sessionRow(s) }
+                        ForEach(chat.listedSessions) { s in sessionRow(s) }
                     }
                     .padding(6)
                 }

@@ -329,6 +329,20 @@ enum ReaderSelfTest {
         eq(reopened.sessions.first { $0.id == firstID }?.title, "Custom name",
            "a renamed conversation keeps its title when saved again")
 
+        // A conversation you've just started has nothing to save, so it used to
+        // be invisible — clicking "new" appeared to do nothing.
+        reopened.startNewSession()
+        let draftID = reopened.currentSessionID
+        check(reopened.listedSessions.contains { $0.id == draftID },
+              "a new conversation is listed before anything is said")
+        eq(reopened.listedSessions.first?.messages.count, 0, "it's listed as empty")
+        eq(reopened.sessions.contains { $0.id == draftID }, false, "but nothing is written to disk yet")
+
+        // Leaving it without saying anything discards it.
+        reopened.load(older)
+        check(!reopened.listedSessions.contains { $0.id == draftID },
+              "leaving an untouched new conversation drops it from the list")
+
         reopened.delete(older)
         check(!reopened.sessions.contains { $0.id == firstID }, "deleting removes it")
         eq(reopened.sessions.count, 1, "the other conversation is untouched")
