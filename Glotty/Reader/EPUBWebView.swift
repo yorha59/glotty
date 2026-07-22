@@ -23,6 +23,8 @@ struct EPUBWebView: NSViewRepresentable {
     let onRemoveUnderline: (String) -> Void
     let onTranslate: (String) -> Void
     let onAsk: (String) -> Void
+    /// Quote the selection into the composer rather than sending it.
+    let onAdd: (String) -> Void
     /// Fires whenever the selection changes so the window can offer a
     /// keyboard path (⌘T) for the same action the chip exposes.
     let onSelectionChange: (String) -> Void
@@ -78,7 +80,8 @@ struct EPUBWebView: NSViewRepresentable {
         let c = context.coordinator
         let chip = NSHostingView(rootView: SelectionChip(
             onTranslate: { [weak c] in c?.translateTapped() },
-            onAsk: { [weak c] in c?.askTapped() }))
+            onAsk: { [weak c] in c?.askTapped() },
+            onAdd: { [weak c] in c?.addTapped() }))
         chip.isHidden = true
         overlay.addSubview(chip)
         c.overlay = overlay
@@ -94,6 +97,7 @@ struct EPUBWebView: NSViewRepresentable {
         c.onRemoveUnderline = onRemoveUnderline
         c.onTranslate = onTranslate
         c.onAsk = onAsk
+        c.onAdd = onAdd
         c.onSelectionChange = onSelectionChange
         c.onChapterFlip = onChapterFlip
         c.onPageText = onPageText
@@ -130,6 +134,7 @@ struct EPUBWebView: NSViewRepresentable {
         var onRemoveUnderline: (String) -> Void = { _ in }
         var onTranslate: (String) -> Void = { _ in }
         var onAsk: (String) -> Void = { _ in }
+        var onAdd: (String) -> Void = { _ in }
         var onSelectionChange: (String) -> Void = { _ in }
         var onPagination: (Int, Int) -> Void = { _, _ in }
         var onChapterFlip: (Int) -> Void = { _ in }
@@ -276,6 +281,13 @@ struct EPUBWebView: NSViewRepresentable {
             let text = pendingSelection
             guard !text.isEmpty else { return }
             onTranslate(text)
+            clearSelectionUI()
+        }
+
+        func addTapped() {
+            let text = pendingSelection
+            guard !text.isEmpty else { return }
+            onAdd(text)
             clearSelectionUI()
         }
 

@@ -176,6 +176,22 @@ final class ReaderChat: ObservableObject {
         deliver()
     }
 
+    /// Put a passage in the composer without sending. Ask answers "what does
+    /// this say?"; this is for when the question is something else and the
+    /// passage is only what it's about — several selections can be gathered
+    /// before asking.
+    func quote(_ text: String) {
+        let quote = ReaderState.cleanSelection(text)
+        guard !quote.isEmpty else { return }
+        let typed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        input = "\u{201C}\(quote)\u{201D}\n\n" + typed
+        focusRequests &+= 1
+    }
+
+    /// Bumped when the composer should take focus — after Add drops a passage
+    /// in, typing is the next thing wanted.
+    @Published private(set) var focusRequests = 0
+
     func send() {
         let q = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty, !isStreaming else { return }

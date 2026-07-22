@@ -104,7 +104,7 @@ enum ReaderSelfTest {
         func view(_ d: PDFDocument) -> PDFReaderView {
             PDFReaderView(doc: d, page: binding, translations: [],
                           onLookup: { _ in }, onTranslate: { _, _, _ in },
-                          onAsk: { _ in }, onRemove: { _ in })
+                          onAsk: { _ in }, onAdd: { _ in }, onRemove: { _ in })
         }
         let pdfView = PDFView()          // retained here; the coordinator holds it weakly
         let c = view(docA).makeCoordinator()
@@ -345,6 +345,18 @@ enum ReaderSelfTest {
         check(asked?.text.range(of: "explain", options: .caseInsensitive) == nil,
               "no English instruction is glued onto the passage")
         reopened.stop()
+        reopened.input = ""
+
+        // Add is the counterpart to Ask: it stages the passage instead of
+        // sending, so a question that isn't "explain this" can be typed first.
+        reopened.input = ""
+        let sentBefore = reopened.messages.count
+        reopened.quote("  first   passage ")
+        check(reopened.input.contains("first passage"), "Add puts the passage in the composer")
+        eq(reopened.messages.count, sentBefore, "Add sends nothing on its own")
+        reopened.quote("second passage")
+        check(reopened.input.contains("first passage") && reopened.input.contains("second passage"),
+              "a second Add joins the first rather than replacing it")
         reopened.input = ""
 
         // A conversation you've just started has nothing to save, so it used to

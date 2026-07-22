@@ -16,6 +16,7 @@ struct PDFReaderView: NSViewRepresentable {
     let onLookup: (String) -> Void
     let onTranslate: (Int, CGRect, String) -> Void
     let onAsk: (String) -> Void
+    let onAdd: (String) -> Void
     let onRemove: (UUID) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -53,7 +54,8 @@ struct PDFReaderView: NSViewRepresentable {
 
         let chip = NSHostingView(rootView: SelectionChip(
             onTranslate: { [weak c] in c?.translateTapped() },
-            onAsk: { [weak c] in c?.askTapped() }))
+            onAsk: { [weak c] in c?.askTapped() },
+            onAdd: { [weak c] in c?.addTapped() }))
         chip.frame.size = chip.fittingSize
         chip.isHidden = true
         overlay.addSubview(chip)
@@ -224,6 +226,12 @@ struct PDFReaderView: NSViewRepresentable {
             clearSelectionUI()
         }
 
+        func addTapped() {
+            guard let s = pendingSelection else { return }
+            parent.onAdd(s.text)
+            clearSelectionUI()
+        }
+
         func askTapped() {
             guard let s = pendingSelection else { return }
             parent.onAsk(s.text)
@@ -251,11 +259,17 @@ final class PassthroughView: NSView {
 struct SelectionChip: View {
     let onTranslate: () -> Void
     let onAsk: () -> Void
+    /// Put the passage in the composer instead of sending it. Ask covers
+    /// "explain this"; Add is for when the question is something else and the
+    /// passage is just what it's about.
+    let onAdd: () -> Void
     var body: some View {
         HStack(spacing: 0) {
             button("globe", "Translate", onTranslate)
             Divider().frame(height: 16).overlay(Color.white.opacity(0.35))
             button("bubble.left.and.bubble.right", "Ask", onAsk)
+            Divider().frame(height: 16).overlay(Color.white.opacity(0.35))
+            button("text.append", "Add", onAdd)
         }
         .background(Color.accentColor, in: Capsule())
         .shadow(color: .black.opacity(0.2), radius: 4, y: 2)

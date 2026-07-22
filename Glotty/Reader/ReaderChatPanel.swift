@@ -286,6 +286,7 @@ struct ReaderChatPanel: View {
                 .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
                 .focused($inputFocused)
                 .onSubmit(chat.send)
+                .onChange(of: chat.focusRequests) { _, _ in inputFocused = true }
             HStack(spacing: 8) {
                 modelPicker
                 Spacer(minLength: 0)

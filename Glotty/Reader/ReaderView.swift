@@ -70,6 +70,10 @@ struct ReaderView: View {
                         chat.attach(text)
                         withAnimation(.easeInOut(duration: 0.18)) { showChat = true }
                     },
+                    onAdd: { text in
+                        chat.quote(text)
+                        withAnimation(.easeInOut(duration: 0.18)) { showChat = true }
+                    },
                     onSelectionChange: { epubSelection = $0 },
                     page: $state.pageIndex,
                     pageCount: $epubPageCount,
@@ -179,6 +183,10 @@ struct ReaderView: View {
                     },
                     onAsk: { text in
                         chat.attach(text)
+                        withAnimation(.easeInOut(duration: 0.18)) { showChat = true }
+                    },
+                    onAdd: { text in
+                        chat.quote(text)
                         withAnimation(.easeInOut(duration: 0.18)) { showChat = true }
                     },
                     onRemove: { _ in }
