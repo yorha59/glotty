@@ -32,6 +32,10 @@ struct DeepSeekModelOption: Identifiable, Hashable {
 /// stay readable and the generic provider doesn't grow optional hooks.
 struct DeepSeekProvider: LLMProvider {
     let id = "deepseek"
+    /// Set when a caller wants a specific model rather than the one stored
+    /// for this provider — the reader picks its own, separately from Glotty.
+    var modelOverride: String?
+
     let displayName = "DeepSeek"
 
     static let keychainAccount = "deepseek"
@@ -114,6 +118,7 @@ struct DeepSeekProvider: LLMProvider {
     }
 
     private var modelID: String {
+        if let modelOverride, !modelOverride.isEmpty { return modelOverride }
         let raw = UserDefaults.standard.string(forKey: "glotty.deepseek.model")?
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return (raw?.isEmpty == false ? raw! : Self.defaultModel)

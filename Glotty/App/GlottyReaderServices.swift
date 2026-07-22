@@ -14,20 +14,27 @@ final class GlottyReaderServices: ReaderServices {
     }
 
     func chatStream(prompt: String) -> AsyncThrowingStream<String, Error>? {
-        LLMRegistry.current()?.chatCompletionStream(prompt: prompt)
+        // The reader keeps its own provider/model — see ReaderModelSelection.
+        ReaderModelSelection.provider()?.chatCompletionStream(prompt: prompt)
     }
 
-    func providers() async -> [ReaderProvider] { Self.configuredProviders() }
+    func providers() async -> [ReaderProvider] { Self.configuredProviders(scope: .reader) }
 
     func selectModel(providerID: String, modelID: String) {
-        Self.applySelection(providerID: providerID, modelID: modelID)
+        Self.applySelection(providerID: providerID, modelID: modelID, scope: .reader)
     }
 
     /// The provider list the reader's picker shows. Only providers that are
     /// actually usable (a key is set, or none is needed) — offering one that
     /// can't answer just produces a failed reply.
-    static func configuredProviders() -> [ReaderProvider] {
-        let activeID = LLMRegistry.currentProviderID()
+    /// Which surface a provider list / selection belongs to. The reader chats
+    /// about long dense text; Glotty's popup does short latency-sensitive
+    /// rewrites — different jobs, so they keep separate choices.
+    enum Scope { case glotty, reader }
+
+    static func configuredProviders(scope: Scope = .glotty) -> [ReaderProvider] {
+        let activeID = scope == .reader ? ReaderModelSelection.providerID
+                                        : LLMRegistry.currentProviderID()
         return LLMRegistry.all.compactMap { p -> ReaderProvider? in
             // Skip providers that can't answer (no API key yet) — offering one
             // only produces a failed reply.
@@ -38,13 +45,20 @@ final class GlottyReaderServices: ReaderServices {
                 name: p.displayName,
                 models: models.map { .init(id: $0.id, name: $0.name) },
                 isActive: p.id == activeID,
-                activeModelID: key.flatMap { UserDefaults.standard.string(forKey: $0) })
+                activeModelID: scope == .reader
+                    ? (ReaderModelSelection.modelID(for: p.id)
+                       ?? key.flatMap { UserDefaults.standard.string(forKey: $0) })
+                    : key.flatMap { UserDefaults.standard.string(forKey: $0) })
         }
     }
 
     /// Apply a pick from the reader. Provider and model are separate settings,
     /// so both are written; an empty model id means "provider only".
-    static func applySelection(providerID: String, modelID: String) {
+    static func applySelection(providerID: String, modelID: String, scope: Scope = .glotty) {
+        if scope == .reader {
+            ReaderModelSelection.select(providerID: providerID, modelID: modelID)
+            return
+        }
         LLMRegistry.setCurrentProviderID(providerID)
         guard !modelID.isEmpty, let key = modelCatalog(for: providerID).key else { return }
         UserDefaults.standard.set(modelID, forKey: key)

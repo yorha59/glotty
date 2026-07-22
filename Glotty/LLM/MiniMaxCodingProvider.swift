@@ -14,6 +14,10 @@ struct MiniMaxModelOption: Identifiable, Hashable {
 /// China is `api.minimaxi.com` (override the endpoint in Settings).
 struct MiniMaxCodingProvider: LLMProvider {
     let id = "minimax-coding"
+    /// Set when a caller wants a specific model rather than the one stored
+    /// for this provider — the reader picks its own, separately from Glotty.
+    var modelOverride: String?
+
     let displayName = "MiniMax (Coding)"
 
     static let keychainAccount = "minimax-coding"
@@ -76,6 +80,7 @@ struct MiniMaxCodingProvider: LLMProvider {
     }
 
     private var model: String {
+        if let modelOverride, !modelOverride.isEmpty { return modelOverride }
         let raw = UserDefaults.standard.string(forKey: "glotty.minimax.model")?
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return (raw?.isEmpty == false ? raw! : Self.defaultModel)

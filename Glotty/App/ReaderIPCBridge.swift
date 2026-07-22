@@ -37,7 +37,7 @@ enum ReaderIPCBridge {
         let nc = DistributedNotificationCenter.default()
         nc.addObserver(forName: ReaderIPC.providersRequestName, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated {
-                let list = GlottyReaderServices.configuredProviders()
+                let list = GlottyReaderServices.configuredProviders(scope: .reader)
                 let json = (try? JSONEncoder().encode(list)).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
                 post(ReaderIPC.providersReplyName, ["providers": json])
             }
@@ -46,13 +46,14 @@ enum ReaderIPCBridge {
             MainActor.assumeIsolated {
                 guard let provider = note.userInfo?["provider"] as? String else { return }
                 GlottyReaderServices.applySelection(
-                    providerID: provider, modelID: (note.userInfo?["model"] as? String) ?? "")
+                    providerID: provider, modelID: (note.userInfo?["model"] as? String) ?? "",
+                    scope: .reader)
             }
         }
     }
 
     private static func serveChat(id: String, prompt: String) {
-        guard let provider = LLMRegistry.current() else {
+        guard let provider = ReaderModelSelection.provider() else {
             post(ReaderIPC.chatDoneName, ["requestID": id,
                  "error": String(localized: "No language model is configured in Glotty.")])
             return

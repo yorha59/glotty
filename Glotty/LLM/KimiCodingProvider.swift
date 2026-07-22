@@ -12,6 +12,10 @@ struct KimiModelOption: Identifiable, Hashable {
 /// different response shape (`content[0].text`) than Z.AI's OpenAI-compatible one.
 struct KimiCodingProvider: LLMProvider {
     let id = "kimi-coding"
+    /// Set when a caller wants a specific model rather than the one stored
+    /// for this provider — the reader picks its own, separately from Glotty.
+    var modelOverride: String?
+
     let displayName = "Kimi For Coding"
 
     static let keychainAccount = "kimi-coding"
@@ -69,6 +73,7 @@ struct KimiCodingProvider: LLMProvider {
     }
 
     private var model: String {
+        if let modelOverride, !modelOverride.isEmpty { return modelOverride }
         let raw = UserDefaults.standard.string(forKey: "glotty.kimi.model")?
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return (raw?.isEmpty == false ? raw! : Self.defaultModel)

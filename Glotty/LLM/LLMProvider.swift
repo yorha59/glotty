@@ -417,6 +417,34 @@ enum LLMRegistry {
         return list.first { $0.id == id } ?? list.first
     }
 
+    /// Build a specific provider, optionally pinned to a model other than the
+    /// one stored for it. Used by the reader, which keeps its own choice: the
+    /// stock presets take the model at construction, and the dedicated classes
+    /// read it from defaults unless told otherwise.
+    static func provider(id: String, modelOverride: String?) -> LLMProvider? {
+        let model = (modelOverride?.isEmpty == false) ? modelOverride : nil
+        if let preset = OpenAIStockPresets.find(id: id) {
+            guard let model else { return makeProvider(for: preset) }
+            let endpoint = URL(string: preset.currentEndpoint())
+                ?? URL(string: preset.defaultEndpoint)!
+            return OpenAICompatibleProvider(
+                id: preset.id, displayName: preset.displayName, endpointURL: endpoint,
+                model: model, keychainAccount: preset.id, extraBodyJSON: preset.extraBodyJSON)
+        }
+        switch id {
+        case "deepseek":
+            var p = DeepSeekProvider(); p.modelOverride = model; return p
+        case "kimi-coding":
+            var p = KimiCodingProvider(); p.modelOverride = model; return p
+        case "minimax-coding":
+            var p = MiniMaxCodingProvider(); p.modelOverride = model; return p
+        default:
+            // Custom endpoints carry their own model id, and the on-device
+            // model has none — nothing to override.
+            return all.first { $0.id == id }
+        }
+    }
+
     /// Look up a provider's display name by id. Used by the usage tab so the
     /// table renders human-readable rows regardless of where the provider came
     /// from (stock / custom / Kimi).
