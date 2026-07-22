@@ -18,8 +18,22 @@ enum LLMError: LocalizedError {
         case .networkFailure(let err):
             return "Network failure: \(err.localizedDescription)"
         case .httpError(let status, let body):
+            // Say what to do, not just what came back. A raw
+            // `{"error":{"code":"1302",...}}` gives the reader nothing to act
+            // on — and the common causes have different fixes. 429 in
+            // particular is usually one model being refused while others on the
+            // same key answer fine, so it points at the model, not the account.
             let preview = body.prefix(160)
-            return "HTTP \(status): \(preview)"
+            switch status {
+            case 429:
+                return String(localized: "Rate limited. This often applies to one model rather than the whole account — try a different model or provider from the picker.")
+            case 401, 403:
+                return String(localized: "The API key was rejected (HTTP \(status)). Check it in Settings → Language Model.")
+            case 500...599:
+                return String(localized: "The provider had a server error (HTTP \(status)). Retry, or switch provider if it persists.")
+            default:
+                return "HTTP \(status): \(preview)"
+            }
         case .emptyResponse:
             return "Empty response from the model."
         case .malformedResponse(let detail):
