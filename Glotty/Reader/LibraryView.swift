@@ -39,7 +39,11 @@ struct LibraryView: View {
                 // that "did nothing" just surfaced whatever the reader window
                 // still had loaded — which reads as opening the wrong file.
                 .contentShape(Rectangle())
-                .onTapGesture(count: 2) { open(b) }
+                // simultaneousGesture, not onTapGesture: a tap gesture on a row
+                // consumes the click before List's own selection sees it, so
+                // adding double-click-to-open stopped single-click selecting
+                // and the detail pane never changed.
+                .simultaneousGesture(TapGesture(count: 2).onEnded { open(b) })
                 .contextMenu {
                     Button { open(b) } label: { Label("Open", systemImage: "book") }
                         .disabled(!fileExists(b))
