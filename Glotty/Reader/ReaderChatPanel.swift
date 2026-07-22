@@ -9,13 +9,35 @@ struct ReaderChatPanel: View {
     @State private var pendingDelete: SavedDialogue?
     @State private var renaming: SavedDialogue?
     @State private var renameText = ""
+    /// Whether the conversations rail is open. Persisted so it stays the way
+    /// it was left, like the chat panel's own width.
+    @AppStorage("glotty.reader.chatSessionsShown") private var showSessions = false
 
     @ObservedObject var chat: ReaderChat
     let width: CGFloat
     let onClose: () -> Void
     @FocusState private var inputFocused: Bool
 
+    /// Width of the conversations rail when it's open.
+    private let sessionsWidth: CGFloat = 168
+
     var body: some View {
+        HStack(spacing: 0) {
+            // The rail extends the panel rather than squeezing the transcript,
+            // so showing it doesn't reflow the conversation you're reading.
+            if showSessions {
+                sessionsSidebar
+                    .frame(width: sessionsWidth)
+                    .transition(.move(edge: .leading))
+                Divider()
+            }
+            chatColumn
+        }
+        .frame(width: width + (showSessions ? sessionsWidth + 1 : 0))
+    }
+
+    /// Header, transcript, attached passage, composer.
+    private var chatColumn: some View {
         VStack(spacing: 0) {
             header
             Divider()
@@ -31,7 +53,6 @@ struct ReaderChatPanel: View {
             }
             composer
         }
-        .frame(width: width)
         .background(Color(nsColor: .windowBackgroundColor))
         // Same shape as the Library's delete: a question, the scope, and a
         // repeat-the-verb destructive button.
@@ -71,10 +92,15 @@ struct ReaderChatPanel: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Image(systemName: "bubble.left.and.bubble.right.fill").foregroundStyle(.tint)
+            Button {
+                withAnimation(.easeInOut(duration: 0.18)) { showSessions.toggle() }
+            } label: {
+                Image(systemName: "sidebar.left")
+            }
+            .buttonStyle(.plain).foregroundStyle(showSessions ? Color.accentColor : .secondary)
+            .help(showSessions ? "Hide conversations" : "Show conversations")
             Text("Chat").font(.headline)
             Spacer()
-            sessionsMenu
             Button { chat.startNewSession() } label: { Image(systemName: "square.and.pencil") }
                 .buttonStyle(.plain).foregroundStyle(.secondary)
                 .help("New conversation")
@@ -85,44 +111,56 @@ struct ReaderChatPanel: View {
         .padding(10)
     }
 
-    /// Saved conversations for this book: switch, rename, delete. Every reply
-    /// is written as it arrives, so switching away never loses anything.
-    private var sessionsMenu: some View {
-        Menu {
+    /// Conversations for this book, as a rail beside the chat. Selecting one
+    /// opens it; rename/delete live in each row's context menu, where they
+    /// apply to the row you actually clicked.
+    private var sessionsSidebar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("Conversations").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button { chat.startNewSession() } label: { Image(systemName: "plus") }
+                    .buttonStyle(.plain).foregroundStyle(.secondary)
+                    .help("New conversation")
+            }
+            .padding(.horizontal, 10).padding(.vertical, 8)
+            Divider()
             if chat.sessions.isEmpty {
-                Text("No saved conversations")
-            }
-            ForEach(chat.sessions) { s in
-                Button { chat.load(s) } label: {
-                    let label = "\(s.title) — \(s.date.formatted(.relative(presentation: .named)))"
-                    if s.id == chat.currentSessionID {
-                        Label(label, systemImage: "checkmark")
-                    } else {
-                        Text(label)
+                Text("No conversations yet")
+                    .font(.caption).foregroundStyle(.tertiary)
+                    .padding(10)
+                Spacer()
+            } else {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 2) {
+                        ForEach(chat.sessions) { s in sessionRow(s) }
                     }
+                    .padding(6)
                 }
             }
-            if !chat.sessions.isEmpty {
-                Divider()
-                Menu("Rename") {
-                    ForEach(chat.sessions) { s in
-                        Button(s.title) { renaming = s; renameText = s.title }
-                    }
-                }
-                Menu("Delete") {
-                    ForEach(chat.sessions) { s in
-                        Button(s.title, role: .destructive) { pendingDelete = s }
-                    }
-                }
-            }
-        } label: {
-            Image(systemName: "clock.arrow.circlepath")
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .foregroundStyle(.secondary)
-        .help(chat.sessions.isEmpty ? "Conversations" : "Conversations (\(chat.sessions.count))")
+        .background(Color.primary.opacity(0.03))
+    }
+
+    private func sessionRow(_ s: SavedDialogue) -> some View {
+        let selected = s.id == chat.currentSessionID
+        return VStack(alignment: .leading, spacing: 1) {
+            Text(s.title).font(.caption).lineLimit(2)
+                .foregroundStyle(selected ? Color.white : .primary)
+            Text(s.date.formatted(.relative(presentation: .named)))
+                .font(.system(size: 9))
+                .foregroundStyle(selected ? Color.white.opacity(0.8) : .secondary)
+        }
+        .padding(.horizontal, 7).padding(.vertical, 5)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 6)
+            .fill(selected ? Color.accentColor : .clear))
+        .contentShape(Rectangle())
+        .onTapGesture { chat.load(s) }
+        .contextMenu {
+            Button("Rename…") { renaming = s; renameText = s.title }
+            Button("Delete…", role: .destructive) { pendingDelete = s }
+        }
     }
 
     private var messages: some View {
