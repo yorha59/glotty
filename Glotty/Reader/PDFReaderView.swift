@@ -86,6 +86,9 @@ struct PDFReaderView: NSViewRepresentable {
         private var originalToDerived: [Int: Int] = [:]
         private var lastIDs: [UUID] = []
         private var pendingSelection: (page: PDFPage, rect: CGRect, text: String)?
+        /// Deferred tap-to-look-up, cancelled when the tap turns out to be the
+        /// first half of a double-click.
+        private var pendingLookup: DispatchWorkItem?
         /// The document the view was last built from. Identity, not equality:
         /// PDFDocument has no useful `==`, and two different files can share a
         /// page count, so only "is this the same object" is meaningful.
@@ -157,10 +160,25 @@ struct PDFReaderView: NSViewRepresentable {
             }
             // A drag-select ends as a click too — don't fire a lookup then.
             if let s = v.currentSelection?.string, !s.trimmingCharacters(in: .whitespaces).isEmpty { return }
-            let onPage = v.convert(pt, to: page)
-            guard let word = page.selectionForWord(at: onPage)?.string?
-                .trimmingCharacters(in: .whitespacesAndNewlines), !word.isEmpty else { return }
-            parent.onLookup(word)
+
+            // Wait out the double-click interval before looking anything up.
+            // A double-click arrives here as its *first* click, before PDFKit
+            // has selected the word, so the selection guard above can't see it
+            // yet — checking again once the gesture has settled is what tells
+            // a tap apart from the start of a double-click.
+            pendingLookup?.cancel()
+            let work = DispatchWorkItem { [weak self] in
+                guard let self, let v = self.pdfView else { return }
+                if let s = v.currentSelection?.string,
+                   !s.trimmingCharacters(in: .whitespaces).isEmpty { return }
+                let onPage = v.convert(pt, to: page)
+                guard let word = page.selectionForWord(at: onPage)?.string?
+                    .trimmingCharacters(in: .whitespacesAndNewlines), !word.isEmpty else { return }
+                self.parent.onLookup(word)
+            }
+            pendingLookup = work
+            DispatchQueue.main.asyncAfter(
+                deadline: .now() + NSEvent.doubleClickInterval, execute: work)
         }
 
         @objc func pageChanged() {
