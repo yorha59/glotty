@@ -55,6 +55,7 @@ enum ReaderSelfTest {
         checkStartPage()
         checkProvidersOverIPC()
         checkChatSessions()
+        checkRetryAfterFailure()
         checkProviderPayload()
 
         print("\n\(checks - failures.count)/\(checks) passed")
@@ -363,6 +364,54 @@ enum ReaderSelfTest {
         reopened.delete(older)
         check(!reopened.sessions.contains { $0.id == firstID }, "deleting removes it")
         eq(reopened.sessions.count, 1, "the other conversation is untouched")
+    }
+
+    /// A rate limit shouldn't cost the question. Retry must re-send what's
+    /// already in the transcript and replace the failed bubble, not stack a
+    /// second one under it.
+    private static func checkRetryAfterFailure() {
+        print("\nretry after a failed reply")
+        final class FlakyServices: ReaderServices {
+            var failNext = true
+            func lookUp(_ text: String) {}
+            func translate(_ text: String) {}
+            func providers() async -> [ReaderProvider] { [] }
+            func selectModel(providerID: String, modelID: String) {}
+            func chatStream(prompt: String) -> AsyncThrowingStream<String, Error>? {
+                let fail = failNext
+                failNext = false
+                return AsyncThrowingStream { c in
+                    if fail {
+                        c.finish(throwing: NSError(
+                            domain: "HTTP", code: 429,
+                            userInfo: [NSLocalizedDescriptionKey: "HTTP 429: rate limit"]))
+                    } else {
+                        c.yield("the answer")
+                        c.finish()
+                    }
+                }
+            }
+        }
+        let previous = ReaderCore.services
+        let svc = FlakyServices()
+        ReaderCore.services = svc
+        defer { ReaderCore.services = previous }
+
+        let chat = ReaderChat()
+        chat.setBook(.init(id: "selftest:retry", title: "T", path: "/tmp/t.pdf"))
+        chat.input = "why?"
+        chat.send()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+        check(chat.messages.last?.isError == true, "a failed reply is flagged, so the bubble can offer retry")
+        let afterFailure = chat.messages.count
+
+        chat.retry()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+        eq(chat.messages.last?.text, "the answer", "retry re-sends and the reply lands")
+        check(chat.messages.last?.isError != true, "the error bubble is gone, not stacked under")
+        eq(chat.messages.count, afterFailure, "the failed reply was replaced, not appended to")
+        eq(chat.messages.filter { $0.role == .user }.count, 1, "the question wasn't duplicated")
+        eq(chat.messages.first(where: { $0.role == .user })?.text, "why?", "and it's the same question")
     }
 
     private static func checkLibraryStore() {

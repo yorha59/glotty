@@ -11,6 +11,10 @@ final class ReaderChat: ObservableObject {
         let id = UUID()
         let role: Role
         var text: String
+        /// The reply failed — rate limit, network, a dropped request. Flagged
+        /// so the bubble can offer a retry instead of making the question be
+        /// retyped.
+        var isError = false
         /// The turn is a passage sent by Ask rather than something typed. The
         /// bubble shows the passage alone — the "explain this" instruction goes
         /// in the prompt, not into the visible text, so the model still sees
@@ -180,13 +184,28 @@ final class ReaderChat: ObservableObject {
         deliver()
     }
 
+    /// Send the last question again after a failure. Drops the failed reply
+    /// so the retry replaces it rather than stacking another bubble, and
+    /// re-uses the question already in the transcript — a rate limit shouldn't
+    /// cost you what you typed.
+    func retry() {
+        guard !isStreaming else { return }
+        while let last = messages.last, last.role == .assistant, last.isError {
+            messages.removeLast()
+        }
+        guard messages.last?.role == .user else { return }
+        deliver()
+    }
+
     /// Stream a reply for whatever the last user turn is. Shared by typing a
     /// question and by Ask, so both behave identically from here on.
     private func deliver() {
         let prompt = buildPrompt()
         guard let stream = ReaderCore.services?.chatStream(prompt: prompt) else {
-            messages.append(Msg(role: .assistant,
-                text: String(localized: "No language model is configured. Choose one in Settings → Language Model.")))
+            messages.append(Msg(
+                role: .assistant,
+                text: String(localized: "No language model is configured. Choose one in Settings → Language Model."),
+                isError: true))
             return
         }
 
@@ -207,13 +226,15 @@ final class ReaderChat: ObservableObject {
                 // A stream that ends without ever producing text isn't a reply.
                 if let self, self.messages.indices.contains(idx),
                    self.messages[idx].text.isEmpty {
-                    self.messages[idx].text = String(localized: "No reply came back. Try again.")
+                    self.messages[idx].text = String(localized: "No reply came back.")
+                    self.messages[idx].isError = true
                 }
             } catch is CancellationError {
                 // stopped by the user
             } catch {
                 if let self, self.messages.indices.contains(idx), self.messages[idx].text.isEmpty {
                     self.messages[idx].text = String(localized: "Couldn't get a reply: ") + error.localizedDescription
+                    self.messages[idx].isError = true
                 }
             }
             self?.finish()
@@ -244,7 +265,8 @@ final class ReaderChat: ObservableObject {
                 if let i = self.messages.indices.last, self.messages[i].role == .assistant,
                    self.messages[i].text.isEmpty {
                     self.messages[i].text = String(localized:
-                        "No reply after \(Int(idle))s — is Glotty running? Send again to retry.")
+                        "No reply after \(Int(idle))s — is Glotty running?")
+                    self.messages[i].isError = true
                 }
                 self.finish()
             }

@@ -179,6 +179,21 @@ struct ReaderChatPanel: View {
                         ProgressView().controlSize(.small).scaleEffect(0.7)
                         Text(chat.statusLine).font(.caption).foregroundStyle(.secondary)
                     }
+                } else if m.isError {
+                    // A failure keeps the question in the transcript, so retry
+                    // just re-sends it — nothing to retype.
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(m.text)
+                            .font(.callout)
+                            .textSelection(.enabled)
+                            .foregroundStyle(.secondary)
+                        Button { chat.retry() } label: {
+                            Label("Retry", systemImage: "arrow.clockwise").font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.tint)
+                        .disabled(chat.isStreaming)
+                    }
                 } else {
                     Text(m.text.isEmpty ? "…" : LocalizedStringKey(m.text))
                         .font(.callout)
