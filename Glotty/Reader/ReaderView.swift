@@ -83,8 +83,7 @@ struct ReaderView: View {
             }
             if showChat {
                 chatResizeHandle
-                ReaderChatPanel(chat: chat, width: CGFloat(chatWidth),
-                                onClose: { withAnimation(.easeInOut(duration: 0.18)) { showChat = false } })
+                ReaderChatPanel(chat: chat, width: CGFloat(chatWidth))
                     .transition(.move(edge: .trailing))
             }
         }
@@ -187,8 +186,7 @@ struct ReaderView: View {
             }
             if showChat {
                 chatResizeHandle
-                ReaderChatPanel(chat: chat, width: CGFloat(chatWidth),
-                                onClose: { withAnimation(.easeInOut(duration: 0.18)) { showChat = false } })
+                ReaderChatPanel(chat: chat, width: CGFloat(chatWidth))
                     .transition(.move(edge: .trailing))
             }
         }

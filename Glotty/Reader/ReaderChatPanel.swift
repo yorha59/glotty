@@ -17,7 +17,6 @@ struct ReaderChatPanel: View {
 
     @ObservedObject var chat: ReaderChat
     let width: CGFloat
-    let onClose: () -> Void
     @FocusState private var inputFocused: Bool
 
     /// Width of the conversations rail when it's open.
@@ -103,19 +102,9 @@ struct ReaderChatPanel: View {
             .help(showSessions ? "Hide conversations" : "Show conversations")
             Text("Chat").font(.headline)
             Spacer()
-            // New-conversation lives in the rail's header when the rail is
-            // open; showing it in both places just gave two buttons for one
-            // action.
-            if !showSessions {
-                Button { chat.startNewSession() } label: { Image(systemName: "square.and.pencil") }
-                    .buttonStyle(.plain).foregroundStyle(.secondary)
-                    .help("New conversation")
-            }
-            // Closing the panel, not "some other sidebar" — an x reads as that,
-            // where a second sidebar glyph next to the rail toggle did not.
-            Button(action: onClose) { Image(systemName: "xmark") }
+            Button { chat.startNewSession() } label: { Image(systemName: "square.and.pencil") }
                 .buttonStyle(.plain).foregroundStyle(.secondary)
-                .help("Close chat")
+                .help("New conversation")
         }
         .padding(10)
     }
@@ -125,14 +114,8 @@ struct ReaderChatPanel: View {
     /// apply to the row you actually clicked.
     private var sessionsSidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("Conversations").font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                Button { chat.startNewSession() } label: { Image(systemName: "plus") }
-                    .buttonStyle(.plain).foregroundStyle(.secondary)
-                    .help("New conversation")
-            }
-            .padding(.horizontal, 10).padding(.vertical, 8)
+            Text("Conversations").font(.caption).foregroundStyle(.secondary)
+                .padding(.horizontal, 10).padding(.vertical, 8)
             Divider()
             if chat.sessions.isEmpty {
                 Text("No conversations yet")
