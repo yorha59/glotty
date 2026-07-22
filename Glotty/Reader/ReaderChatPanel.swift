@@ -105,7 +105,11 @@ struct ReaderChatPanel: View {
     private var modelPicker: some View {
         Menu {
             if providers.isEmpty {
-                Text("No providers available")
+                // The models live in Glotty, so an empty list usually means
+                // Glotty isn't running rather than nothing being configured —
+                // say so, since the fix is different.
+                Text("No models — is Glotty running?")
+                Button("Try again") { Task { providers = await ReaderCore.services?.providers() ?? [] } }
             }
             ForEach(providers) { p in
                 if p.models.isEmpty {

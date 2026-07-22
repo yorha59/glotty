@@ -82,13 +82,16 @@ final class IPCReaderServices: NSObject, ReaderServices {
     private var providerWaiters: [CheckedContinuation<[ReaderProvider], Never>] = []
 
     func providers() async -> [ReaderProvider] {
-        guard isGlottyRunning else { return [] }
-        return await withCheckedContinuation { cont in
+        await withCheckedContinuation { cont in
             providerWaiters.append(cont)
+            // Don't bail when Glotty is down — `post` starts it and retries, so
+            // opening the picker brings the model list with it. Bailing early
+            // is what made a quit Glotty look like "no providers configured".
             post(ReaderIPC.providersRequestName, [:])
-            // Same fire-and-forget hazard as chat: if Glotty doesn't answer,
-            // resume with an empty list rather than leaving the menu hanging.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            // Same fire-and-forget hazard as chat: if no reply arrives, resume
+            // with an empty list rather than leaving the menu hanging. Long
+            // enough to cover `post` launching Glotty first.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in
                 self?.resumeProviderWaiters(with: [])
             }
         }
