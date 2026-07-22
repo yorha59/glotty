@@ -8,6 +8,7 @@ struct ReaderView: View {
     @ObservedObject var state: ReaderState
     @State private var showTOC = true
     @State private var showCustomize = false
+    @State private var showBookmarks = false
     @StateObject private var chat = ReaderChat()
     @State private var showChat = true
     @AppStorage("glotty.reader.chatWidth") private var chatWidth: Double = 380
@@ -246,6 +247,7 @@ struct ReaderView: View {
                 }
                 .help("Toggle contents")
             }
+            bookmarksListButton
             Spacer()
             Button { if state.pdfPage > 0 { state.pdfPage -= 1 } } label: { Image(systemName: "chevron.left") }
                 .disabled(state.pdfPage <= 0)
@@ -256,12 +258,11 @@ struct ReaderView: View {
                 .disabled(state.pdfPage >= pdf.pageCount - 1)
             Spacer()
 
-            bookmarkMenu
-
             Button { withAnimation(.easeInOut(duration: 0.18)) { showChat.toggle() } } label: {
                 Image(systemName: showChat ? "bubble.left.and.bubble.right.fill" : "bubble.left.and.bubble.right")
             }
             .help("Toggle chat")
+            bookmarkRibbon
         }
         .buttonStyle(.borderless)
         .padding(.horizontal, 12)
@@ -324,30 +325,75 @@ struct ReaderView: View {
     /// it, and the menu lists every saved spot to jump back to. Reading
     /// position is restored automatically — bookmarks are for going back to a
     /// place deliberately, not for resuming.
-    private var bookmarkMenu: some View {
-        Menu {
-            Button(state.currentIsBookmarked ? "Remove bookmark" : "Bookmark this page") {
-                state.toggleBookmark()
-            }
-            if !state.bookmarks.isEmpty {
-                Divider()
-                ForEach(state.bookmarks) { b in
-                    Button("\(b.label) — p.\(b.page + 1)") { state.goToBookmark(b) }
-                }
-                Divider()
-                Menu("Remove") {
-                    ForEach(state.bookmarks) { b in
-                        Button("\(b.label) — p.\(b.page + 1)") { state.removeBookmark(b) }
+    /// Books-style ribbon: one tap marks or clears the page you're on, and it
+    /// shows at a glance whether this page is marked. Red when set, because
+    /// that's the whole signal — a hollow outline reads as "no bookmarks
+    /// anywhere", which isn't what it means.
+    private var bookmarkRibbon: some View {
+        Button { state.toggleBookmark() } label: {
+            Image(systemName: state.currentIsBookmarked ? "bookmark.fill" : "bookmark")
+                .foregroundStyle(state.currentIsBookmarked ? Color.red : Color.secondary)
+        }
+        .buttonStyle(.plain)
+        .help(state.currentIsBookmarked ? "Remove bookmark" : "Add bookmark")
+    }
+
+    /// The saved places, as a list rather than a menu: a bookmark is worth
+    /// showing where it is and when it was made, which a menu row can't say.
+    private var bookmarksListButton: some View {
+        Button { showBookmarks.toggle() } label: {
+            Image(systemName: "bookmark.square")
+        }
+        .buttonStyle(.plain)
+        .help(state.bookmarks.isEmpty ? "Bookmarks" : "Bookmarks (\(state.bookmarks.count))")
+        .popover(isPresented: $showBookmarks, arrowEdge: .bottom) {
+            bookmarksList
+        }
+    }
+
+    private var bookmarksList: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Bookmarks")
+                .font(.caption).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
+            Divider()
+            if state.bookmarks.isEmpty {
+                Text("No bookmarks yet")
+                    .font(.caption).foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+            } else {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(state.bookmarks) { b in bookmarkRow(b) }
                     }
                 }
+                .frame(maxHeight: 260)
             }
-        } label: {
-            Image(systemName: state.currentIsBookmarked ? "bookmark.fill" : "bookmark")
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .help(state.bookmarks.isEmpty ? "Bookmarks" : "Bookmarks (\(state.bookmarks.count))")
+        .frame(width: 260)
+    }
+
+    private func bookmarkRow(_ b: ReaderState.Bookmark) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(b.label).font(.callout.weight(.semibold)).lineLimit(1)
+                Text(b.date.formatted(date: .complete, time: .omitted))
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Text("\(b.page + 1)").font(.callout).foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 12).padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            state.goToBookmark(b)
+            showBookmarks = false
+        }
+        .contextMenu {
+            Button("Remove bookmark", role: .destructive) { state.removeBookmark(b) }
+        }
     }
 
     private func controlBar(_ book: EPUBBook) -> some View {
@@ -356,6 +402,7 @@ struct ReaderView: View {
                 Image(systemName: "sidebar.left")
             }
             .help("Toggle contents")
+            bookmarksListButton
 
             Spacer()
 
@@ -369,8 +416,6 @@ struct ReaderView: View {
 
             Spacer()
 
-            bookmarkMenu
-
             Button { showCustomize.toggle() } label: {
                 Text("Aa").font(.system(size: 16, weight: .medium))
             }
@@ -381,6 +426,7 @@ struct ReaderView: View {
                 Image(systemName: showChat ? "bubble.left.and.bubble.right.fill" : "bubble.left.and.bubble.right")
             }
             .help("Toggle chat")
+            bookmarkRibbon
         }
         .buttonStyle(.borderless)
         .padding(.horizontal, 12)
