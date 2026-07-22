@@ -11,6 +11,11 @@ final class ReaderChat: ObservableObject {
         let id = UUID()
         let role: Role
         var text: String
+        /// The turn is a passage sent by Ask rather than something typed. The
+        /// bubble shows the passage alone — the "explain this" instruction goes
+        /// in the prompt, not into the visible text, so the model still sees
+        /// the reader's own language and answers in it.
+        var isQuoteAsk = false
     }
 
     @Published var messages: [Msg] = []
@@ -156,24 +161,28 @@ final class ReaderChat: ObservableObject {
     /// pinning it above the composer as a separate thing to keep track of. It
     /// goes into the transcript with the question, so the conversation reads
     /// as a whole and follow-ups don't have to re-state what was quoted.
+    /// Ask about a selected passage — sent straight away rather than parked in
+    /// the composer. The visible turn is the passage itself; asking for the
+    /// explanation is the prompt's job, so the request carries the reader's own
+    /// language and comes back in it.
     func attach(_ text: String) {
         let quote = ReaderState.cleanSelection(text)
-        guard !quote.isEmpty else { return }
-        let typed = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        input = "\u{201C}\(quote)\u{201D}\n\n" + typed
-        focusRequests &+= 1
+        guard !quote.isEmpty, !isStreaming else { return }
+        messages.append(Msg(role: .user, text: "\u{201C}\(quote)\u{201D}", isQuoteAsk: true))
+        deliver()
     }
-
-    /// Bumped when the composer should take focus — after Ask drops a passage
-    /// in, the next thing wanted is typing.
-    @Published private(set) var focusRequests = 0
 
     func send() {
         let q = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty, !isStreaming else { return }
         input = ""
         messages.append(Msg(role: .user, text: q))
+        deliver()
+    }
 
+    /// Stream a reply for whatever the last user turn is. Shared by typing a
+    /// question and by Ask, so both behave identically from here on.
+    private func deliver() {
         let prompt = buildPrompt()
         guard let stream = ReaderCore.services?.chatStream(prompt: prompt) else {
             messages.append(Msg(role: .assistant,
@@ -306,6 +315,19 @@ final class ReaderChat: ObservableObject {
         }
         for m in messages {   // ends with the user's latest question
             p += (m.role == .user ? "User: " : "Assistant: ") + m.text + "\n"
+        }
+        // Ask sends the passage with no question attached, so say what's wanted
+        // here rather than wrapping the visible turn in English — that would
+        // make a Chinese reader's selection read as an English question and
+        // come back answered in English.
+        if messages.last(where: { $0.role == .user })?.isQuoteAsk == true {
+            p += """
+
+                The user selected that passage while reading and wants it explained: \
+                what it means, and what it refers to in the surrounding text. Answer \
+                in the language of the passage.
+
+                """
         }
         p += "Assistant:"
         return p

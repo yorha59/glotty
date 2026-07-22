@@ -329,17 +329,20 @@ enum ReaderSelfTest {
         eq(reopened.sessions.first { $0.id == firstID }?.title, "Custom name",
            "a renamed conversation keeps its title when saved again")
 
-        // Ask quotes the passage into the message being written, rather than
-        // pinning it above the composer as a separate thing to manage.
+        // Ask sends the passage straight away — no detour through the composer.
         reopened.input = ""
+        let before = reopened.messages.count
         reopened.attach("  a selected   passage  ")
-        check(reopened.input.contains("a selected passage"),
-              "Ask puts the passage in the composer: \"\(reopened.input.prefix(40))…\"")
-        check(reopened.input.hasSuffix("\n\n"), "and leaves the cursor on a fresh line to type after")
-        reopened.input += "what does this mean?"
-        reopened.send()
-        check(reopened.messages.last(where: { $0.role == .user })?.text.contains("a selected passage") == true,
-              "the sent message carries the quote, so the transcript shows both")
+        check(reopened.input.isEmpty, "Ask doesn't park anything in the composer")
+        check(reopened.messages.count > before, "Ask sends immediately")
+        let asked = reopened.messages.last { $0.role == .user }
+        check(asked?.text.contains("a selected passage") == true,
+              "the sent turn is the passage: \(asked?.text ?? "-")")
+        check(asked?.isQuoteAsk == true, "marked as a passage ask, so the prompt can say what's wanted")
+        // The visible turn stays in the reader's own language — an English
+        // wrapper here is what would drag replies into English.
+        check(asked?.text.range(of: "explain", options: .caseInsensitive) == nil,
+              "no English instruction is glued onto the passage")
         reopened.stop()
         reopened.input = ""
 
