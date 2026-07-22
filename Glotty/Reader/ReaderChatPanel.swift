@@ -21,6 +21,14 @@ struct ReaderChatPanel: View {
             Divider()
             messages
             Divider()
+            // The attached passage belongs with the composer, not at the top of
+            // the transcript: it's what the next question is about, and up
+            // there it scrolled away exactly when it mattered.
+            if let ctx = chat.context, !ctx.isEmpty {
+                contextChip(ctx)
+                    .padding(.horizontal, 10)
+                    .padding(.top, 8)
+            }
             composer
         }
         .frame(width: width)
@@ -121,7 +129,6 @@ struct ReaderChatPanel: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
-                    if let ctx = chat.context, !ctx.isEmpty { contextChip(ctx) }
                     if chat.messages.isEmpty && chat.context == nil {
                         Text("Select text in the document and tap **Ask** to bring it here, then ask about it.")
                             .font(.callout).foregroundStyle(.secondary)
