@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The reader's right-hand tutor panel: an attached passage chip, a streaming
+/// The reader's right-hand tutor panel: a conversations rail, a streaming
 /// message list, and a composer. Reuses `LLMProvider.current()` via `ReaderChat`.
 struct ReaderChatPanel: View {
     /// Providers as last reported by Glotty; refreshed when the picker opens.
@@ -44,14 +44,6 @@ struct ReaderChatPanel: View {
             Divider()
             messages
             Divider()
-            // The attached passage belongs with the composer, not at the top of
-            // the transcript: it's what the next question is about, and up
-            // there it scrolled away exactly when it mattered.
-            if let ctx = chat.context, !ctx.isEmpty {
-                contextChip(ctx)
-                    .padding(.horizontal, 10)
-                    .padding(.top, 8)
-            }
             composer
         }
         .background(Color(nsColor: .windowBackgroundColor))
@@ -159,8 +151,8 @@ struct ReaderChatPanel: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
-                    if chat.messages.isEmpty && chat.context == nil {
-                        Text("Select text in the document and tap **Ask** to bring it here, then ask about it.")
+                    if chat.messages.isEmpty {
+                        Text("Select text in the document and tap **Ask** to quote it here, then type your question.")
                             .font(.callout).foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 8)
                     }
@@ -173,33 +165,6 @@ struct ReaderChatPanel: View {
                 withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo("bottom", anchor: .bottom) }
             }
         }
-    }
-
-    /// One-line reminder of what's attached — you selected the passage, so it
-    /// only has to say which one, not reproduce it. The full text is in the
-    /// tooltip. Previously this showed four lines behind a full-height accent
-    /// bar: a `frame(width:)` with no height lets the shape take every point
-    /// offered, so a two-word selection ate half the panel.
-    private func contextChip(_ ctx: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: "text.quote")
-                .font(.system(size: 10))
-                .foregroundStyle(.tint)
-            Text(ctx)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-            Spacer(minLength: 0)
-            Button(action: chat.clearContext) { Image(systemName: "xmark.circle.fill") }
-                .buttonStyle(.plain)
-                .foregroundStyle(.tertiary)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(Capsule().fill(Color.primary.opacity(0.06)))
-        .fixedSize(horizontal: false, vertical: true)
-        .help(ctx)
     }
 
     private func bubble(_ m: ReaderChat.Msg) -> some View {
@@ -306,6 +271,7 @@ struct ReaderChatPanel: View {
                 .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
                 .focused($inputFocused)
                 .onSubmit(chat.send)
+                .onChange(of: chat.focusRequests) { _, _ in inputFocused = true }
             HStack(spacing: 8) {
                 modelPicker
                 Spacer(minLength: 0)

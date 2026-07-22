@@ -329,6 +329,20 @@ enum ReaderSelfTest {
         eq(reopened.sessions.first { $0.id == firstID }?.title, "Custom name",
            "a renamed conversation keeps its title when saved again")
 
+        // Ask quotes the passage into the message being written, rather than
+        // pinning it above the composer as a separate thing to manage.
+        reopened.input = ""
+        reopened.attach("  a selected   passage  ")
+        check(reopened.input.contains("a selected passage"),
+              "Ask puts the passage in the composer: \"\(reopened.input.prefix(40))…\"")
+        check(reopened.input.hasSuffix("\n\n"), "and leaves the cursor on a fresh line to type after")
+        reopened.input += "what does this mean?"
+        reopened.send()
+        check(reopened.messages.last(where: { $0.role == .user })?.text.contains("a selected passage") == true,
+              "the sent message carries the quote, so the transcript shows both")
+        reopened.stop()
+        reopened.input = ""
+
         // A conversation you've just started has nothing to save, so it used to
         // be invisible — clicking "new" appeared to do nothing.
         reopened.startNewSession()

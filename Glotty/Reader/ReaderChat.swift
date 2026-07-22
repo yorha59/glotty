@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// A lightweight tutor chat for the reader's side panel. The user adds a
-/// selected passage as context ("Ask"), then asks follow-up questions; replies
-/// stream from the configured LLM provider. Session-only (not persisted).
+/// A lightweight tutor chat for the reader's side panel. "Ask" quotes the
+/// selected passage into the message being written, so the question and the
+/// text it's about are one turn; replies stream from the configured provider
+/// and every conversation is saved against the book.
 @MainActor
 final class ReaderChat: ObservableObject {
     struct Msg: Identifiable, Equatable {
@@ -13,7 +14,9 @@ final class ReaderChat: ObservableObject {
     }
 
     @Published var messages: [Msg] = []
-    @Published var context: String?          // the attached passage
+    /// Only still here so conversations saved before Ask started quoting into
+    /// the message still decode; nothing sets it now.
+    @Published var context: String?
     @Published var input: String = ""
     @Published var isStreaming = false
 
@@ -149,11 +152,21 @@ final class ReaderChat: ObservableObject {
         refreshSessions()
     }
 
-    /// Attach a selection as the passage the conversation is about.
+    /// Bring a selected passage into the message being written, rather than
+    /// pinning it above the composer as a separate thing to keep track of. It
+    /// goes into the transcript with the question, so the conversation reads
+    /// as a whole and follow-ups don't have to re-state what was quoted.
     func attach(_ text: String) {
-        context = ReaderState.cleanSelection(text)
+        let quote = ReaderState.cleanSelection(text)
+        guard !quote.isEmpty else { return }
+        let typed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        input = "\u{201C}\(quote)\u{201D}\n\n" + typed
+        focusRequests &+= 1
     }
-    func clearContext() { context = nil }
+
+    /// Bumped when the composer should take focus — after Ask drops a passage
+    /// in, the next thing wanted is typing.
+    @Published private(set) var focusRequests = 0
 
     func send() {
         let q = input.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -290,9 +303,6 @@ final class ReaderChat: ObservableObject {
         let page = String((pageTextProvider?() ?? "").prefix(4000))
         if !page.isEmpty {
             p += "The page the user is currently reading:\n\"\"\"\n\(page)\n\"\"\"\n\n"
-        }
-        if let ctx = context, !ctx.isEmpty {
-            p += "The user specifically selected this passage from that page:\n\"\"\"\n\(ctx)\n\"\"\"\n\n"
         }
         for m in messages {   // ends with the user's latest question
             p += (m.role == .user ? "User: " : "Assistant: ") + m.text + "\n"
