@@ -241,13 +241,6 @@ struct ReaderView: View {
 
     private func pdfControlBar(_ pdf: PDFDocument) -> some View {
         HStack(spacing: 12) {
-            if !state.pdfTOC.isEmpty {
-                Button { withAnimation(.easeInOut(duration: 0.18)) { showTOC.toggle() } } label: {
-                    Image(systemName: "sidebar.left")
-                }
-                .help("Toggle contents")
-            }
-            bookmarksListButton
             Spacer()
             Button { if state.pdfPage > 0 { state.pdfPage -= 1 } } label: { Image(systemName: "chevron.left") }
                 .disabled(state.pdfPage <= 0)
@@ -258,6 +251,13 @@ struct ReaderView: View {
                 .disabled(state.pdfPage >= pdf.pageCount - 1)
             Spacer()
 
+            if !state.pdfTOC.isEmpty {
+                Button { withAnimation(.easeInOut(duration: 0.18)) { showTOC.toggle() } } label: {
+                    Image(systemName: "sidebar.left")
+                }
+                .help("Toggle contents")
+            }
+            bookmarksListButton
             Button { withAnimation(.easeInOut(duration: 0.18)) { showChat.toggle() } } label: {
                 Image(systemName: showChat ? "bubble.left.and.bubble.right.fill" : "bubble.left.and.bubble.right")
             }
@@ -398,14 +398,9 @@ struct ReaderView: View {
 
     private func controlBar(_ book: EPUBBook) -> some View {
         HStack(spacing: 12) {
-            Button { withAnimation(.easeInOut(duration: 0.18)) { showTOC.toggle() } } label: {
-                Image(systemName: "sidebar.left")
-            }
-            .help("Toggle contents")
-            bookmarksListButton
-
+            // Chapter nav centred; every control gathered on the right so the
+            // toolbar isn't split across both ends.
             Spacer()
-
             Button { state.prev() } label: { Image(systemName: "chevron.left") }
                 .disabled(state.chapterIndex <= 0)
             Text("\(state.chapterIndex + 1) / \(state.chapterCount)")
@@ -413,15 +408,18 @@ struct ReaderView: View {
                 .foregroundStyle(.secondary)
             Button { state.next() } label: { Image(systemName: "chevron.right") }
                 .disabled(state.chapterIndex >= state.chapterCount - 1)
-
             Spacer()
 
+            Button { withAnimation(.easeInOut(duration: 0.18)) { showTOC.toggle() } } label: {
+                Image(systemName: "sidebar.left")
+            }
+            .help("Toggle contents")
+            bookmarksListButton
             Button { showCustomize.toggle() } label: {
                 Text("Aa").font(.system(size: 16, weight: .medium))
             }
             .help("Text & colors")
             .popover(isPresented: $showCustomize, arrowEdge: .bottom) { customizePanel }
-
             Button { withAnimation(.easeInOut(duration: 0.18)) { showChat.toggle() } } label: {
                 Image(systemName: showChat ? "bubble.left.and.bubble.right.fill" : "bubble.left.and.bubble.right")
             }
