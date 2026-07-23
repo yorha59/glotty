@@ -55,6 +55,7 @@ enum ReaderSelfTest {
         checkStartPage()
         checkProvidersOverIPC()
         checkChatSessions()
+        checkChatBoundToBook()
         checkRetryAfterFailure()
         checkProviderPayload()
 
@@ -459,6 +460,33 @@ enum ReaderSelfTest {
         // Clean up so later checks see the state they expect.
         s.toggleBookmark()
         eq(ReaderState.savedBookmarks(for: id).count, 0, "and clearing it is visible too")
+    }
+
+    /// Switching books must not carry — or re-file — one book's conversation
+    /// under another. setBook updated bookID before the stream's teardown
+    /// saved the thread, so the outgoing conversation was written under the
+    /// incoming book and then shown there.
+    private static func checkChatBoundToBook() {
+        print("\nchat is bound to its own book")
+        let a = ReaderState.BookInfo(id: "selftest:book-A", title: "A", path: "/tmp/a.pdf")
+        let b = ReaderState.BookInfo(id: "selftest:book-B", title: "B", path: "/tmp/b.pdf")
+
+        let chat = ReaderChat()
+        chat.setBook(a)
+        chat.messages = [.init(role: .user, text: "A question"),
+                         .init(role: .assistant, text: "A answer")]
+        chat.saveThreadForTesting()
+
+        // Switch to B while A's conversation is still on screen.
+        chat.setBook(b)
+        check(chat.messages.isEmpty, "B opens with no conversation carried from A")
+        check(!chat.sessions.contains { $0.messages.contains { $0.text == "A answer" } },
+              "A's conversation is NOT listed under B")
+
+        // And A still has exactly its own, unduplicated.
+        chat.setBook(a)
+        eq(chat.sessions.count, 1, "A still has one conversation, not re-saved copies")
+        eq(chat.messages.last?.text, "A answer", "A resumes its own conversation")
     }
 
     private static func checkLibraryStore() {

@@ -98,13 +98,25 @@ final class ReaderChat: ObservableObject {
     /// book used to hand back an empty panel even though the conversation was
     /// on disk — the thread was saved but never read back.
     func setBook(_ info: ReaderState.BookInfo?) {
-        let changed = info?.id != bookID
+        guard info?.id != bookID else {
+            // Same book — just let the title/path fill in if they were nil.
+            if bookTitle.isEmpty { bookTitle = info?.title ?? "" }
+            if bookPath == nil { bookPath = info?.path }
+            return
+        }
+        // Leaving a book: persist its conversation under ITS id, then drop the
+        // messages so the switch can't re-save them under the next book. Saving
+        // after bookID had already changed is what filed one book's chat under
+        // another and made it show up there.
+        stop()                 // saves the outgoing thread under the current (old) id
+        messages.removeAll()   // nothing to carry onto — or re-save under — the new book
+        context = nil
+        attachments.removeAll()
+
         bookID = info?.id
         bookTitle = info?.title ?? ""
         bookPath = info?.path
-        guard changed else { return }
-        stop()
-        context = nil
+
         refreshSessions()
         if let latest = sessions.first { load(latest) } else { startNewSession() }
     }
