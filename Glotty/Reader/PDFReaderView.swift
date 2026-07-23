@@ -6,14 +6,12 @@ import AppKit
 /// PDFView shows the reflowed document, so translations push following content
 /// down instead of overlaying it, while selection / hit-testing / zoom stay
 /// native. An overlay hosts the floating **Translate** chip shown on selection.
-///   • click a word → `onLookup`.
-///   • select a run → Translate chip → `onTranslate(originalPage, bounds, text)`.
+///   • select a run → Translate / What is this / Add chip.
 ///   • click the ✕ on a translation band → `onRemove(id)`.
 struct PDFReaderView: NSViewRepresentable {
     let doc: PDFDocument                       // the original, untouched document
     @Binding var page: Int                     // ORIGINAL page index (TOC / resume)
     let translations: [ReaderTranslation]
-    let onLookup: (String) -> Void
     let onTranslate: (Int, CGRect, String) -> Void
     let onAsk: (String) -> Void
     let onAdd: (String) -> Void
@@ -88,9 +86,6 @@ struct PDFReaderView: NSViewRepresentable {
         private var originalToDerived: [Int: Int] = [:]
         private var lastIDs: [UUID] = []
         private var pendingSelection: (page: PDFPage, rect: CGRect, text: String)?
-        /// Deferred tap-to-look-up, cancelled when the tap turns out to be the
-        /// first half of a double-click.
-        private var pendingLookup: DispatchWorkItem?
         /// The document the view was last built from. Identity, not equality:
         /// PDFDocument has no useful `==`, and two different files can share a
         /// page count, so only "is this the same object" is meaningful.
@@ -150,37 +145,21 @@ struct PDFReaderView: NSViewRepresentable {
         // MARK: input
 
         @objc func click(_ g: NSClickGestureRecognizer) {
+            // The only thing a bare click does now is delete a translation band
+            // via its ✕. It no longer looks a word up: that fired on any click
+            // during normal reading, and two quick-but-not-double clicks each
+            // opened a popup before the selection registered — the doubled
+            // explain windows. Looking up is a deliberate act now, same as the
+            // EPUB reader: select the word (double-click selects it) and use
+            // the chip's "What is this".
             guard let v = pdfView else { return }
             let pt = g.location(in: v)
             guard let page = v.page(for: pt, nearest: true), let doc = v.document else { return }
             let d = doc.index(for: page)
-            // Translation band: only the ✕ is actionable (delete it).
             if let id = derived.translationID[d] {
                 let onPage = v.convert(pt, to: page)
                 if ReflowPDF.closeRect(on: page).contains(onPage) { parent.onRemove(id) }
-                return
             }
-            // A drag-select ends as a click too — don't fire a lookup then.
-            if let s = v.currentSelection?.string, !s.trimmingCharacters(in: .whitespaces).isEmpty { return }
-
-            // Wait out the double-click interval before looking anything up.
-            // A double-click arrives here as its *first* click, before PDFKit
-            // has selected the word, so the selection guard above can't see it
-            // yet — checking again once the gesture has settled is what tells
-            // a tap apart from the start of a double-click.
-            pendingLookup?.cancel()
-            let work = DispatchWorkItem { [weak self] in
-                guard let self, let v = self.pdfView else { return }
-                if let s = v.currentSelection?.string,
-                   !s.trimmingCharacters(in: .whitespaces).isEmpty { return }
-                let onPage = v.convert(pt, to: page)
-                guard let word = page.selectionForWord(at: onPage)?.string?
-                    .trimmingCharacters(in: .whitespacesAndNewlines), !word.isEmpty else { return }
-                self.parent.onLookup(word)
-            }
-            pendingLookup = work
-            DispatchQueue.main.asyncAfter(
-                deadline: .now() + NSEvent.doubleClickInterval, execute: work)
         }
 
         @objc func pageChanged() {

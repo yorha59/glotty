@@ -103,7 +103,7 @@ enum ReaderSelfTest {
         let binding = Binding(get: { page }, set: { page = $0 })
         func view(_ d: PDFDocument) -> PDFReaderView {
             PDFReaderView(doc: d, page: binding, translations: [],
-                          onLookup: { _ in }, onTranslate: { _, _, _ in },
+                          onTranslate: { _, _, _ in },
                           onAsk: { _ in }, onAdd: { _ in }, onRemove: { _ in })
         }
         let pdfView = PDFView()          // retained here; the coordinator holds it weakly

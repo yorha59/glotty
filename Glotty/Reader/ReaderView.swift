@@ -2,8 +2,9 @@ import SwiftUI
 import PDFKit
 
 /// The reader UI: a toggleable table-of-contents sidebar, a control bar
-/// (chapter nav, font size, theme), and the chapter web view. A tap on any word
-/// runs Glotty's explain popup and underlines the word.
+/// (chapter nav, font size, theme), and the chapter web view. Looking up,
+/// translating or asking about text is a deliberate act — select it and use
+/// the floating chip — so an ordinary click never fires a popup.
 struct ReaderView: View {
     @ObservedObject var state: ReaderState
     @State private var showTOC = true
@@ -171,11 +172,6 @@ struct ReaderView: View {
                     doc: pdf,
                     page: $state.pdfPage,
                     translations: [],
-                    onLookup: { word in
-                        ReaderMark.pending = word
-                        ReaderMark.capture = state.queryCapture(term: word, kind: "explain")
-                        ReaderCore.services?.lookUp(word)
-                    },
                     onTranslate: { _, _, text in
                         // Show the result in Glotty's standard translate popup (a
                         // floating window) rather than an inline band — the popup
