@@ -194,11 +194,20 @@ struct ReaderChatPanel: View {
                         .foregroundStyle(.tint)
                         .disabled(chat.isStreaming)
                     }
-                } else {
-                    Text(m.text.isEmpty ? "…" : LocalizedStringKey(m.text))
+                } else if m.role == .assistant {
+                    // Replies come back as Markdown — headings, lists, quotes —
+                    // so render it rather than showing the raw ## and - markers.
+                    ReaderMarkdownText(text: m.text)
                         .font(.callout)
                         .textSelection(.enabled)
-                        .foregroundStyle(m.role == .user ? Color.white : Color.primary)
+                        .foregroundStyle(Color.primary)
+                } else {
+                    // The question, shown as typed. A quoted passage can contain
+                    // stray markdown, so don't parse the user's own turn.
+                    Text(m.text)
+                        .font(.callout)
+                        .textSelection(.enabled)
+                        .foregroundStyle(Color.white)
                 }
             }
             .padding(.horizontal, 10).padding(.vertical, 7)
