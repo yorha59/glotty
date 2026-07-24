@@ -272,9 +272,11 @@ private struct BookDetailView: View {
                 Text(q.date, format: .dateTime.month().day().hour().minute())
                     .font(.caption2).foregroundStyle(.secondary)
             }
-            Text(q.result).font(.callout).foregroundStyle(.secondary)
+            // Explanations come back as Markdown; render it rather than showing
+            // raw ## and - (same as the chat).
+            ReaderMarkdownText(text: q.result)
+                .font(.callout).foregroundStyle(.secondary)
                 .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 5)
     }

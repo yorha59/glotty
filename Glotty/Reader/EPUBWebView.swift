@@ -595,9 +595,8 @@ struct QueryPreviewView: View {
                 Spacer(minLength: 0)
             }
             ScrollView {
-                Text(record.result)
+                ReaderMarkdownText(text: record.result)
                     .font(.callout).textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxHeight: 240)
             HStack(spacing: 10) {
