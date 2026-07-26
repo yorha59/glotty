@@ -23,6 +23,11 @@ struct OpenAICompatibleProvider: LLMProvider {
     /// `{"thinking":{"type":"disabled"}}` to skip reasoning tokens for polish).
     /// Pre-encoded as `Data` so the struct stays `Sendable`.
     let extraBodyJSON: Data?
+    /// Ask the provider to search the web when the model judges it useful.
+    /// Only set for providers with a native web-search tool (Z.AI); ignored by
+    /// everyone else. Set on the reader's provider, not Glotty's own, so the
+    /// popup's polish/explain stay fast and offline-of-the-web.
+    var webSearchEnabled = false
 
     func isAvailable() -> Bool {
         Keychain.read(account: keychainAccount)?.isEmpty == false
@@ -106,7 +111,7 @@ struct OpenAICompatibleProvider: LLMProvider {
         guard let apiKey = Keychain.read(account: keychainAccount), !apiKey.isEmpty else {
             throw LLMError.missingAPIKey(providerName: displayName)
         }
-        let bodyData = try makeBody(prompt: prompt, temperature: 0.5)
+        let bodyData = try makeBody(prompt: prompt, temperature: 0.5, webSearch: webSearchEnabled)
         let bytes = try await openSSEStream(apiKey: apiKey, body: bodyData)
 
         var accumulated = ""
@@ -134,7 +139,7 @@ struct OpenAICompatibleProvider: LLMProvider {
     }
 
     private func makeBody(prompt: String, temperature: Double,
-                          jsonMode: Bool = false) throws -> Data {
+                          jsonMode: Bool = false, webSearch: Bool = false) throws -> Data {
         var body: [String: Any] = [
             "model": model,
             "messages": [["role": "user", "content": prompt]],
@@ -150,6 +155,10 @@ struct OpenAICompatibleProvider: LLMProvider {
         // Ask for guaranteed-parseable JSON where the caller needs it (polish).
         // Not set for prose replies — explain/chat must stay Markdown.
         if jsonMode { body["response_format"] = ["type": "json_object"] }
+        // Z.AI's native web-search tool: the model calls it when it judges the
+        // question needs current or outside information, and folds the results
+        // into its answer server-side — no client tool loop.
+        if webSearch { body["tools"] = [["type": "web_search", "web_search": ["enable": true]]] }
         if let extraBodyJSON,
            let extra = try? JSONSerialization.jsonObject(with: extraBodyJSON) as? [String: Any] {
             for (k, v) in extra { body[k] = v }

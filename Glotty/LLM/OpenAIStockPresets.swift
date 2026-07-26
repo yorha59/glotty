@@ -36,6 +36,11 @@ enum OpenAIStockPresets {
         static func == (lhs: Preset, rhs: Preset) -> Bool { lhs.id == rhs.id }
         func hash(into hasher: inout Hasher) { hasher.combine(id) }
 
+        /// Whether this provider has a native web-search tool. Z.AI does; no
+        /// other stock preset does. A computed check keeps it off every
+        /// initializer for a one-provider capability.
+        var supportsWebSearch: Bool { id == "zai" }
+
         /// UserDefaults key holding the user's endpoint override.
         var endpointUserDefaultsKey: String { "glotty.\(id).endpoint" }
         /// UserDefaults key holding the user's selected model.

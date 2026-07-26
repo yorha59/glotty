@@ -53,6 +53,6 @@ enum ReaderModelSelection {
     /// The provider instance the reader's chat should talk to, with its model
     /// override applied.
     static func provider() -> LLMProvider? {
-        LLMRegistry.provider(id: providerID, modelOverride: modelID(for: providerID))
+        LLMRegistry.provider(id: providerID, modelOverride: modelID(for: providerID), webSearch: true)
     }
 }

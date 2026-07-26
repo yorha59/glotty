@@ -435,15 +435,19 @@ enum LLMRegistry {
     /// one stored for it. Used by the reader, which keeps its own choice: the
     /// stock presets take the model at construction, and the dedicated classes
     /// read it from defaults unless told otherwise.
-    static func provider(id: String, modelOverride: String?) -> LLMProvider? {
+    static func provider(id: String, modelOverride: String?, webSearch: Bool = false) -> LLMProvider? {
         let model = (modelOverride?.isEmpty == false) ? modelOverride : nil
         if let preset = OpenAIStockPresets.find(id: id) {
-            guard let model else { return makeProvider(for: preset) }
-            let endpoint = URL(string: preset.currentEndpoint())
-                ?? URL(string: preset.defaultEndpoint)!
-            return OpenAICompatibleProvider(
-                id: preset.id, displayName: preset.displayName, endpointURL: endpoint,
-                model: model, keychainAccount: preset.id, extraBodyJSON: preset.extraBodyJSON)
+            let wantSearch = webSearch && preset.supportsWebSearch
+            var p = makeProvider(for: preset)
+            if let model { 
+                let endpoint = URL(string: preset.currentEndpoint()) ?? URL(string: preset.defaultEndpoint)!
+                p = OpenAICompatibleProvider(
+                    id: preset.id, displayName: preset.displayName, endpointURL: endpoint,
+                    model: model, keychainAccount: preset.id, extraBodyJSON: preset.extraBodyJSON)
+            }
+            p.webSearchEnabled = wantSearch
+            return p
         }
         switch id {
         case "deepseek":
