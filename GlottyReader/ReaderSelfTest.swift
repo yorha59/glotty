@@ -58,6 +58,7 @@ enum ReaderSelfTest {
         checkChatBoundToBook()
         checkRetryAfterFailure()
         checkProviderPayload()
+        checkQuoteJumpAnchor()
 
         print("\n\(checks - failures.count)/\(checks) passed")
         if !failures.isEmpty {
@@ -254,6 +255,36 @@ enum ReaderSelfTest {
         eq(back.first?.activeModelID, "glm-5.1", "current model survives")
         eq(back.first(where: { $0.isActive })?.id, "zai", "active provider survives")
         check(back.last?.models.isEmpty == true, "a provider with no model list is still listed")
+    }
+
+    /// A quoted passage remembers where it was picked, so the chat can jump
+    /// back to it — and that anchor must survive being written to disk and
+    /// reloaded, or the link would work only until the panel was reopened.
+    private static func checkQuoteJumpAnchor() {
+        print("\nquote links jump back to the passage")
+        let info = ReaderState.BookInfo(id: "selftest:anchor", title: "T", path: "/tmp/t.pdf")
+        let chat = ReaderChat()
+        chat.setBook(info)
+        chat.attach("a picked passage", chapter: 3, page: 5)
+        let asked = chat.messages.last { $0.role == .user }
+        eq(asked?.srcChapter, 3, "an asked passage remembers its chapter")
+        eq(asked?.srcPage, 5, "and its page")
+        chat.stop()
+        // A reply so the thread is saveable (empty-assistant threads are skipped).
+        chat.messages.append(.init(role: .assistant, text: "ok"))
+        chat.saveThreadForTesting()
+
+        let reopened = ReaderChat()
+        reopened.setBook(info)
+        let restored = reopened.messages.last { $0.role == .user && $0.hasSource }
+        eq(restored?.srcChapter, 3, "the anchor survives save/load — chapter")
+        eq(restored?.srcPage, 5, "the anchor survives save/load — page")
+
+        var landed: (Int, Int)?
+        reopened.onJump = { c, p in landed = (c, p) }
+        if let restored { reopened.jump(to: restored) }
+        check(landed?.0 == 3 && landed?.1 == 5,
+              "the link hands the spot to the reader: \(String(describing: landed))")
     }
 
     /// The model picker, exercised through the real IPC client against a real

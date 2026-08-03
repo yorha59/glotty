@@ -17,6 +17,11 @@ struct SavedMessage: Codable, Identifiable, Equatable {
     var id = UUID()
     let role: String        // "user" | "assistant"
     let text: String
+    /// Where in the book a quoted passage came from, so the chat can jump back
+    /// to it. `chapter`/`page` mirror the reader's position (EPUB chapter+page,
+    /// or a PDF page in `page`). Optional so threads saved before this decode.
+    var srcChapter: Int?
+    var srcPage: Int?
 }
 
 /// A saved chat thread about a book (from the reader's chat panel).

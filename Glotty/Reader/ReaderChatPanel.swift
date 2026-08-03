@@ -204,10 +204,22 @@ struct ReaderChatPanel: View {
                 } else {
                     // The question, shown as typed. A quoted passage can contain
                     // stray markdown, so don't parse the user's own turn.
-                    Text(m.text)
-                        .font(.callout)
-                        .textSelection(.enabled)
-                        .foregroundStyle(Color.white)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(m.text)
+                            .font(.callout)
+                            .textSelection(.enabled)
+                            .foregroundStyle(Color.white)
+                        // Reading back, it's easy to lose where a quote came
+                        // from — this takes you there.
+                        if m.hasSource {
+                            Button { chat.jump(to: m) } label: {
+                                Label("Jump to passage", systemImage: "location.fill")
+                                    .font(.caption2)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(Color.white.opacity(0.85))
+                        }
+                    }
                 }
             }
             .padding(.horizontal, 10).padding(.vertical, 7)

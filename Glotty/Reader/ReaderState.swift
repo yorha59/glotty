@@ -475,13 +475,20 @@ final class ReaderState: ObservableObject {
 
     /// Jump to a saved spot. Same-chapter jumps only move the page, so the web
     /// view pages rather than reloading.
-    func goToBookmark(_ b: Bookmark) {
-        if pdf != nil {
-            pdfPage = b.page
-            return
-        }
-        if chapterIndex != b.chapter { chapterIndex = b.chapter }
-        pageIndex = b.page
+    func goToBookmark(_ b: Bookmark) { goToLocation(chapter: b.chapter, page: b.page) }
+
+    /// The current reading position, for anchoring a chat quote to where it was
+    /// picked. The selection is always on the page in view when it's added, so
+    /// the position doubles as the passage's location — no CFI needed.
+    var currentLocation: (chapter: Int, page: Int)? {
+        bookmarkTarget.map { ($0.chapter, $0.page) }
+    }
+
+    /// Jump to a `(chapter, page)` — shared by bookmarks and chat-quote links.
+    func goToLocation(chapter: Int, page: Int) {
+        if pdf != nil { pdfPage = page; return }
+        if chapterIndex != chapter { chapterIndex = chapter }
+        pageIndex = page
     }
 
     // MARK: - PDF helpers

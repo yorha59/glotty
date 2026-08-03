@@ -20,6 +20,12 @@ final class ReaderChat: ObservableObject {
         /// in the prompt, not into the visible text, so the model still sees
         /// the reader's own language and answers in it.
         var isQuoteAsk = false
+        /// Where the quoted passage came from, so the bubble can offer a jump
+        /// back to it. Set for turns that quote a selection (Ask / Add); nil
+        /// for a plain typed question. `page` alone means a PDF.
+        var srcChapter: Int?
+        var srcPage: Int?
+        var hasSource: Bool { srcPage != nil }
     }
 
     @Published var messages: [Msg] = []
@@ -134,7 +140,8 @@ final class ReaderChat: ObservableObject {
         sessionStartedAt = session.date
         context = session.context
         messages = session.messages.map {
-            Msg(role: $0.role == "user" ? .user : .assistant, text: $0.text)
+            Msg(role: $0.role == "user" ? .user : .assistant, text: $0.text,
+                srcChapter: $0.srcChapter, srcPage: $0.srcPage)
         }
     }
 
@@ -183,10 +190,11 @@ final class ReaderChat: ObservableObject {
     /// the composer. The visible turn is the passage itself; asking for the
     /// explanation is the prompt's job, so the request carries the reader's own
     /// language and comes back in it.
-    func attach(_ text: String) {
+    func attach(_ text: String, chapter: Int? = nil, page: Int? = nil) {
         let quote = ReaderState.cleanSelection(text)
         guard !quote.isEmpty, !isStreaming else { return }
-        messages.append(Msg(role: .user, text: "\u{201C}\(quote)\u{201D}", isQuoteAsk: true))
+        messages.append(Msg(role: .user, text: "\u{201C}\(quote)\u{201D}",
+                            isQuoteAsk: true, srcChapter: chapter, srcPage: page))
         deliver()
     }
 
@@ -197,6 +205,10 @@ final class ReaderChat: ObservableObject {
     struct Attachment: Identifiable, Equatable {
         let id = UUID()
         let text: String
+        /// Where the passage was picked, carried onto the sent message so it
+        /// can link back. `page` alone means a PDF.
+        var chapter: Int?
+        var page: Int?
         /// Enough to recognise which selection this is, not the selection.
         var label: String {
             let flat = text.replacingOccurrences(of: "\n", with: " ")
@@ -209,10 +221,10 @@ final class ReaderChat: ObservableObject {
     /// Stage a passage for the next question. Ask answers "what does this
     /// say?" on its own; this is for when the question is something else and
     /// the passage is only what it's about. Several can be gathered.
-    func quote(_ text: String) {
+    func quote(_ text: String, chapter: Int? = nil, page: Int? = nil) {
         let quote = ReaderState.cleanSelection(text)
         guard !quote.isEmpty else { return }
-        attachments.append(Attachment(text: quote))
+        attachments.append(Attachment(text: quote, chapter: chapter, page: page))
         focusRequests &+= 1
     }
 
@@ -224,6 +236,17 @@ final class ReaderChat: ObservableObject {
     /// in, typing is the next thing wanted.
     @Published private(set) var focusRequests = 0
 
+    /// Set by the reader view to turn a quote link back into a page turn. The
+    /// panel can't reach the document itself, so it hands the `(chapter, page)`
+    /// off and the view navigates.
+    var onJump: ((_ chapter: Int, _ page: Int) -> Void)?
+
+    /// Take the reader to where a quoted passage was picked.
+    func jump(to m: Msg) {
+        guard let page = m.srcPage else { return }
+        onJump?(m.srcChapter ?? 0, page)
+    }
+
     func send() {
         let typed = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !typed.isEmpty || !attachments.isEmpty, !isStreaming else { return }
@@ -233,9 +256,12 @@ final class ReaderChat: ObservableObject {
             .map { "\u{201C}\($0.text)\u{201D}" }
             .joined(separator: "\n\n")
         let full = [quoted, typed].filter { !$0.isEmpty }.joined(separator: "\n\n")
+        // ponytail: link to the first passage's spot. Gathering passages from
+        // several pages into one turn is rare; per-passage anchors if it isn't.
+        let src = attachments.first
         input = ""
         attachments.removeAll()
-        messages.append(Msg(role: .user, text: full))
+        messages.append(Msg(role: .user, text: full, srcChapter: src?.chapter, srcPage: src?.page))
         deliver()
     }
 
@@ -360,7 +386,10 @@ final class ReaderChat: ObservableObject {
             title: existing ?? String(derived.prefix(70)),
             date: Date(),
             context: context,
-            messages: messages.map { SavedMessage(role: $0.role == .user ? "user" : "assistant", text: $0.text) })
+            messages: messages.map {
+                SavedMessage(role: $0.role == .user ? "user" : "assistant", text: $0.text,
+                             srcChapter: $0.srcChapter, srcPage: $0.srcPage)
+            })
         BookLibrary.saveDialogue(bookID: bookID, title: bookTitle, path: bookPath, dialogue)
         refreshSessions()
     }

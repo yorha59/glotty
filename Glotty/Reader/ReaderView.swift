@@ -33,6 +33,11 @@ struct ReaderView: View {
             // Read at send time, so a question is answered about the page the
             // user is on right then — not the one open when the panel appeared.
             chat.pageTextProvider = { [weak state] in state?.visiblePageText ?? "" }
+            // A quote link in the chat turns back into a page turn here — the
+            // panel can't reach the document.
+            chat.onJump = { [weak state] chapter, page in
+                withAnimation(.easeInOut(duration: 0.18)) { state?.goToLocation(chapter: chapter, page: page) }
+            }
         }
         .onChange(of: state.bookInfo) { _, info in chat.setBook(info) }
     }
@@ -69,11 +74,13 @@ struct ReaderView: View {
                     onRemoveUnderline: { state.unmarkLookedUp($0) },
                     onTranslate: translateSelection,
                     onAsk: { text in
-                        chat.attach(text)
+                        let loc = state.currentLocation
+                        chat.attach(text, chapter: loc?.chapter, page: loc?.page)
                         withAnimation(.easeInOut(duration: 0.18)) { showChat = true }
                     },
                     onAdd: { text in
-                        chat.quote(text)
+                        let loc = state.currentLocation
+                        chat.quote(text, chapter: loc?.chapter, page: loc?.page)
                         withAnimation(.easeInOut(duration: 0.18)) { showChat = true }
                     },
                     onSelectionChange: { epubSelection = $0 },
@@ -179,11 +186,13 @@ struct ReaderView: View {
                         translateSelection(text)
                     },
                     onAsk: { text in
-                        chat.attach(text)
+                        let loc = state.currentLocation
+                        chat.attach(text, chapter: loc?.chapter, page: loc?.page)
                         withAnimation(.easeInOut(duration: 0.18)) { showChat = true }
                     },
                     onAdd: { text in
-                        chat.quote(text)
+                        let loc = state.currentLocation
+                        chat.quote(text, chapter: loc?.chapter, page: loc?.page)
                         withAnimation(.easeInOut(duration: 0.18)) { showChat = true }
                     },
                     onRemove: { _ in }
