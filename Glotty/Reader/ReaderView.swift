@@ -35,8 +35,10 @@ struct ReaderView: View {
             chat.pageTextProvider = { [weak state] in state?.visiblePageText ?? "" }
             // A quote link in the chat turns back into a page turn here — the
             // panel can't reach the document.
-            chat.onJump = { [weak state] chapter, page in
-                withAnimation(.easeInOut(duration: 0.18)) { state?.goToLocation(chapter: chapter, page: page) }
+            chat.onJump = { [weak state] chapter, page, passage in
+                guard let state else { return }
+                withAnimation(.easeInOut(duration: 0.18)) { state.goToLocation(chapter: chapter, page: page) }
+                state.highlightPassage(passage)
             }
         }
         .onChange(of: state.bookInfo) { _, info in chat.setBook(info) }
@@ -88,7 +90,8 @@ struct ReaderView: View {
                     pageCount: $epubPageCount,
                     onChapterFlip: { dir in flipChapter(book, dir) },
                     onPageText: { state.visiblePageText = $0 },
-                    landOnLastPage: landOnLastPage
+                    landOnLastPage: landOnLastPage,
+                    highlight: state.highlight
                 )
                 .id(book.identifier)   // fresh web view per book
                 .background(translateShortcut)
@@ -195,7 +198,8 @@ struct ReaderView: View {
                         chat.quote(text, chapter: loc?.chapter, page: loc?.page)
                         withAnimation(.easeInOut(duration: 0.18)) { showChat = true }
                     },
-                    onRemove: { _ in }
+                    onRemove: { _ in },
+                    highlight: state.highlight
                 )
             }
             if showChat {
@@ -226,22 +230,44 @@ struct ReaderView: View {
             )
     }
 
-    private var pdfTOCSidebar: some View {
-        List {
-            ForEach(state.pdfTOC) { item in
-                Button { state.pdfPage = item.pageIndex } label: {
-                    HStack {
-                        Text(item.label).lineLimit(2).multilineTextAlignment(.leading)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.leading, CGFloat(item.level) * 10)
-                    .contentShape(Rectangle())
-                    .foregroundStyle(item.pageIndex == state.pdfPage ? Color.accentColor : .primary)
-                }
-                .buttonStyle(.plain)
-            }
+    /// The section the reader is inside: the last entry that starts at or
+    /// before the current page. Using the exact page only lit an entry up on
+    /// its own first page, so the highlight vanished as soon as you read on.
+    private var activePDFTOCID: UUID? {
+        if let i = state.pdfTOC.lastIndex(where: { $0.pageIndex <= state.pdfPage }) {
+            return state.pdfTOC[i].id
         }
-        .listStyle(.sidebar)
+        return state.pdfTOC.first?.id
+    }
+
+    private var pdfTOCSidebar: some View {
+        ScrollViewReader { proxy in
+            List {
+                ForEach(state.pdfTOC) { item in
+                    Button { state.pdfPage = item.pageIndex } label: {
+                        HStack {
+                            Text(item.label).lineLimit(2).multilineTextAlignment(.leading)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.leading, CGFloat(item.level) * 10)
+                        .contentShape(Rectangle())
+                        .foregroundStyle(item.id == activePDFTOCID ? Color.accentColor : .primary)
+                    }
+                    .buttonStyle(.plain)
+                    .id(item.id)
+                }
+            }
+            .listStyle(.sidebar)
+            // Follow the reading position: scroll only when the section
+            // changes, so paging within one section doesn't keep re-centring.
+            .onChange(of: activePDFTOCID) { _, id in scrollTOC(proxy, to: id) }
+            .onAppear { scrollTOC(proxy, to: activePDFTOCID) }
+        }
+    }
+
+    private func scrollTOC(_ proxy: ScrollViewProxy, to id: (some Hashable)?) {
+        guard let id else { return }
+        withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(id, anchor: .center) }
     }
 
     private func pdfControlBar(_ pdf: PDFDocument) -> some View {
@@ -275,25 +301,32 @@ struct ReaderView: View {
     }
 
     private func tocSidebar(_ book: EPUBBook) -> some View {
-        List {
-            Section(book.title) {
-                ForEach(Array(book.toc.enumerated()), id: \.element.id) { _, item in
-                    Button {
-                        if let i = item.chapterIndex { state.goto(i) }
-                    } label: {
-                        HStack {
-                            Text(item.label).lineLimit(2).multilineTextAlignment(.leading)
-                            Spacer(minLength: 0)
+        // The entry to keep in view: the first one pointing at this chapter.
+        let activeID = book.toc.first { $0.chapterIndex == state.chapterIndex }?.id
+        return ScrollViewReader { proxy in
+            List {
+                Section(book.title) {
+                    ForEach(Array(book.toc.enumerated()), id: \.element.id) { _, item in
+                        Button {
+                            if let i = item.chapterIndex { state.goto(i) }
+                        } label: {
+                            HStack {
+                                Text(item.label).lineLimit(2).multilineTextAlignment(.leading)
+                                Spacer(minLength: 0)
+                            }
+                            .contentShape(Rectangle())
+                            .foregroundStyle(item.chapterIndex == state.chapterIndex ? Color.accentColor : .primary)
                         }
-                        .contentShape(Rectangle())
-                        .foregroundStyle(item.chapterIndex == state.chapterIndex ? Color.accentColor : .primary)
+                        .buttonStyle(.plain)
+                        .disabled(item.chapterIndex == nil)
+                        .id(item.id)
                     }
-                    .buttonStyle(.plain)
-                    .disabled(item.chapterIndex == nil)
                 }
             }
+            .listStyle(.sidebar)
+            .onChange(of: state.chapterIndex) { _, _ in scrollTOC(proxy, to: activeID) }
+            .onAppear { scrollTOC(proxy, to: activeID) }
         }
-        .listStyle(.sidebar)
     }
 
     /// Themes as swatches rather than a segmented control — there are too many

@@ -16,6 +16,9 @@ struct PDFReaderView: NSViewRepresentable {
     let onAsk: (String) -> Void
     let onAdd: (String) -> Void
     let onRemove: (UUID) -> Void
+    /// A passage to select + scroll to (from a chat-quote jump); identity
+    /// carries the request. nil selects nothing.
+    var highlight: ReaderState.PassageHighlight? = nil
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -86,6 +89,8 @@ struct PDFReaderView: NSViewRepresentable {
         private var originalToDerived: [Int: Int] = [:]
         private var lastIDs: [UUID] = []
         private var pendingSelection: (page: PDFPage, rect: CGRect, text: String)?
+        /// Id of the last handled highlight request, so paging doesn't re-fire it.
+        var lastHighlightID: UUID?
         /// The document the view was last built from. Identity, not equality:
         /// PDFDocument has no useful `==`, and two different files can share a
         /// page count, so only "is this the same object" is meaningful.
@@ -110,6 +115,21 @@ struct PDFReaderView: NSViewRepresentable {
             if documentChanged { rebuild(initial: true) }
             else if translationsChanged { rebuild(initial: false) }
             else { goToOriginalIfNeeded(parent.page) }
+            if let h = parent.highlight, h.id != lastHighlightID {
+                lastHighlightID = h.id
+                highlightPassage(h.text)
+            }
+        }
+
+        /// Select the passage a chat quote came from and scroll it into view.
+        /// PDFKit's own search runs over the document's text, so a cleaned-up
+        /// selection usually still matches; best-effort — a miss just leaves the
+        /// page-level jump that already happened.
+        private func highlightPassage(_ text: String) {
+            guard let v = pdfView, let doc = v.document,
+                  let sel = doc.findString(text, withOptions: [.caseInsensitive]).first else { return }
+            v.setCurrentSelection(sel, animate: true)
+            v.go(to: sel)
         }
 
         // MARK: build / reflow

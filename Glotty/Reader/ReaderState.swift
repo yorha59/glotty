@@ -491,6 +491,20 @@ final class ReaderState: ObservableObject {
         pageIndex = page
     }
 
+    /// A passage the reader should visibly mark, after jumping to it from a chat
+    /// quote. Identity (`id`) carries the request so the same passage can be
+    /// re-highlighted on a second click; the reader views watch it.
+    struct PassageHighlight: Equatable { let id = UUID(); let text: String }
+    @Published var highlight: PassageHighlight?
+
+    /// Mark `text` in whichever document is open. The passage was picked from
+    /// the page just navigated to, so the view only has to find and colour it.
+    func highlightPassage(_ text: String) {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        highlight = PassageHighlight(text: t)
+    }
+
     // MARK: - PDF helpers
 
     private static func pdfPageKey(_ url: URL) -> String { "glotty.reader.pdfpage.\(url.lastPathComponent)" }

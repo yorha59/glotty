@@ -167,6 +167,40 @@ struct ReaderChatPanel: View {
         }
     }
 
+    /// The quoted passage as a clickable chip (Cursor-style reference token):
+    /// a quote glyph, a one-line preview, and a corner arrow that reads as
+    /// "takes you somewhere". Tapping jumps to the spot and highlights it.
+    private func passageChip(_ m: ReaderChat.Msg, preview: String) -> some View {
+        let flat = preview.replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespaces)
+        let label = flat.count > 32 ? String(flat.prefix(32)) + "…" : flat
+        return Button { chat.jump(to: m) } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "text.quote").font(.system(size: 10, weight: .semibold))
+                Text(label).font(.caption).lineLimit(1)
+                Image(systemName: "arrow.up.right").font(.system(size: 9, weight: .semibold))
+                    .opacity(0.7)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(Color.white.opacity(0.16), in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.white.opacity(0.28), lineWidth: 0.5))
+        }
+        .buttonStyle(.plain)
+        .help("Jump to this passage in the book")
+    }
+
+    /// A user turn's text with the leading quoted passage removed — the chip
+    /// shows the passage, so only what was typed remains here. `srcText` is the
+    /// passage `send()`/`attach()` prepended in quotes.
+    private func spokenText(_ m: ReaderChat.Msg) -> String {
+        guard let q = m.srcText else { return m.text }
+        let quoted = "\u{201C}\(q)\u{201D}"
+        var t = m.text
+        if t.hasPrefix(quoted) { t = String(t.dropFirst(quoted.count)) }
+        return t.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private func bubble(_ m: ReaderChat.Msg) -> some View {
         HStack {
             if m.role == .user { Spacer(minLength: 28) }
@@ -202,22 +236,19 @@ struct ReaderChatPanel: View {
                         .textSelection(.enabled)
                         .foregroundStyle(Color.primary)
                 } else {
-                    // The question, shown as typed. A quoted passage can contain
-                    // stray markdown, so don't parse the user's own turn.
+                    // A quoted passage rides as a chip — clicking it jumps back
+                    // to the spot in the book and highlights it — with the typed
+                    // question, if any, below. A plain question is just text.
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(m.text)
-                            .font(.callout)
-                            .textSelection(.enabled)
-                            .foregroundStyle(Color.white)
-                        // Reading back, it's easy to lose where a quote came
-                        // from — this takes you there.
-                        if m.hasSource {
-                            Button { chat.jump(to: m) } label: {
-                                Label("Jump to passage", systemImage: "location.fill")
-                                    .font(.caption2)
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(Color.white.opacity(0.85))
+                        if m.hasSource, let passage = m.srcText {
+                            passageChip(m, preview: passage)
+                        }
+                        let spoken = spokenText(m)
+                        if !spoken.isEmpty {
+                            Text(spoken)
+                                .font(.callout)
+                                .textSelection(.enabled)
+                                .foregroundStyle(Color.white)
                         }
                     }
                 }

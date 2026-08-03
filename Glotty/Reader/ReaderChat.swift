@@ -25,6 +25,10 @@ final class ReaderChat: ObservableObject {
         /// for a plain typed question. `page` alone means a PDF.
         var srcChapter: Int?
         var srcPage: Int?
+        /// The quoted passage itself, shown as a chip and used to highlight the
+        /// spot on jump. Held apart from `text` (which also carries the typed
+        /// question and is what the model sees).
+        var srcText: String?
         var hasSource: Bool { srcPage != nil }
     }
 
@@ -141,7 +145,7 @@ final class ReaderChat: ObservableObject {
         context = session.context
         messages = session.messages.map {
             Msg(role: $0.role == "user" ? .user : .assistant, text: $0.text,
-                srcChapter: $0.srcChapter, srcPage: $0.srcPage)
+                srcChapter: $0.srcChapter, srcPage: $0.srcPage, srcText: $0.srcText)
         }
     }
 
@@ -194,7 +198,7 @@ final class ReaderChat: ObservableObject {
         let quote = ReaderState.cleanSelection(text)
         guard !quote.isEmpty, !isStreaming else { return }
         messages.append(Msg(role: .user, text: "\u{201C}\(quote)\u{201D}",
-                            isQuoteAsk: true, srcChapter: chapter, srcPage: page))
+                            isQuoteAsk: true, srcChapter: chapter, srcPage: page, srcText: quote))
         deliver()
     }
 
@@ -236,15 +240,15 @@ final class ReaderChat: ObservableObject {
     /// in, typing is the next thing wanted.
     @Published private(set) var focusRequests = 0
 
-    /// Set by the reader view to turn a quote link back into a page turn. The
-    /// panel can't reach the document itself, so it hands the `(chapter, page)`
-    /// off and the view navigates.
-    var onJump: ((_ chapter: Int, _ page: Int) -> Void)?
+    /// Set by the reader view to turn a quote link back into a page turn +
+    /// highlight. The panel can't reach the document itself, so it hands off
+    /// the spot and the passage and the view navigates and marks it.
+    var onJump: ((_ chapter: Int, _ page: Int, _ passage: String) -> Void)?
 
-    /// Take the reader to where a quoted passage was picked.
+    /// Take the reader to where a quoted passage was picked and mark it.
     func jump(to m: Msg) {
         guard let page = m.srcPage else { return }
-        onJump?(m.srcChapter ?? 0, page)
+        onJump?(m.srcChapter ?? 0, page, m.srcText ?? "")
     }
 
     func send() {
@@ -261,7 +265,8 @@ final class ReaderChat: ObservableObject {
         let src = attachments.first
         input = ""
         attachments.removeAll()
-        messages.append(Msg(role: .user, text: full, srcChapter: src?.chapter, srcPage: src?.page))
+        messages.append(Msg(role: .user, text: full,
+                            srcChapter: src?.chapter, srcPage: src?.page, srcText: src?.text))
         deliver()
     }
 
@@ -388,7 +393,7 @@ final class ReaderChat: ObservableObject {
             context: context,
             messages: messages.map {
                 SavedMessage(role: $0.role == .user ? "user" : "assistant", text: $0.text,
-                             srcChapter: $0.srcChapter, srcPage: $0.srcPage)
+                             srcChapter: $0.srcChapter, srcPage: $0.srcPage, srcText: $0.srcText)
             })
         BookLibrary.saveDialogue(bookID: bookID, title: bookTitle, path: bookPath, dialogue)
         refreshSessions()

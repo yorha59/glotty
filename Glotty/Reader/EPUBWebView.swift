@@ -39,6 +39,9 @@ struct EPUBWebView: NSViewRepresentable {
     /// Where to land after a chapter load: the end, when the reader arrived by
     /// paging backwards.
     let landOnLastPage: Bool
+    /// A passage to highlight (from a chat-quote jump). Identity carries the
+    /// request so the same passage can be re-highlighted; nil highlights nothing.
+    let highlight: ReaderState.PassageHighlight?
 
     /// Side margin around the text, applied to the view rather than in CSS so
     /// it survives horizontal paging.
@@ -109,6 +112,7 @@ struct EPUBWebView: NSViewRepresentable {
         c.style = Coordinator.Style(scale: fontScale, lineHeight: lineHeight,
                                     letterSpacing: letterSpacing, bg: bg, fg: fg, font: fontCSS)
         c.words = lookedUp.sorted()   // stable order — the dirty check compares it
+        var startedLoad = false
         if c.loadedChapter != chapterIndex, book.chapters.indices.contains(chapterIndex) {
             c.loadedChapter = chapterIndex
             // `page` is 0 for a forward flip and the restored position when a
@@ -118,11 +122,19 @@ struct EPUBWebView: NSViewRepresentable {
             // the new text and Translate/⌘T would act on the previous chapter.
             c.resetSelection()
             web.loadFileURL(book.chapters[chapterIndex].url, allowingReadAccessTo: book.rootDir)
+            startedLoad = true
             // style + marks are (re)applied in didFinish for the fresh document
         } else {
             c.applyStyle()
             c.applyMarks()
             c.syncPage(page)
+        }
+        // A new jump request colours its passage. If a chapter is loading, the
+        // DOM isn't ready — didFinish runs it once the page exists.
+        if let h = highlight, h.id != c.lastHighlightID {
+            c.lastHighlightID = h.id
+            c.pendingHighlight = h.text
+            if !startedLoad { c.applyHighlight() }
         }
     }
 
@@ -164,6 +176,10 @@ struct EPUBWebView: NSViewRepresentable {
         /// wipes the live highlight — so only push when something really changed.
         private var appliedStyle: Style?
         private var appliedWords: [String]?
+        /// Passage waiting to be highlighted, and the id of the last request
+        /// handled so the same jump isn't re-run on every state round-trip.
+        var pendingHighlight: String?
+        var lastHighlightID: UUID?
 
         init(onLookup: @escaping (String) -> Void, bookID: String) {
             self.onLookup = onLookup; self.bookID = bookID
@@ -181,6 +197,19 @@ struct EPUBWebView: NSViewRepresentable {
             webView.evaluateJavaScript(
                 landing < 0 ? "__glottyGoto(__glottyPages() - 1)" : "__glottyGoto(\(landing))",
                 completionHandler: nil)
+            // A jump that crossed into this chapter waited for the load.
+            applyHighlight()
+        }
+
+        /// Colour the pending passage in the live DOM. No-op when there's
+        /// nothing pending; the JS itself no-ops if the text can't be found.
+        func applyHighlight() {
+            guard let text = pendingHighlight else { return }
+            pendingHighlight = nil
+            let json = (try? JSONSerialization.data(withJSONObject: [text]))
+                .flatMap { String(data: $0, encoding: .utf8) } ?? "[\"\"]"
+            webView?.evaluateJavaScript(
+                "window.__glottyHighlight && __glottyHighlight(\(json)[0])", completionHandler: nil)
         }
 
         /// Pull the on-screen text so the chat can answer about what's actually
@@ -375,7 +404,9 @@ struct EPUBWebView: NSViewRepresentable {
           'img,svg,table{max-width:100% !important; max-height:100% !important; height:auto !important;}' +
           'a{color:#3b82f6;}' +
           'span.glotty-seen{text-decoration:underline; text-decoration-color:#3b82f6;' +
-          'text-decoration-thickness:2px; text-underline-offset:3px; cursor:pointer;}';
+          'text-decoration-thickness:2px; text-underline-offset:3px; cursor:pointer;}' +
+          // Where a chat quote jumped to, so the eye lands on the passage.
+          '::highlight(glotty-jump){background:rgba(250,204,21,.42);}';
         __glottyWrap();
         __glottyPaginate();
       };
@@ -389,6 +420,41 @@ struct EPUBWebView: NSViewRepresentable {
         wrap.id = 'glotty-page';
         while (b.firstChild) wrap.appendChild(b.firstChild);
         b.appendChild(wrap);
+      };
+
+      // Highlight the passage a chat quote came from. Matches on
+      // whitespace-normalised text so a cleaned-up selection still finds its
+      // place, and colours it via the Custom Highlight API (no DOM surgery, so
+      // the reader's marks/selection are untouched). Best-effort: returns
+      // false and leaves the page as-is if the text or the API isn't there.
+      window.__glottyHighlight = function (needle) {
+        try {
+          if (!needle || !window.CSS || !CSS.highlights || typeof Highlight === 'undefined') return false;
+          CSS.highlights.delete('glotty-jump');
+          var target = needle.replace(/\s+/g, ' ').trim();
+          if (!target) return false;
+          var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+          var text = '', map = [], n;   // map[i] = [node, offsetWithinNode] for char i of `text`
+          while ((n = walker.nextNode())) {
+            var raw = n.nodeValue;
+            for (var i = 0; i < raw.length; i++) { text += raw[i]; map.push([n, i]); }
+          }
+          // Collapse whitespace but keep the map aligned to the surviving chars.
+          var norm = '', nmap = [], prevWS = false;
+          for (var j = 0; j < text.length; j++) {
+            var ch = text[j];
+            if (/\s/.test(ch)) { if (prevWS) continue; ch = ' '; prevWS = true; }
+            else prevWS = false;
+            norm += ch; nmap.push(map[j]);
+          }
+          var at = norm.indexOf(target);
+          if (at < 0) return false;
+          var s = nmap[at], e = nmap[Math.min(at + target.length - 1, nmap.length - 1)];
+          var range = document.createRange();
+          range.setStart(s[0], s[1]); range.setEnd(e[0], e[1] + 1);
+          CSS.highlights.set('glotty-jump', new Highlight(range));
+          return true;
+        } catch (err) { return false; }
       };
 
       // --- paging -----------------------------------------------------------

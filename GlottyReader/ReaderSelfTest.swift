@@ -280,11 +280,13 @@ enum ReaderSelfTest {
         eq(restored?.srcChapter, 3, "the anchor survives save/load — chapter")
         eq(restored?.srcPage, 5, "the anchor survives save/load — page")
 
-        var landed: (Int, Int)?
-        reopened.onJump = { c, p in landed = (c, p) }
+        eq(restored?.srcText, "a picked passage", "the passage itself survives, for the chip + highlight")
+
+        var landed: (chapter: Int, page: Int, passage: String)?
+        reopened.onJump = { c, p, text in landed = (c, p, text) }
         if let restored { reopened.jump(to: restored) }
-        check(landed?.0 == 3 && landed?.1 == 5,
-              "the link hands the spot to the reader: \(String(describing: landed))")
+        check(landed?.chapter == 3 && landed?.page == 5 && landed?.passage == "a picked passage",
+              "the link hands the spot + passage to the reader: \(String(describing: landed))")
     }
 
     /// The model picker, exercised through the real IPC client against a real

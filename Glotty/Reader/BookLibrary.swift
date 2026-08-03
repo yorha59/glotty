@@ -22,6 +22,7 @@ struct SavedMessage: Codable, Identifiable, Equatable {
     /// or a PDF page in `page`). Optional so threads saved before this decode.
     var srcChapter: Int?
     var srcPage: Int?
+    var srcText: String?
 }
 
 /// A saved chat thread about a book (from the reader's chat panel).
