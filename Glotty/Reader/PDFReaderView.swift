@@ -122,14 +122,25 @@ struct PDFReaderView: NSViewRepresentable {
         }
 
         /// Select the passage a chat quote came from and scroll it into view.
-        /// PDFKit's own search runs over the document's text, so a cleaned-up
-        /// selection usually still matches; best-effort — a miss just leaves the
-        /// page-level jump that already happened.
+        /// PDFKit's search runs over the whole document in reading order, and a
+        /// section title also appears in the table of contents — so `.first`
+        /// would jump to the TOC, not the page the quote was picked from. Pick
+        /// the match nearest the page we just navigated to, and ignore matches
+        /// far from it (a TOC hit when the real page's text didn't match), so
+        /// the highlight never overrides a correct page-level jump.
         private func highlightPassage(_ text: String) {
-            guard let v = pdfView, let doc = v.document,
-                  let sel = doc.findString(text, withOptions: [.caseInsensitive]).first else { return }
-            v.setCurrentSelection(sel, animate: true)
-            v.go(to: sel)
+            guard let v = pdfView, let doc = v.document else { return }
+            let matches = doc.findString(text, withOptions: [.caseInsensitive])
+            guard !matches.isEmpty else { return }
+            let target = originalToDerived[parent.page] ?? parent.page
+            func distance(_ sel: PDFSelection) -> Int {
+                guard let p = sel.pages.first else { return .max }
+                return abs(doc.index(for: p) - target)
+            }
+            guard let best = matches.min(by: { distance($0) < distance($1) }),
+                  distance(best) <= 2 else { return }   // >2 pages off ⇒ a stray/TOC hit; leave the page jump
+            v.setCurrentSelection(best, animate: true)
+            v.go(to: best)
         }
 
         // MARK: build / reflow
