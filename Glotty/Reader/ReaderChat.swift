@@ -287,6 +287,7 @@ final class ReaderChat: ObservableObject {
     /// question and by Ask, so both behave identically from here on.
     private func deliver() {
         let prompt = buildPrompt()
+        ReaderPromptLog.record(prompt)   // debug: see exactly what the model gets
         guard let stream = ReaderCore.services?.chatStream(prompt: prompt) else {
             messages.append(Msg(
                 role: .assistant,
