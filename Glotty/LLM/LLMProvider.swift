@@ -3,6 +3,7 @@ import Foundation
 /// Errors surfaced by `LLMProvider` implementations.
 enum LLMError: LocalizedError {
     case missingAPIKey(providerName: String)
+    case keychainLocked(providerName: String)
     case providerUnavailable(reason: String)
     case networkFailure(underlying: Error)
     case httpError(status: Int, body: String)
@@ -13,6 +14,8 @@ enum LLMError: LocalizedError {
         switch self {
         case .missingAPIKey(let name):
             return "\(name) needs an API key. Add it in Settings → Language Model."
+        case .keychainLocked(let name):
+            return String(localized: "\(name)'s API key is saved but can't be read — the login keychain is locked. Unlock it (Keychain Access → login → Unlock, or log out and back in) and retry.")
         case .providerUnavailable(let reason):
             return "Provider unavailable — \(reason)"
         case .networkFailure(let err):

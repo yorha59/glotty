@@ -108,8 +108,11 @@ struct OpenAICompatibleProvider: LLMProvider {
         prompt: String,
         continuation: AsyncThrowingStream<String, Error>.Continuation
     ) async throws {
-        guard let apiKey = Keychain.read(account: keychainAccount), !apiKey.isEmpty else {
-            throw LLMError.missingAPIKey(providerName: displayName)
+        let apiKey: String
+        switch Keychain.readResult(account: keychainAccount) {
+        case .value(let k): apiKey = k
+        case .locked: throw LLMError.keychainLocked(providerName: displayName)
+        case .missing: throw LLMError.missingAPIKey(providerName: displayName)
         }
         let bodyData = try makeBody(prompt: prompt, temperature: 0.5, webSearch: webSearchEnabled)
         let bytes = try await openSSEStream(apiKey: apiKey, body: bodyData)
