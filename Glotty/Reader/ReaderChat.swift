@@ -416,14 +416,14 @@ final class ReaderChat: ObservableObject {
         p += "doesn't cover the question, answer from your own knowledge anyway — "
         p += "note in one short clause that the passage doesn't cover it, then give "
         p += "the answer. Never reply with only a refusal.\n\n"
-        // What's on screen right now. The user asks about what they're reading,
-        // usually without selecting anything first; without this the model only
-        // saw the attached snippet and would answer that it can't see the rest.
-        // Capped for token cost, not transport — a dense PDF page's text can run
-        // long, and the tail matters less than what's on screen at the top.
-        let page = String((pageTextProvider?() ?? "").prefix(4000))
+        // What's around what they're reading — the PDF path sends the current
+        // page plus its neighbours (tagged), so a question about a section that
+        // spans a page break isn't answered "the page doesn't cover that" when
+        // the answer is a paragraph over. Capped for token cost, not transport;
+        // wide enough for ~3 dense pages.
+        let page = String((pageTextProvider?() ?? "").prefix(9000))
         if !page.isEmpty {
-            p += "The page the user is currently reading:\n\"\"\"\n\(page)\n\"\"\"\n\n"
+            p += "The page the user is reading (with the pages around it):\n\"\"\"\n\(page)\n\"\"\"\n\n"
         }
         for m in messages {   // ends with the user's latest question
             p += (m.role == .user ? "User: " : "Assistant: ") + m.text + "\n"

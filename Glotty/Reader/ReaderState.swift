@@ -522,7 +522,16 @@ final class ReaderState: ObservableObject {
     /// unlike EPUB this is pulled rather than pushed.
     private func refreshPDFPageText() {
         guard let doc = pdf, pdfPage >= 0, pdfPage < doc.pageCount else { return }
-        visiblePageText = doc.page(at: pdfPage)?.string ?? ""
+        // Not just the visible page: a reader's question usually concerns a
+        // section that runs across a page break, and the answer is often a
+        // paragraph over. Send the page plus its neighbours, each tagged so the
+        // model can tell the current page from what's around it.
+        let lo = max(0, pdfPage - 1), hi = min(doc.pageCount - 1, pdfPage + 1)
+        visiblePageText = (lo...hi).compactMap { i -> String? in
+            guard let s = doc.page(at: i)?.string, !s.isEmpty else { return nil }
+            let tag = i == pdfPage ? "current page" : (i < pdfPage ? "previous page" : "next page")
+            return "[\(tag)]\n\(s)"
+        }.joined(separator: "\n\n")
     }
     private static func buildPDFTOC(_ doc: PDFDocument) -> [PDFTOCItem] {
         guard let root = doc.outlineRoot else { return [] }

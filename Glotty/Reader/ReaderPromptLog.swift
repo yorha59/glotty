@@ -20,7 +20,7 @@ enum ReaderPromptLog {
     }
 
     static func record(_ prompt: String) {
-        let marker = "The page the user is currently reading:"
+        let marker = "The page the user is reading"
         let hasPage = prompt.contains(marker)
         // Length of the page-context block (text between the marker's opening
         // and closing triple-quote), for a quick "is the context actually there
