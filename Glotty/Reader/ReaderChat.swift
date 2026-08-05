@@ -283,6 +283,13 @@ final class ReaderChat: ObservableObject {
         deliver()
     }
 
+    /// True when the last turn is a question with no reply — a live send whose
+    /// error bubble was cleared, or (more often) a thread reopened after a
+    /// failed turn, since errors aren't persisted. The panel offers a retry.
+    var lastQuestionUnanswered: Bool {
+        !isStreaming && messages.last?.role == .user
+    }
+
     /// Stream a reply for whatever the last user turn is. Shared by typing a
     /// question and by Ask, so both behave identically from here on.
     private func deliver() {
@@ -392,7 +399,11 @@ final class ReaderChat: ObservableObject {
             title: existing ?? String(derived.prefix(70)),
             date: Date(),
             context: context,
-            messages: messages.map {
+            // Errors and the empty in-flight placeholder aren't conversation —
+            // saving them reloads a fake reply with no retry and poisons the
+            // next prompt. A failed turn leaves its question as the last saved
+            // message, which the panel treats as retryable.
+            messages: messages.filter { !$0.isError && !$0.text.isEmpty }.map {
                 SavedMessage(role: $0.role == .user ? "user" : "assistant", text: $0.text,
                              srcChapter: $0.srcChapter, srcPage: $0.srcPage, srcText: $0.srcText)
             })
@@ -425,7 +436,7 @@ final class ReaderChat: ObservableObject {
         if !page.isEmpty {
             p += "The page the user is reading (with the pages around it):\n\"\"\"\n\(page)\n\"\"\"\n\n"
         }
-        for m in messages {   // ends with the user's latest question
+        for m in messages where !m.isError {   // ends with the user's latest question
             p += (m.role == .user ? "User: " : "Assistant: ") + m.text + "\n"
         }
         // Ask sends the passage with no question attached, so say what's wanted

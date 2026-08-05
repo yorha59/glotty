@@ -157,6 +157,18 @@ struct ReaderChatPanel: View {
                             .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 8)
                     }
                     ForEach(chat.messages) { bubble($0) }
+                    // A question with no reply — a thread reopened after a
+                    // failed turn (errors aren't saved). Offer to send it again.
+                    if chat.lastQuestionUnanswered {
+                        HStack {
+                            Spacer(minLength: 28)
+                            Button { chat.retry() } label: {
+                                Label("Retry", systemImage: "arrow.clockwise").font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.tint)
+                        }
+                    }
                     Color.clear.frame(height: 1).id("bottom")
                 }
                 .padding(10)
