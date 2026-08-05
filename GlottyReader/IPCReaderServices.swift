@@ -53,7 +53,11 @@ final class IPCReaderServices: NSObject, ReaderServices {
             continuation.onTermination = { [weak self] _ in
                 Task { @MainActor in self?.chatConts[reqID] = nil }
             }
-            post(ReaderIPC.chatRequestName, ["requestID": reqID, "prompt": prompt])
+            // The prompt carries page context (tens of KB) — too big for a
+            // distributed notification, which drops oversized userInfo. Hand it
+            // over via a shared file; the notification carries only the id.
+            ReaderIPCFile.writePrompt(prompt, id: reqID)
+            post(ReaderIPC.chatRequestName, ["requestID": reqID])
         }
     }
 

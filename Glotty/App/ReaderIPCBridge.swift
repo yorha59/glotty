@@ -22,8 +22,10 @@ enum ReaderIPCBridge {
         DistributedNotificationCenter.default().addObserver(
             forName: ReaderIPC.chatRequestName, object: nil, queue: .main) { note in
             MainActor.assumeIsolated {
+                // The prompt travels via a shared file (too big for userInfo);
+                // the notification carries only the id.
                 guard let id = note.userInfo?["requestID"] as? String,
-                      let prompt = note.userInfo?["prompt"] as? String else { return }
+                      let prompt = ReaderIPCFile.readPrompt(id: id) else { return }
                 serveChat(id: id, prompt: prompt)
             }
         }
