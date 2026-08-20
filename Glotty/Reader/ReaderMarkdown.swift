@@ -50,7 +50,7 @@ struct ReaderMarkdownText: View {
                 let content = String(t.dropFirst()).trimmingCharacters(in: .whitespaces)
                 return Block(view: AnyView(
                     HStack(alignment: .top, spacing: 8) {
-                        RoundedRectangle(cornerRadius: 1.5).fill(.tint.opacity(0.5)).frame(width: 3)
+                        Rectangle().fill(.tint.opacity(0.5)).frame(width: 3)
                         inline(content).foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)))

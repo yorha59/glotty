@@ -36,6 +36,7 @@ struct ReaderChatPanel: View {
             chatColumn
         }
         .frame(width: width + (showSessions ? sessionsWidth + 1 : 0))
+        .overlay { ReaderReplySelectionOverlay { chat.quote($0) } }
     }
 
     /// Header, transcript, attached passage, composer.
@@ -70,13 +71,17 @@ struct ReaderChatPanel: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Rename conversation").font(.headline)
                 TextField("Title", text: $renameText)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
                     .frame(width: 260)
+                    .padding(7)
+                    .overlay(Rectangle().strokeBorder(Color.primary.opacity(0.22)))
                 HStack {
                     Spacer()
                     Button("Cancel") { renaming = nil }
                     Button("Rename") { chat.rename(s, to: renameText); renaming = nil }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, 12).frame(height: 28)
+                        .foregroundStyle(.white).background(Color.accentColor)
                         .disabled(renameText.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
@@ -138,8 +143,10 @@ struct ReaderChatPanel: View {
         }
         .padding(.horizontal, 7).padding(.vertical, 5)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 6)
-            .fill(selected ? Color.accentColor : .clear))
+        .background(selected ? Color.accentColor : .clear)
+        .overlay(alignment: .leading) {
+            if selected { Rectangle().fill(Color.white.opacity(0.65)).frame(width: 2) }
+        }
         .contentShape(Rectangle())
         .onTapGesture { chat.load(s) }
         .contextMenu {
@@ -196,8 +203,8 @@ struct ReaderChatPanel: View {
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 8).padding(.vertical, 4)
-            .background(Color.white.opacity(0.16), in: Capsule())
-            .overlay(Capsule().strokeBorder(Color.white.opacity(0.28), lineWidth: 0.5))
+            .background(Color.white.opacity(0.16))
+            .overlay(Rectangle().strokeBorder(Color.white.opacity(0.28), lineWidth: 0.5))
         }
         .buttonStyle(.plain)
         .help("Jump to this passage in the book")
@@ -248,14 +255,6 @@ struct ReaderChatPanel: View {
                         .font(.callout)
                         .textSelection(.enabled)
                         .foregroundStyle(Color.primary)
-                        .contextMenu {
-                            Button("Add to Conversation") {
-                                if let text = ReaderTextSelection.text(from: NSApp.keyWindow?.firstResponder) {
-                                    chat.quote(text)
-                                }
-                            }
-                            .disabled(ReaderTextSelection.text(from: NSApp.keyWindow?.firstResponder) == nil)
-                        }
                 } else {
                     // A quoted passage rides as a chip — clicking it jumps back
                     // to the spot in the book and highlights it — with the typed
@@ -275,8 +274,10 @@ struct ReaderChatPanel: View {
                 }
             }
             .padding(.horizontal, 10).padding(.vertical, 7)
-            .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(m.role == .user ? Color.accentColor : Color.primary.opacity(0.07)))
+            .background(m.role == .user ? Color.accentColor : Color.primary.opacity(0.07))
+            .overlay(alignment: .leading) {
+                if m.role == .assistant { Rectangle().fill(Color.accentColor.opacity(0.5)).frame(width: 2) }
+            }
             if m.role == .assistant { Spacer(minLength: 28) }
         }
         .frame(maxWidth: .infinity, alignment: m.role == .user ? .trailing : .leading)
@@ -362,7 +363,8 @@ struct ReaderChatPanel: View {
             .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 6).padding(.vertical, 3)
-        .background(Capsule().fill(Color.accentColor.opacity(0.16)))
+        .background(Color.accentColor.opacity(0.16))
+        .overlay(Rectangle().strokeBorder(Color.accentColor.opacity(0.25)))
         .foregroundStyle(.tint)
         .help(a.text)
     }
@@ -405,9 +407,103 @@ struct ReaderChatPanel: View {
             }
         }
         .padding(.horizontal, 12).padding(.vertical, 9)
-        .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color.primary.opacity(0.06)))
-        .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Color.primary.opacity(0.12)))
+        .background(Color.primary.opacity(0.045))
+        .overlay(Rectangle().strokeBorder(Color.primary.opacity(0.16)))
         .padding(10)
+    }
+}
+
+/// Mirrors the document selection chip for text selected inside an AI reply.
+/// The overlay is click-through except for its Add button, so scrolling and
+/// selecting the transcript keep their native behaviour.
+private struct ReaderReplySelectionOverlay: NSViewRepresentable {
+    let onAdd: (String) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(onAdd: onAdd) }
+
+    func makeNSView(context: Context) -> PassthroughView {
+        let overlay = PassthroughView()
+        context.coordinator.install(in: overlay)
+        return overlay
+    }
+
+    func updateNSView(_ overlay: PassthroughView, context: Context) {
+        context.coordinator.onAdd = onAdd
+    }
+
+    final class Coordinator: NSObject {
+        var onAdd: (String) -> Void
+        private weak var overlay: PassthroughView?
+        private weak var editor: NSTextView?
+        private var selectedText = ""
+        private var chip: NSHostingView<ReplySelectionAddChip>?
+
+        init(onAdd: @escaping (String) -> Void) {
+            self.onAdd = onAdd
+            super.init()
+            NotificationCenter.default.addObserver(
+                self, selector: #selector(selectionChanged(_:)),
+                name: NSTextView.didChangeSelectionNotification, object: nil)
+        }
+
+        deinit { NotificationCenter.default.removeObserver(self) }
+
+        func install(in overlay: PassthroughView) {
+            self.overlay = overlay
+            let chip = NSHostingView(rootView: ReplySelectionAddChip { [weak self] in self?.add() })
+            chip.isHidden = true
+            overlay.addSubview(chip)
+            self.chip = chip
+        }
+
+        @objc private func selectionChanged(_ note: Notification) {
+            guard let editor = note.object as? NSTextView,
+                  let field = editor.delegate as? NSTextField,
+                  field.isSelectable, !field.isEditable,
+                  editor.window === overlay?.window,
+                  let text = ReaderTextSelection.text(from: editor),
+                  let overlay, let window = overlay.window, let chip else {
+                chip?.isHidden = true
+                return
+            }
+            self.editor = editor
+            selectedText = text
+            let screenRect = editor.firstRect(
+                forCharacterRange: editor.selectedRange(), actualRange: nil)
+            let localRect = overlay.convert(window.convertFromScreen(screenRect), from: nil)
+            let size = chip.fittingSize
+            let x = min(max(8, localRect.midX - size.width / 2), overlay.bounds.width - size.width - 8)
+            let below = localRect.minY - size.height - 8
+            let y = below >= 8 ? below : min(localRect.maxY + 8, overlay.bounds.height - size.height - 8)
+            chip.frame = NSRect(x: x, y: y, width: size.width, height: size.height)
+            chip.isHidden = false
+        }
+
+        private func add() {
+            guard !selectedText.isEmpty else { return }
+            onAdd(selectedText)
+            if let editor {
+                editor.setSelectedRange(NSRange(location: NSMaxRange(editor.selectedRange()), length: 0))
+            }
+            chip?.isHidden = true
+        }
+    }
+}
+
+private struct ReplySelectionAddChip: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label("Add", systemImage: "text.append")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 13).padding(.vertical, 7)
+        }
+        .buttonStyle(.plain)
+        .background(Color.accentColor)
+        .overlay(Rectangle().strokeBorder(Color.white.opacity(0.18)))
+        .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
     }
 }
 

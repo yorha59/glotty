@@ -281,7 +281,8 @@ struct SelectionChip: View {
             Divider().frame(height: 16).overlay(Color.white.opacity(0.35))
             button("text.append", "Add", onAdd)
         }
-        .background(Color.accentColor, in: Capsule())
+        .background(Color.accentColor)
+        .overlay(Rectangle().strokeBorder(Color.white.opacity(0.18)))
         .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
     }
 

@@ -656,7 +656,8 @@ struct QueryPreviewView: View {
                 Text(record.term).font(.headline).lineLimit(2)
                 Text(record.kind == "translate" ? "Translation" : "Explanation")
                     .font(.caption2).padding(.horizontal, 7).padding(.vertical, 2)
-                    .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+                    .background(Color.accentColor.opacity(0.15))
+                    .overlay(Rectangle().strokeBorder(Color.accentColor.opacity(0.2)))
                     .foregroundStyle(.tint)
                 Spacer(minLength: 0)
             }

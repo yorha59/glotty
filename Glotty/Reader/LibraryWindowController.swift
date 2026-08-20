@@ -12,17 +12,21 @@ final class LibraryWindowController: NSObject, NSWindowDelegate {
     func show() {
         if window == nil {
             let w = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 840, height: 540),
+                contentRect: NSRect(x: 0, y: 0, width: 1180, height: 720),
                 styleMask: [.titled, .closable, .resizable, .miniaturizable],
                 backing: .buffered, defer: false)
             w.title = String(localized: "Glotty Library")
-            w.center()
+            w.contentMinSize = NSSize(width: 1050, height: 650)
             w.setFrameAutosaveName("GlottyLibraryWindow")
             w.isReleasedWhenClosed = false
             w.delegate = self
             window = w
         }
         window?.contentViewController = NSHostingController(rootView: LibraryView())
+        if let w = window, let screen = w.screen ?? NSScreen.main,
+           !screen.visibleFrame.contains(w.frame) {
+            w.setFrame(w.constrainFrameRect(w.frame, to: screen), display: false)
+        }
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
     }

@@ -339,12 +339,12 @@ struct ReaderView: View {
                 let selected = state.theme == t
                 Button { state.theme = t } label: {
                     VStack(spacing: 3) {
-                        RoundedRectangle(cornerRadius: 5)
+                        Rectangle()
                             .fill(Color(readerHex: t.bg))
                             .frame(height: 30)
                             .overlay(Text("Aa").font(.system(size: 13, weight: .medium))
                                 .foregroundStyle(Color(readerHex: t.fg)))
-                            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(
+                            .overlay(Rectangle().strokeBorder(
                                 selected ? Color.accentColor : .secondary.opacity(0.35),
                                 lineWidth: selected ? 2 : 1))
                         Text(t.label)
@@ -520,7 +520,9 @@ struct ReaderView: View {
             Text("Open an EPUB or PDF to start reading.")
                 .foregroundStyle(.secondary)
             Button("Open Book…") { ReaderWindowController.shared.openBook() }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.plain)
+                .padding(.horizontal, 14).frame(height: 30)
+                .foregroundStyle(.white).background(Color.accentColor)
             if let err = state.openError {
                 Text(err).font(.caption).foregroundStyle(.red).multilineTextAlignment(.center)
             }
@@ -558,7 +560,8 @@ private struct SimpleColorPicker: View {
                                    startPoint: .top, endPoint: .bottom)
                     knob.position(x: sat * geo.size.width, y: (1 - bri) * geo.size.height)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .clipped()
+                .overlay(Rectangle().strokeBorder(Color.primary.opacity(0.18)))
                 .contentShape(Rectangle())
                 .gesture(DragGesture(minimumDistance: 0).onChanged { v in
                     sat = clamp(v.location.x / geo.size.width)
@@ -573,7 +576,8 @@ private struct SimpleColorPicker: View {
                     LinearGradient(colors: Self.hues, startPoint: .leading, endPoint: .trailing)
                     knob.position(x: hue * geo.size.width, y: geo.size.height / 2)
                 }
-                .clipShape(Capsule())
+                .clipped()
+                .overlay(Rectangle().strokeBorder(Color.primary.opacity(0.18)))
                 .contentShape(Rectangle())
                 .gesture(DragGesture(minimumDistance: 0).onChanged { v in
                     hue = clamp(v.location.x / geo.size.width)
@@ -587,9 +591,9 @@ private struct SimpleColorPicker: View {
     }
 
     private var knob: some View {
-        Circle()
+        Rectangle()
             .strokeBorder(.white, lineWidth: 2)
-            .background(Circle().fill(.clear))
+            .background(Rectangle().fill(.clear))
             .frame(width: 12, height: 12)
             .shadow(color: .black.opacity(0.5), radius: 1)
     }
@@ -624,10 +628,10 @@ private struct ColorField: View {
                 Text(title).font(.subheadline)
                 Spacer()
                 Button { withAnimation(.easeInOut(duration: 0.15)) { picking.toggle() } } label: {
-                    RoundedRectangle(cornerRadius: 4)
+                    Rectangle()
                         .fill(Color(readerHex: hex))
                         .frame(width: 26, height: 18)
-                        .overlay(RoundedRectangle(cornerRadius: 4)
+                        .overlay(Rectangle()
                             .strokeBorder(picking ? Color.accentColor : .secondary.opacity(0.4),
                                           lineWidth: picking ? 2 : 1))
                 }
@@ -635,9 +639,11 @@ private struct ColorField: View {
                 .help("Pick a color")
                 TextField("#RRGGBB", text: $draft)
                     .focused($focused)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
                     .font(.system(.caption, design: .monospaced))
                     .frame(width: 92)
+                    .padding(5)
+                    .overlay(Rectangle().strokeBorder(Color.primary.opacity(0.2)))
                     .onSubmit(commit)
                     .onChange(of: focused) { _, f in if !f { commit() } }
             }
@@ -645,11 +651,11 @@ private struct ColorField: View {
             HStack(spacing: 6) {
                 ForEach(presets, id: \.self) { p in
                     Button { hex = p } label: {
-                        RoundedRectangle(cornerRadius: 4)
+                        Rectangle()
                             .fill(Color(readerHex: p))
                             .frame(width: 28, height: 22)
                             .overlay(
-                                RoundedRectangle(cornerRadius: 4)
+                                Rectangle()
                                     .strokeBorder(p.lowercased() == hex.lowercased()
                                                   ? Color.accentColor : Color.secondary.opacity(0.3),
                                                   lineWidth: p.lowercased() == hex.lowercased() ? 2 : 1)
