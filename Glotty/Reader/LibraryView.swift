@@ -72,6 +72,7 @@ struct LibraryView: View {
             }
             .padding(.horizontal, 18).frame(height: 54)
         }
+        .frame(height: 54)
     }
 
     private var navigationRail: some View {
