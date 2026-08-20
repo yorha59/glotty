@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// The reader's right-hand tutor panel: a conversations rail, a streaming
@@ -247,6 +248,14 @@ struct ReaderChatPanel: View {
                         .font(.callout)
                         .textSelection(.enabled)
                         .foregroundStyle(Color.primary)
+                        .contextMenu {
+                            Button("Add to Conversation") {
+                                if let text = ReaderTextSelection.text(from: NSApp.keyWindow?.firstResponder) {
+                                    chat.quote(text)
+                                }
+                            }
+                            .disabled(ReaderTextSelection.text(from: NSApp.keyWindow?.firstResponder) == nil)
+                        }
                 } else {
                     // A quoted passage rides as a chip — clicking it jumps back
                     // to the spot in the book and highlights it — with the typed
@@ -293,14 +302,13 @@ struct ReaderChatPanel: View {
                         if p.isActive { Label(p.name, systemImage: "checkmark") } else { Text(p.name) }
                     }
                 } else {
-                    Menu(p.name) {
-                        ForEach(p.models) { m in
-                            Button { select(p, m.id) } label: {
-                                if p.isActive && m.id == p.activeModelID {
-                                    Label(m.name, systemImage: "checkmark")
-                                } else {
-                                    Text(m.name)
-                                }
+                    ForEach(p.models) { m in
+                        Button { select(p, m.id) } label: {
+                            let label = "\(p.name) · \(m.name)"
+                            if p.isActive && m.id == p.activeModelID {
+                                Label(label, systemImage: "checkmark")
+                            } else {
+                                Text(label)
                             }
                         }
                     }
@@ -400,5 +408,25 @@ struct ReaderChatPanel: View {
         .background(RoundedRectangle(cornerRadius: 11, style: .continuous).fill(Color.primary.opacity(0.06)))
         .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Color.primary.opacity(0.12)))
         .padding(10)
+    }
+}
+
+/// SwiftUI exposes selectable `Text`, but not its selected string. On macOS
+/// the live selection still belongs to the window's field editor.
+enum ReaderTextSelection {
+    static func text(from responder: NSResponder?) -> String? {
+        let editor: NSTextView?
+        if let textView = responder as? NSTextView {
+            editor = textView
+        } else if let field = responder as? NSTextField {
+            editor = field.currentEditor() as? NSTextView
+        } else {
+            editor = nil
+        }
+        guard let editor else { return nil }
+        let range = editor.selectedRange()
+        guard range.location != NSNotFound, range.length > 0,
+              NSMaxRange(range) <= (editor.string as NSString).length else { return nil }
+        return (editor.string as NSString).substring(with: range)
     }
 }

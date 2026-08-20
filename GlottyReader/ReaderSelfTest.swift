@@ -54,6 +54,7 @@ enum ReaderSelfTest {
         checkChatDoesNotWedge()
         checkStartPage()
         checkProvidersOverIPC()
+        checkReplySelection()
         checkChatSessions()
         checkChatBoundToBook()
         checkRetryAfterFailure()
@@ -69,6 +70,16 @@ enum ReaderSelfTest {
     }
 
     // MARK: checks
+
+    private static func checkReplySelection() {
+        print("\nselected reply text can be added to chat")
+        let textView = NSTextView()
+        textView.string = "whole chosen answer"
+        textView.setSelectedRange(NSRange(location: 6, length: 6))
+        eq(ReaderTextSelection.text(from: textView), "chosen", "uses the exact highlighted text")
+        textView.setSelectedRange(NSRange(location: 0, length: 0))
+        check(ReaderTextSelection.text(from: textView) == nil, "ignores an empty selection")
+    }
 
     /// The "Page 194 of 41" bug: swapping documents must not carry one
     /// document's page index onto the other's record.
