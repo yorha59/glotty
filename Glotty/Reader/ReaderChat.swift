@@ -311,11 +311,22 @@ final class ReaderChat: ObservableObject {
         startTicking()
         task = Task { [weak self] in
             do {
+                var latest = ""
+                var lastPaintAt: Date?
                 for try await snapshot in stream {
                     guard let self else { return }
                     if self.phase == .waiting { self.phase = .writing }
                     self.lastChunkAt = Date()
-                    if self.messages.indices.contains(idx) { self.messages[idx].text = snapshot }
+                    latest = snapshot
+                    let now = Date()
+                    if lastPaintAt.map({ now.timeIntervalSince($0) >= 0.05 }) ?? true {
+                        if self.messages.indices.contains(idx) { self.messages[idx].text = snapshot }
+                        lastPaintAt = now
+                    }
+                }
+                // The last chunk may land inside the 50ms paint window.
+                if let self, self.messages.indices.contains(idx), self.messages[idx].text != latest {
+                    self.messages[idx].text = latest
                 }
                 // A stream that ends without ever producing text isn't a reply.
                 if let self, self.messages.indices.contains(idx),

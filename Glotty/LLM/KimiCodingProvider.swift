@@ -15,6 +15,9 @@ struct KimiCodingProvider: LLMProvider {
     /// Set when a caller wants a specific model rather than the one stored
     /// for this provider — the reader picks its own, separately from Glotty.
     var modelOverride: String?
+    /// Reader chat may let Kimi request its hosted SearchWeb service. Kept off
+    /// for polish/explain, where an agent round-trip would only add latency.
+    var webSearchEnabled = false
 
     let displayName = "Kimi For Coding"
 
@@ -226,17 +229,104 @@ struct KimiCodingProvider: LLMProvider {
               !apiKey.isEmpty else {
             throw LLMError.missingAPIKey(providerName: displayName)
         }
+        var messages: [[String: Any]] = [["role": "user", "content": prompt]]
+        var accumulated = ""
+        // ponytail: three rounds cover search + one refinement. Add a general
+        // agent loop only if Reader chat grows more tools.
+        for _ in 0..<3 {
+            var body: [String: Any] = [
+                "model": model, "max_tokens": 3000, "temperature": 0.5,
+                "stream": true, "messages": messages,
+            ]
+            if webSearchEnabled { body["tools"] = [Self.searchTool] }
+            let bytes = try await openMessageStream(apiKey: apiKey, body: body)
+            let usage = AnthropicUsageStream(providerID: self.id)
+            var blocks: [Int: [String: Any]] = [:]
+            var toolJSON: [Int: String] = [:]
+            var emittedThisTurn = false
 
-        let body: [String: Any] = [
-            "model": model,
-            "max_tokens": 3000,
-            "temperature": 0.5,
-            "stream": true,
-            "messages": [
-                ["role": "user", "content": prompt]
+            for try await line in bytes.lines {
+                try Task.checkCancellation()
+                guard line.hasPrefix("data:") else { continue }
+                let payload = line.dropFirst("data:".count)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !payload.isEmpty, let data = payload.data(using: .utf8),
+                      let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                else { continue }
+                usage.observe(event: event)
+                let index = event["index"] as? Int ?? 0
+                switch event["type"] as? String {
+                case "content_block_start":
+                    if let block = event["content_block"] as? [String: Any] { blocks[index] = block }
+                case "content_block_delta":
+                    guard let delta = event["delta"] as? [String: Any] else { continue }
+                    if let chunk = delta["text"] as? String, !chunk.isEmpty {
+                        if !emittedThisTurn, !accumulated.isEmpty { accumulated += "\n\n" }
+                        emittedThisTurn = true
+                        accumulated += chunk
+                        var block = blocks[index] ?? ["type": "text", "text": ""]
+                        block["text"] = (block["text"] as? String ?? "") + chunk
+                        blocks[index] = block
+                        continuation.yield(accumulated)
+                    }
+                    if let json = delta["partial_json"] as? String {
+                        toolJSON[index, default: ""] += json
+                    }
+                    for key in ["thinking", "signature"] {
+                        if let value = delta[key] as? String {
+                            var block = blocks[index] ?? ["type": "thinking", "thinking": "", "signature": ""]
+                            block[key] = (block[key] as? String ?? "") + value
+                            blocks[index] = block
+                        }
+                    }
+                case "message_stop": break
+                default: continue
+                }
+            }
+            usage.finalize()
+
+            let assistantBlocks = blocks.keys.sorted().compactMap { index -> [String: Any]? in
+                guard var block = blocks[index] else { return nil }
+                if block["type"] as? String == "tool_use",
+                   let raw = toolJSON[index]?.data(using: .utf8),
+                   let input = try? JSONSerialization.jsonObject(with: raw) as? [String: Any] {
+                    block["input"] = input
+                }
+                return block
+            }
+            let calls = assistantBlocks.filter { $0["type"] as? String == "tool_use" }
+            guard webSearchEnabled, !calls.isEmpty else { break }
+
+            messages.append(["role": "assistant", "content": assistantBlocks])
+            var results: [[String: Any]] = []
+            for call in calls {
+                let callID = call["id"] as? String ?? UUID().uuidString
+                let input = call["input"] as? [String: Any] ?? [:]
+                let content = try await search(input: input, callID: callID, apiKey: apiKey)
+                results.append(["type": "tool_result", "tool_use_id": callID, "content": content])
+            }
+            messages.append(["role": "user", "content": results])
+        }
+
+        let trimmed = accumulated.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw LLMError.emptyResponse }
+    }
+
+    private static let searchTool: [String: Any] = [
+        "name": "SearchWeb",
+        "description": "Search the web for current or external information. Use only when the supplied document and your knowledge are insufficient.",
+        "input_schema": [
+            "type": "object",
+            "properties": [
+                "query": ["type": "string", "description": "Search keywords"],
+                "limit": ["type": "integer", "minimum": 1, "maximum": 20],
+                "include_content": ["type": "boolean"],
             ],
-        ]
+            "required": ["query"],
+        ],
+    ]
 
+    private func openMessageStream(apiKey: String, body: [String: Any]) async throws -> URLSession.AsyncBytes {
         var req = URLRequest(url: endpointURL)
         req.httpMethod = "POST"
         req.timeoutInterval = 60
@@ -246,53 +336,61 @@ struct KimiCodingProvider: LLMProvider {
         req.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         req.setValue("KimiCLI/1.5", forHTTPHeaderField: "User-Agent")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-
         let (bytes, response): (URLSession.AsyncBytes, URLResponse)
-        do {
-            (bytes, response) = try await URLSession.shared.bytes(for: req)
-        } catch {
-            throw LLMError.networkFailure(underlying: error)
-        }
-
+        do { (bytes, response) = try await URLSession.shared.bytes(for: req) }
+        catch { throw LLMError.networkFailure(underlying: error) }
         guard let http = response as? HTTPURLResponse else {
             throw LLMError.malformedResponse(detail: "no HTTPURLResponse")
         }
         guard (200..<300).contains(http.statusCode) else {
-            var bodyStr = ""
-            for try await line in bytes.lines { bodyStr += line + "\n" }
-            throw LLMError.httpError(status: http.statusCode, body: bodyStr)
+            var dump = ""
+            for try await line in bytes.lines { dump += line + "\n" }
+            throw LLMError.httpError(status: http.statusCode, body: dump)
         }
+        return bytes
+    }
 
-        var accumulated = ""
-        let usage = AnthropicUsageStream(providerID: self.id)
-        for try await line in bytes.lines {
-            try Task.checkCancellation()
-            guard line.hasPrefix("data:") else { continue }
-            let payload = line
-                .dropFirst("data:".count)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            if payload.isEmpty { continue }
-            guard let data = payload.data(using: .utf8),
-                  let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                continue
-            }
-            usage.observe(event: event)
-            let eventType = event["type"] as? String
-
-            if eventType == "message_stop" { break }
-            guard eventType == "content_block_delta",
-                  let delta = event["delta"] as? [String: Any],
-                  let chunk = delta["text"] as? String,
-                  !chunk.isEmpty else { continue }
-
-            accumulated += chunk
-            continuation.yield(accumulated)
+    private func search(input: [String: Any], callID: String, apiKey: String) async throws -> String {
+        let query = (input["query"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !query.isEmpty else { return "Search failed: query is empty." }
+        let limit = min(20, max(1, input["limit"] as? Int ?? 5))
+        let body: [String: Any] = [
+            "text_query": query, "limit": limit,
+            "enable_page_crawling": input["include_content"] as? Bool ?? false,
+            "timeout_seconds": 30,
+        ]
+        var req = URLRequest(url: endpointURL.deletingLastPathComponent().appendingPathComponent("search"))
+        req.httpMethod = "POST"
+        req.timeoutInterval = 90
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        req.setValue(callID, forHTTPHeaderField: "X-Msh-Tool-Call-Id")
+        req.setValue("KimiCLI/1.5", forHTTPHeaderField: "User-Agent")
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let data: Data
+        let response: URLResponse
+        do { (data, response) = try await URLSession.shared.data(for: req) }
+        catch { return "Search failed: \(error.localizedDescription)" }
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            return "Search failed: HTTP \((response as? HTTPURLResponse)?.statusCode ?? 0)."
         }
+        return String(Self.formatSearchResults(data).prefix(20_000))
+    }
 
-        usage.finalize()
-
-        let trimmed = accumulated.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { throw LLMError.emptyResponse }
+    static func formatSearchResults(_ data: Data) -> String {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let results = root["search_results"] as? [[String: Any]], !results.isEmpty
+        else { return "No search results." }
+        return results.map { result in
+            let fields = [
+                "Title: \(result["title"] as? String ?? "Untitled")",
+                "Date: \(result["date"] as? String ?? "")",
+                "URL: \(result["url"] as? String ?? "")",
+                "Summary: \(result["snippet"] as? String ?? "")",
+                result["content"] as? String ?? "",
+            ]
+            return fields.filter { !$0.hasSuffix(": ") && !$0.isEmpty }.joined(separator: "\n")
+        }.joined(separator: "\n\n---\n\n")
     }
 
     /// Pull the first `text` block out of an Anthropic-shaped response:

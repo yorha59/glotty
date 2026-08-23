@@ -65,15 +65,26 @@ enum ReaderIPCBridge {
                 // Stream deltas, not the growing cumulative snapshot, so each
                 // notification stays small.
                 var sent = ""
-                for try await snapshot in provider.chatCompletionStream(prompt: prompt) {
-                    let delta = snapshot.hasPrefix(sent) ? String(snapshot.dropFirst(sent.count)) : snapshot
-                    if snapshot.hasPrefix(sent) {
+                var posted = ""
+                var lastPostAt: Date?
+                @MainActor func postSnapshot(_ snapshot: String) {
+                    let delta = snapshot.hasPrefix(posted) ? String(snapshot.dropFirst(posted.count)) : snapshot
+                    if snapshot.hasPrefix(posted) {
                         if !delta.isEmpty { post(ReaderIPC.chatChunkName, ["requestID": id, "delta": delta]) }
                     } else {
                         post(ReaderIPC.chatChunkName, ["requestID": id, "delta": snapshot, "reset": "1"])
                     }
-                    sent = snapshot
+                    posted = snapshot
                 }
+                for try await snapshot in provider.chatCompletionStream(prompt: prompt) {
+                    sent = snapshot
+                    let now = Date()
+                    if lastPostAt.map({ now.timeIntervalSince($0) >= 0.05 }) ?? true {
+                        postSnapshot(snapshot)
+                        lastPostAt = now
+                    }
+                }
+                if sent != posted { postSnapshot(sent) }
                 post(ReaderIPC.chatDoneName, ["requestID": id])
             } catch {
                 post(ReaderIPC.chatDoneName, ["requestID": id, "error": error.localizedDescription])

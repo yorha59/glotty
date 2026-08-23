@@ -182,7 +182,7 @@ struct ReaderChatPanel: View {
                 .padding(10)
             }
             .onChange(of: chat.messages.last?.text) { _, _ in
-                withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo("bottom", anchor: .bottom) }
+                proxy.scrollTo("bottom", anchor: .bottom)
             }
         }
     }
@@ -249,9 +249,15 @@ struct ReaderChatPanel: View {
                         .disabled(chat.isStreaming)
                     }
                 } else if m.role == .assistant {
-                    // Replies come back as Markdown — headings, lists, quotes —
-                    // so render it rather than showing the raw ## and - markers.
-                    ReaderMarkdownText(text: m.text)
+                    Group {
+                        // Parsing every completed line again for every token made
+                        // long replies progressively slower. Format once finished.
+                        if chat.isStreaming, m.id == chat.messages.last?.id {
+                            Text(m.text).frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            ReaderMarkdownText(text: m.text)
+                        }
+                    }
                         .font(.callout)
                         .textSelection(.enabled)
                         .foregroundStyle(Color.primary)

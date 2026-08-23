@@ -243,6 +243,18 @@ struct PolishResponseParserTests {
 
 @Suite("KimiCodingProvider — Anthropic-shaped response extraction")
 struct KimiResponseTests {
+    @Test("Formats hosted web-search results for the tool loop")
+    func formatsSearchResults() throws {
+        let data = try JSONSerialization.data(withJSONObject: ["search_results": [[
+            "title": "Example", "url": "https://example.com", "date": "2026-08-23",
+            "snippet": "A useful result", "content": "Page content",
+        ]]])
+        let text = KimiCodingProvider.formatSearchResults(data)
+        #expect(text.contains("Title: Example"))
+        #expect(text.contains("URL: https://example.com"))
+        #expect(text.contains("Page content"))
+    }
+
     @Test("Pulls the first text block out of content[]")
     func extractsFirstTextBlock() throws {
         let body = """

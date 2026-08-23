@@ -456,7 +456,7 @@ enum LLMRegistry {
         case "deepseek":
             var p = DeepSeekProvider(); p.modelOverride = model; return p
         case "kimi-coding":
-            var p = KimiCodingProvider(); p.modelOverride = model; return p
+            var p = KimiCodingProvider(); p.modelOverride = model; p.webSearchEnabled = webSearch; return p
         case "minimax-coding":
             var p = MiniMaxCodingProvider(); p.modelOverride = model; return p
         default:
