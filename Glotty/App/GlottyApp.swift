@@ -87,7 +87,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // LSUIElement process earns a real home Space (so Settings slides
         // a foreign full-screen app away instead of hovering). Done first
         // so the single-instance early-return below can't skip it.
-        if UserDefaults.standard.bool(forKey: SettingsWindowController.launchRegularKey) {
+        if SettingsWindowController.consumeRegularLaunchRequest() {
             NSApp.setActivationPolicy(.regular)
             dbg("launched in regular mode (Settings home-Space)")
         }

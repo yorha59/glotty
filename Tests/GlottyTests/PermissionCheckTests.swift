@@ -2,6 +2,31 @@ import Testing
 import Foundation
 @testable import Glotty
 
+@Suite("Regular-mode launch request")
+@MainActor
+struct RegularLaunchRequestTests {
+    @Test("Only a pending Settings or Welcome relaunch shows the Dock",
+          arguments: ["none", "settings", "welcome"])
+    func consumesRequest(window: String) {
+        let suite = "GlottyTests.activation.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(true, forKey: SettingsWindowController.launchRegularKey)
+        if window == "settings" {
+            defaults.set(true, forKey: SettingsWindowController.reopenSettingsKey)
+        } else if window == "welcome" {
+            defaults.set(true, forKey: WelcomeWindowController.reopenWelcomeKey)
+        }
+        #expect(SettingsWindowController.consumeRegularLaunchRequest(defaults: defaults)
+                == (window != "none"))
+        #expect(defaults.object(forKey: SettingsWindowController.launchRegularKey) == nil)
+        #expect(!SettingsWindowController.consumeRegularLaunchRequest(defaults: defaults))
+        if window == "settings" {
+            #expect(defaults.bool(forKey: SettingsWindowController.reopenSettingsKey))
+        }
+    }
+}
+
 @Suite("Permission metadata")
 struct PermissionMetadataTests {
     @Test("All permissions enumerate")

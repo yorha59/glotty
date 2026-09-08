@@ -17,11 +17,22 @@ final class SettingsWindowController {
     /// `.regular` BEFORE any window exists, which is the only way an
     /// `LSUIElement` process gets a real home Space (so Settings slides a
     /// foreign full-screen app away instead of hovering). Set when opening
-    /// Settings from agent mode; cleared when Settings closes.
+    /// Settings from agent mode; consumed on the next launch.
     static let launchRegularKey = "glotty.settings.launchRegular"
     /// UserDefaults flag: the relaunch was triggered to open Settings, so
     /// the fresh (regular) instance should open it on launch.
     static let reopenSettingsKey = "glotty.settings.reopenOnLaunch"
+
+    /// A previous quit/crash with Settings open must not leave an idle
+    /// process in the Dock. Only a pending window relaunch earns a home Space.
+    static func consumeRegularLaunchRequest(defaults: UserDefaults = .standard) -> Bool {
+        let requested = defaults.bool(forKey: launchRegularKey)
+        defaults.removeObject(forKey: launchRegularKey)
+        return requested && (
+            defaults.bool(forKey: reopenSettingsKey)
+                || defaults.bool(forKey: WelcomeWindowController.reopenWelcomeKey)
+        )
+    }
 
     private var window: NSWindow?
     /// Exposed for the debug snapshotter — it needs the live
