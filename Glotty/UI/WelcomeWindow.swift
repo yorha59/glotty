@@ -762,7 +762,7 @@ private struct WelcomeView: View {
     /// flips from "needed" to "granted" without navigating away.
     private var permissionsChecklist: some View {
         let snapshot = permissionStatus.snapshot
-        VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: 8) {
             ForEach(Permission.allCases) { perm in
                 permissionRow(perm, granted: snapshot.isGranted(perm))
             }
