@@ -42,11 +42,18 @@ settings:
     Release-AppStore:
       ONLY_ACTIVE_ARCH: NO
 
+packages:
+  Textual:
+    url: https://github.com/gonzalezreal/textual
+    from: 0.5.0
+
 targets:
   Glotty:
     type: application
     platform: macOS
     deploymentTarget: "15.0"
+    dependencies:
+      - package: Textual
     sources:
       - path: Glotty
         # Referenced only via INFOPLIST_FILE in the MAS config — keep it out
@@ -109,6 +116,8 @@ targets:
     type: application
     platform: macOS
     deploymentTarget: "15.0"
+    dependencies:
+      - package: Textual
     sources:
       - path: Glotty
         # Referenced only via INFOPLIST_FILE in the MAS config — keep it out
@@ -139,6 +148,8 @@ targets:
     type: application
     platform: macOS
     deploymentTarget: "15.0"
+    dependencies:
+      - package: Textual
     sources:
       - path: GlottyReader
         excludes:

@@ -32,6 +32,9 @@ struct SavedDialogue: Codable, Identifiable, Equatable {
     var date: Date
     var context: String?
     var messages: [SavedMessage]
+    /// Derived context only; the original transcript remains in `messages`.
+    var memory: String?
+    var memoryMessageCount: Int?
 }
 
 /// A book the user has opened, plus everything recorded about it. `dialogues`
@@ -74,7 +77,62 @@ enum BookLibrary {
 
     static func save(_ rec: BookRecord) {
         guard let data = try? JSONEncoder().encode(rec) else { return }
-        try? data.write(to: fileURL(rec.bookID))
+        try? data.write(to: fileURL(rec.bookID), options: .atomic)
+    }
+
+    /// Own a copy before registering a PDF. Never overwrite a different book
+    /// with the same filename, and keep existing filename-based identities.
+    static func importPDF(_ source: URL) throws -> URL {
+        let folder = dir.appendingPathComponent("Documents", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let source = source.standardizedFileURL
+        if source.deletingLastPathComponent() == folder.standardizedFileURL { return source }
+        var target = folder.appendingPathComponent(source.lastPathComponent)
+        if FileManager.default.fileExists(atPath: target.path) {
+            if FileManager.default.contentsEqual(atPath: source.path, andPath: target.path) { return target }
+            let data = try Data(contentsOf: source, options: .mappedIfSafe)
+            let hash = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+            target = folder.appendingPathComponent(source.deletingPathExtension().lastPathComponent
+                + "-" + hash + ".pdf")
+        }
+        if !FileManager.default.fileExists(atPath: target.path) {
+            let data = try Data(contentsOf: source, options: .mappedIfSafe)
+            try data.write(to: target, options: .atomic)
+        } else if !FileManager.default.contentsEqual(atPath: source.path, andPath: target.path) {
+            throw CocoaError(.fileWriteFileExists)
+        }
+        return target
+    }
+
+    /// Reject late extraction results after a thread was edited or deleted.
+    static func saveMemory(bookID: String, dialogue: SavedDialogue, memory: String) {
+        guard var rec = load(bookID),
+              let i = rec.dialogues?.firstIndex(where: { $0.id == dialogue.id }),
+              rec.dialogues?[i].messages == dialogue.messages else { return }
+        rec.dialogues?[i].memory = String(memory.prefix(2400))
+        rec.dialogues?[i].memoryMessageCount = dialogue.messages.count
+        save(rec)
+    }
+
+    /// Same-document context first, then recent conversations in other books.
+    /// Unsummarized/failed extractions still contribute a bounded transcript.
+    static func memoryContext(bookID: String?, excluding threadID: UUID) -> String {
+        let records = all().sorted {
+            if ($0.bookID == bookID) != ($1.bookID == bookID) { return $0.bookID == bookID }
+            return $0.lastOpened > $1.lastOpened
+        }
+        var result = ""
+        for record in records {
+            for dialogue in record.dialogueList.sorted(by: { $0.date > $1.date }) where dialogue.id != threadID {
+                let recent = dialogue.messages.dropFirst(dialogue.memoryMessageCount ?? 0).suffix(6)
+                    .map { $0.role + ": " + String($0.text.prefix(800)) }.joined(separator: "\n")
+                let text = [dialogue.memory, recent].compactMap { $0 }.joined(separator: "\n")
+                let entry = "Document: \(record.title)\nSession: \(dialogue.title)\n\(text)\n\n"
+                result += String(entry.prefix(min(2800, 12000 - result.count)))
+                if result.count >= 12000 { return result }
+            }
+        }
+        return result
     }
 
     /// All books, most-recently-opened first — for the Library view.
@@ -123,7 +181,12 @@ enum BookLibrary {
         rec.title = title
         rec.path = path
         var list = rec.dialogues ?? []
-        if let i = list.firstIndex(where: { $0.id == dialogue.id }) { list[i] = dialogue }
+        if let i = list.firstIndex(where: { $0.id == dialogue.id }) {
+            var updated = dialogue
+            updated.memory = list[i].memory
+            updated.memoryMessageCount = list[i].memoryMessageCount
+            list[i] = updated
+        }
         else { list.append(dialogue) }
         rec.dialogues = list
         save(rec)

@@ -35,7 +35,7 @@ jobs:
         run: xcodegen generate
 
       - name: Build, sign, notarize, staple PKG
-        # The .pkg is the sole release artifact. A .pkg installs via
+        # The .pkg installers are the release artifacts. A .pkg installs via
         # Installer.app, which writes the app to /Applications as root,
         # so the INSTALLED app carries no com.apple.quarantine flag —
         # even when the .pkg is delivered through a sandboxed messenger
@@ -60,11 +60,19 @@ jobs:
         #      act_runner job sessions don't inherit a keychain unlock.
         env:
           KEYCHAIN_PASS_FILE: /Users/sichengzu/projects/miner/.keychain-pass
-        run: bash scripts/make-pkg-signed.sh
+        run: |
+          rm -f dist/Glotty-*.pkg
+          bash scripts/make-pkg-signed.sh
+          SCHEME=GlottyReader \
+          APP_NAME="Glotty Reader.app" \
+          PRODUCT_SLUG=Glotty-Reader \
+          PKG_IDENTIFIER=com.ruojunye.glotty.reader \
+            bash scripts/make-pkg-signed.sh
 
       - name: Copy artifact to persistent location
         run: |
           mkdir -p ~/ci-artifacts/glotty
+          rm -f ~/ci-artifacts/glotty/Glotty-*.pkg
           cp dist/*.pkg ~/ci-artifacts/glotty/
           echo "=== Artifacts ==="
           ls -lh ~/ci-artifacts/glotty/
@@ -78,8 +86,11 @@ jobs:
         # config (.runner uses the IPv4 IP directly).
         run: |
           GITEA_TOKEN=$(cat ~/projects/miner/.git-token)
-          PKG_FILE=$(ls dist/*.pkg | head -1)
-          PKG_NAME=$(basename "$PKG_FILE")
+          PKG_FILES=(dist/Glotty-*.pkg)
+          if [ "${#PKG_FILES[@]}" -ne 2 ]; then
+            echo "Expected Glotty and Glotty Reader packages; found ${#PKG_FILES[@]}"
+            exit 1
+          fi
           RELEASE_TAG="latest-build"
           API="http://truenas.local:30008/api/v1/repos/hemoon/glotty"
 
@@ -92,17 +103,20 @@ jobs:
           RELEASE_ID=$(curl -sf --ipv4 -X POST \
             -H "Authorization: token $GITEA_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "{\"tag_name\":\"$RELEASE_TAG\",\"name\":\"Latest Build\",\"body\":\"Auto-built from main branch. Double-click the .pkg to install — works via Feishu/WeChat with no Terminal.\",\"target_commitish\":\"main\"}" \
+            -d "{\"tag_name\":\"$RELEASE_TAG\",\"name\":\"Latest Build\",\"body\":\"Auto-built Glotty and Glotty Reader from main. Double-click either .pkg to install.\",\"target_commitish\":\"main\"}" \
             "$API/releases" | python3 -c "import json,sys; print(json.load(sys.stdin).get('id',''))")
 
           echo "Release ID: $RELEASE_ID"
 
-          # Upload PKG (sole release artifact)
-          curl -sf --ipv4 -X POST \
-            -H "Authorization: token $GITEA_TOKEN" \
-            -F "attachment=@$PKG_FILE" \
-            "$API/releases/$RELEASE_ID/assets?name=$PKG_NAME" | python3 -c "
+          # Upload both installers.
+          for PKG_FILE in "${PKG_FILES[@]}"; do
+            PKG_NAME=$(basename "$PKG_FILE")
+            curl -sf --ipv4 -X POST \
+              -H "Authorization: token $GITEA_TOKEN" \
+              -F "attachment=@$PKG_FILE" \
+              "$API/releases/$RELEASE_ID/assets?name=$PKG_NAME" | python3 -c "
           import json,sys
           r=json.load(sys.stdin)
           print('Uploaded:', r.get('name','?'), f\"({r.get('size','?')} bytes)\")
           print('Download:', r.get('browser_download_url','?'))"
+          done

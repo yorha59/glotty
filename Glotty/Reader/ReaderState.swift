@@ -265,7 +265,7 @@ final class ReaderState: ObservableObject {
 
     func open(_ url: URL) {
         if url.pathExtension.lowercased() == "pdf" { openPDF(url) } else { openEPUB(url) }
-        if openError == nil { ReaderRecents.record(url) }
+        if openError == nil { ReaderRecents.record(url.pathExtension.lowercased() == "pdf" ? (pdfURL ?? url) : url) }
     }
 
     private func openEPUB(_ url: URL) {
@@ -298,7 +298,21 @@ final class ReaderState: ObservableObject {
         }
     }
 
-    private func openPDF(_ url: URL) {
+    private func openPDF(_ source: URL) {
+        let access = source.startAccessingSecurityScopedResource()
+        defer { if access { source.stopAccessingSecurityScopedResource() } }
+        // Validate before copying, and don't claim a successful import when
+        // the private library is unwritable.
+        guard PDFDocument(url: source) != nil else {
+            openError = String(localized: "Couldn't open this PDF.")
+            return
+        }
+        let url: URL
+        do { url = try BookLibrary.importPDF(source) }
+        catch {
+            openError = "Couldn't store this PDF: " + error.localizedDescription
+            return
+        }
         guard let doc = PDFDocument(url: url) else {
             pdf = nil
             openError = String(localized: "Couldn't open this PDF.")
@@ -552,12 +566,49 @@ final class ReaderState: ObservableObject {
         return out
     }
 
+    private static let pdfChapterHeading = try! NSRegularExpression(
+        pattern: "^第\\s*(\\d{1,3})\\s*章\\s+.{1,80}$"
+    )
+    private static let pdfCHHeading = try! NSRegularExpression(
+        pattern: "^(?i:ch)\\s+(\\d{1,3}(?:\\.\\d{1,3}){1,3})\\s+.{1,80}$"
+    )
+    private static let pdfNumberedHeading = try! NSRegularExpression(
+        pattern: "^(\\d{1,2}(?:\\.\\d{1,2}){0,3})\\.?\\s+([A-Z][^\\n]{1,60})$"
+    )
+    private static let pdfNamedHeading = try! NSRegularExpression(
+        pattern: "^(Abstract|Introduction|Related Work|Conclusions?|References|Acknowledge?ments?|Discussion|Appendix)$"
+    )
+
+    /// Classify one extracted line without trusting every numbered sentence as
+    /// a heading. PDFKit also exposes equations as text, so reject their common
+    /// operators before they become mojibake-looking sidebar entries.
+    static func classifyPDFHeading(_ line: String, size: Int, body: Int) -> (label: String, level: Int)? {
+        let range = NSRange(line.startIndex..., in: line)
+        if pdfChapterHeading.firstMatch(in: line, range: range) != nil, size > body {
+            return (line, 0)
+        }
+        if let match = pdfCHHeading.firstMatch(in: line, range: range), size > body {
+            let number = (line as NSString).substring(with: match.range(at: 1))
+            return (line, number.components(separatedBy: ".").count - 1)
+        }
+        if pdfNamedHeading.firstMatch(in: line, range: range) != nil, size > body {
+            return (line, 0)
+        }
+        guard let match = pdfNumberedHeading.firstMatch(in: line, range: range) else { return nil }
+        let number = (line as NSString).substring(with: match.range(at: 1))
+        let title = (line as NSString).substring(with: match.range(at: 2))
+        guard title.rangeOfCharacter(from: CharacterSet(charactersIn: "={}()\"_;[]<>%")) == nil else {
+            return nil
+        }
+        let level = number.components(separatedBy: ".").count - 1
+        guard size >= body + (level == 0 ? 4 : 3) else { return nil }
+        return ("\(number) \(title.trimmingCharacters(in: .whitespaces))", level)
+    }
+
     /// Fallback TOC for PDFs with no embedded outline: scan each page's text for
     /// section headings. A heading is a numbered ("2.1 Title") or well-known
-    /// ("Abstract", "References") line; single-number sections and named ones
-    /// must be rendered larger than the body font (that's how we tell "3. Experiments"
-    /// from a sentence starting "16 for…"), while dotted subsections are trusted
-    /// at body size as long as they're Title-case and free of code punctuation.
+    /// ("Abstract", "References") line. Numbered headings must be substantially
+    /// larger than body text so numbered lists and equations stay out.
     /// ponytail: font+regex heuristic tuned for academic papers — misses
     /// heading-less docs and unusual layouts; upgrade path is a proper layout
     /// analysis if it proves too coarse.
@@ -575,10 +626,6 @@ final class ReaderState: ObservableObject {
         }
         let body = sizeCount.max { $0.value < $1.value }?.key ?? 10
 
-        let numbered = try! NSRegularExpression(pattern: "^(\\d{1,2}(?:\\.\\d{1,2}){0,3})\\.?\\s+([A-Z][^\\n]{1,60})$")
-        let named = try! NSRegularExpression(pattern: "^(Abstract|Introduction|Related Work|Conclusions?|References|Acknowledge?ments?|Discussion|Appendix)$")
-        let codeChars = CharacterSet(charactersIn: "={}()\"_;[]<>")
-
         var out: [PDFTOCItem] = []
         for p in 0..<doc.pageCount {
             guard let a = doc.page(at: p)?.attributedString else { continue }
@@ -586,21 +633,12 @@ final class ReaderState: ObservableObject {
             ns.enumerateSubstrings(in: NSRange(location: 0, length: ns.length), options: .byLines) { sub, subRange, _, _ in
                 let line = (sub ?? "").trimmingCharacters(in: .whitespaces)
                 guard !line.isEmpty else { return }
-                let rr = NSRange(line.startIndex..., in: line)
                 var size = 0
                 a.enumerateAttribute(.font, in: subRange) { v, _, _ in
                     if let f = v as? NSFont { size = max(size, Int(f.pointSize.rounded())) }
                 }
-                if let m = numbered.firstMatch(in: line, range: rr) {
-                    let num = (line as NSString).substring(with: m.range(at: 1))
-                    let title = (line as NSString).substring(with: m.range(at: 2)).trimmingCharacters(in: .whitespaces)
-                    if title.rangeOfCharacter(from: codeChars) != nil { return }
-                    let level = num.components(separatedBy: ".").count - 1
-                    if level == 0 && size <= body { return }   // top-level section must be heading-size
-                    if level >= 1 && size < body { return }     // subsection at ≥ body size drops tiny code lines
-                    out.append(PDFTOCItem(label: "\(num) \(title)", pageIndex: p, level: level))
-                } else if named.firstMatch(in: line, range: rr) != nil, size > body {
-                    out.append(PDFTOCItem(label: line, pageIndex: p, level: 0))
+                if let heading = classifyPDFHeading(line, size: size, body: body) {
+                    out.append(PDFTOCItem(label: heading.label, pageIndex: p, level: heading.level))
                 }
             }
         }

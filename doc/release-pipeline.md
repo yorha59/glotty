@@ -1,7 +1,7 @@
 # Release pipeline
 
-How a push to `main` becomes a signed + notarized DMG on the Gitea
-`latest-build` release page. End-to-end:
+How a push to `main` becomes signed + notarized Glotty and Glotty
+Reader installers on the Gitea `latest-build` release page. End-to-end:
 
 ```
 git push origin main
@@ -15,24 +15,24 @@ scripts/runner-mac/glotty-poll-build.sh
         │
         ├── git fetch + reset --hard origin/main
         ├── xcodegen generate
-        ├── scripts/make-dmg-signed.sh
+        ├── scripts/make-pkg-signed.sh (Glotty + GlottyReader)
         │       ├── xcodebuild -configuration Release (unsigned)
         │       ├── codesign with Developer ID Application +
         │       │   Hardened Runtime + Secure Timestamp +
         │       │   Glotty-Release.entitlements
-        │       ├── hdiutil create … dist/Glotty-<version>.dmg
-        │       ├── codesign the DMG
+        │       ├── package each app as its own .pkg
         │       ├── xcrun notarytool submit … --wait
-        │       └── xcrun stapler staple … the DMG
+        │       └── xcrun stapler staple … each app and package
         └── curl → DELETE old `latest-build` release, POST new,
-            upload the DMG as the asset
+            upload both .pkg assets
         │
         ▼
 http://truenas.local:30008/hemoon/glotty/releases/tag/latest-build
 ```
 
-End result: a DMG that Gatekeeper trusts on any Mac. User
-double-clicks, drags to Applications, opens — no warnings.
+End result: two installers that Gatekeeper trusts on any Mac. Users
+download either Glotty or Glotty Reader, double-click the matching
+`.pkg`, and install without Terminal.
 
 ## Why poll-and-build, not Gitea Actions / act_runner
 

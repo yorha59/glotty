@@ -1,6 +1,8 @@
 import Foundation
 import AppKit
 import ApplicationServices
+import Combine
+import CoreGraphics
 import IOKit.hid
 import UserNotifications
 
@@ -64,9 +66,14 @@ enum Permission: String, CaseIterable, Identifiable {
     func isGranted() -> Bool {
         switch self {
         case .accessibility:
-            return AXIsProcessTrustedWithOptions(nil)
+            // Glotty deliberately does not cache AX trust: every published
+            // snapshot asks the system for the current process status.
+            return AXIsProcessTrusted()
         case .inputMonitoring:
-            return IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
+            // Use the Core Graphics preflight that directly describes the
+            // capability needed by CGEvent.tapCreate. IOHIDRequestAccess is
+            // still used below to register Glotty in System Settings.
+            return CGPreflightListenEventAccess()
         case .notifications:
             // UNUserNotificationCenter's settings API is async — we keep a
             // cached value that PermissionCheck.refreshNotificationsStatus()
@@ -74,6 +81,93 @@ enum Permission: String, CaseIterable, Identifiable {
             // Permissions view is visible).
             return PermissionCheck.cachedNotificationsGranted
         }
+    }
+}
+
+struct PermissionStatusSnapshot: Equatable, Sendable {
+    var accessibility: Bool
+    var inputMonitoring: Bool
+    var notifications: Bool
+
+    func isGranted(_ permission: Permission) -> Bool {
+        switch permission {
+        case .accessibility: return accessibility
+        case .inputMonitoring: return inputMonitoring
+        case .notifications: return notifications
+        }
+    }
+
+    var anyMissing: Bool {
+        !accessibility || !inputMonitoring || !notifications
+    }
+}
+
+/// Observable permission state for SwiftUI. The view renders this published
+/// snapshot instead of repeatedly calling TCC APIs from computed properties.
+@MainActor
+final class PermissionStatusModel: ObservableObject {
+    typealias SnapshotProvider = @MainActor () -> PermissionStatusSnapshot
+
+    @Published private(set) var snapshot: PermissionStatusSnapshot
+    @Published private(set) var refreshCount = 0
+    private let snapshotProvider: SnapshotProvider
+
+    init(snapshotProvider: @escaping SnapshotProvider = { PermissionCheck.snapshot() }) {
+        self.snapshotProvider = snapshotProvider
+        snapshot = snapshotProvider()
+    }
+
+    func refresh() {
+        snapshot = snapshotProvider()
+        refreshCount &+= 1
+    }
+}
+
+/// Polls only while the global Fn event tap is missing. Once Input Monitoring
+/// becomes available it asks the caller to install the tap, retrying until the
+/// installation succeeds and then stopping permanently.
+@MainActor
+final class InputMonitoringGrantObserver {
+    typealias GrantCheck = @MainActor () -> Bool
+    typealias RecoveryAttempt = @MainActor () -> Bool
+
+    private let isGranted: GrantCheck
+    private let onAvailable: RecoveryAttempt
+    private var pollingTask: Task<Void, Never>?
+    private(set) var isFinished = false
+
+    init(
+        isGranted: @escaping GrantCheck = { Permission.inputMonitoring.isGranted() },
+        onAvailable: @escaping RecoveryAttempt
+    ) {
+        self.isGranted = isGranted
+        self.onAvailable = onAvailable
+    }
+
+    func start() {
+        guard pollingTask == nil, !isFinished else { return }
+        refresh()
+        guard !isFinished else { return }
+        pollingTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled, let self else { return }
+                refresh()
+            }
+        }
+    }
+
+    func refresh() {
+        guard !isFinished, isGranted() else { return }
+        if onAvailable() {
+            isFinished = true
+            stop()
+        }
+    }
+
+    func stop() {
+        pollingTask?.cancel()
+        pollingTask = nil
     }
 }
 
@@ -103,6 +197,14 @@ enum PermissionCheck {
 
     static func anyMissing() -> Bool {
         Permission.allCases.contains { !$0.isGranted() }
+    }
+
+    static func snapshot() -> PermissionStatusSnapshot {
+        PermissionStatusSnapshot(
+            accessibility: Permission.accessibility.isGranted(),
+            inputMonitoring: Permission.inputMonitoring.isGranted(),
+            notifications: Permission.notifications.isGranted()
+        )
     }
 
     static func summary() -> String {

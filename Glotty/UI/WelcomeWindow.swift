@@ -334,12 +334,9 @@ private struct WelcomeView: View {
         #endif
     }
 
-    /// Ticks every second while the welcome window is up so the
-    /// permissions step re-renders as the user grants access in
-    /// System Settings. `isGranted()` is a cheap syscall for AX /
-    /// IOHID; refreshing notifications happens in the background
-    /// and lands in the cache that the readers see on next render.
-    @State private var permissionsTick: Int = 0
+    /// Published permission snapshot used by the onboarding checklist.
+    /// Refreshing the model updates both the individual rows and summary.
+    @StateObject private var permissionStatus = PermissionStatusModel()
 
     /// Status line under the "Import config" button on step 0. nil
     /// until the user attempts an import; holds an error message if
@@ -761,44 +758,43 @@ private struct WelcomeView: View {
 
     /// One row per system permission Glotty needs, with current
     /// status + an "Open System Settings" deep link to the right
-    /// pane. The `id(permissionsTick)` modifier on the outer VStack
-    /// forces a re-read every second so the row flips from "needed"
-    /// to "granted" without the user having to navigate away and
-    /// back.
+    /// pane. The published snapshot refreshes every second so the row
+    /// flips from "needed" to "granted" without navigating away.
     private var permissionsChecklist: some View {
+        let snapshot = permissionStatus.snapshot
         VStack(alignment: .leading, spacing: 8) {
             ForEach(Permission.allCases) { perm in
-                permissionRow(perm)
+                permissionRow(perm, granted: snapshot.isGranted(perm))
             }
             // System dependency row — not a permission, but the same
             // "is this prerequisite in place?" check. Translate's
             // dictionary lookup needs Apple's Dictionary.app to
             // populate the catalog Glotty reads from.
             dictionaryAppRow
-            if PermissionCheck.anyMissing() {
+            if snapshot.anyMissing {
                 Text(OSLocalizer.string("You can grant the missing ones now or skip this step and come back from the menu bar → Settings → Permissions later. The Translate/Polish/Explain demos in the next steps won't work until Accessibility and Input Monitoring are on."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(.top, 6)
             }
         }
-        .id(permissionsTick)
         .task {
-            // Lightweight timer — refresh once a second while this step
-            // is on screen so granting in System Settings reflects back
-            // here in roughly real time.
             while !Task.isCancelled {
-                PermissionCheck.refreshNotificationsStatus()
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                permissionsTick &+= 1
+                refreshPermissionStatus()
+                try? await Task.sleep(for: .seconds(1))
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(
+            for: NSApplication.didBecomeActiveNotification
+        )) { _ in
+            refreshPermissionStatus()
         }
     }
 
     /// First existing Dictionary.app on disk, or nil. macOS ships it
     /// at /System/Applications on modern releases; /Applications is
     /// the fallback some restored systems use. The result is
-    /// re-evaluated each render (via the body's `id(permissionsTick)`)
+    /// re-evaluated each time the permission status model publishes
     /// so the row flips from missing→present the moment a system
     /// update or Migration Assistant restores it.
     private static func dictionaryAppURL() -> URL? {
@@ -862,9 +858,8 @@ private struct WelcomeView: View {
         )
     }
 
-    private func permissionRow(_ perm: Permission) -> some View {
-        let granted = perm.isGranted()
-        return HStack(alignment: .firstTextBaseline, spacing: 10) {
+    private func permissionRow(_ perm: Permission, granted: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.circle")
                 .foregroundStyle(granted ? .green : .orange)
                 .font(.system(size: 16))
@@ -897,6 +892,13 @@ private struct WelcomeView: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(Color.secondary.opacity(granted ? 0.05 : 0.10))
         )
+    }
+
+    private func refreshPermissionStatus() {
+        permissionStatus.refresh()
+        PermissionCheck.refreshNotificationsStatus { [permissionStatus] in
+            permissionStatus.refresh()
+        }
     }
 
     // MARK: - Pre-prepared demos

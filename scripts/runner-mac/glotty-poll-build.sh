@@ -1,15 +1,15 @@
 #!/bin/bash
 # Polls origin/main every 5 minutes. When it sees a new commit,
 # runs the same build the CI workflow runs (xcodegen + signed
-# PKG via scripts/make-pkg-signed.sh) and uploads the result to
+# PKGs via scripts/make-pkg-signed.sh) and uploads the results to
 # the Gitea `latest-build` release.
 #
 # Replaces act_runner here because v0.2.13s Go network stack
 # intermittently cannot reach the local Gitea even though curl
-# can. Same effective outcome (push to main -> built PKG in
+# can. Same effective outcome (push to main -> built PKGs in
 # release) without the unreliable middleman.
 #
-# The .pkg (not a .dmg) is the artifact: it installs via
+# The .pkg files (not .dmg files) are the artifacts: they install via
 # Installer.app, which writes the app to /Applications as root, so
 # the installed app carries no quarantine flag even when delivered
 # through a sandboxed messenger (Feishu/WeChat). See
@@ -69,35 +69,48 @@ git reset --hard origin/main >> "$LOG" 2>&1
 
 xcodegen generate >> "$LOG" 2>&1 || { log "ERROR xcodegen failed"; gitea_status error "xcodegen failed"; exit 1; }
 
-# Build + sign + notarize + staple (app + pkg)
+# Build + sign + notarize + staple both installers.
+rm -f "$REPO"/dist/Glotty-*.pkg
 KEYCHAIN_PASS_FILE="$KEYCHAIN_PASS_FILE" bash scripts/make-pkg-signed.sh >> "$LOG" 2>&1
 BUILD_STATUS=$?
 if [ "$BUILD_STATUS" != "0" ]; then
-    log "ERROR build/sign/notarize failed status=$BUILD_STATUS"
-    gitea_status failure "build/sign/notarize failed"
+    log "ERROR Glotty build/sign/notarize failed status=$BUILD_STATUS"
+    gitea_status failure "Glotty build/sign/notarize failed"
     exit 1
 fi
 
-# Pick the main-app pkg by version. dist/ accumulates every past build plus
-# the GlottyLab pkg (Glotty-0.1.0.pkg), so the old `ls | head -1` grabbed the
-# alphabetically-first one (the 0.1.0 lab) instead of the release. The Glotty
-# target's MARKETING_VERSION is the first one in project.yml.
-APP_VERSION=$(grep -m1 'MARKETING_VERSION:' "$REPO/project.yml" | sed -E 's/.*"([^"]+)".*/\1/')
-PKG_FILE="$REPO/dist/Glotty-$APP_VERSION.pkg"
-[ -f "$PKG_FILE" ] || { log "ERROR no PKG for version '$APP_VERSION' at $PKG_FILE"; gitea_status error "no pkg for $APP_VERSION"; exit 1; }
-PKG_NAME=$(basename "$PKG_FILE")
-log "Built $PKG_NAME ($(du -h "$PKG_FILE" | cut -f1))"
+KEYCHAIN_PASS_FILE="$KEYCHAIN_PASS_FILE" \
+SCHEME=GlottyReader \
+APP_NAME="Glotty Reader.app" \
+PRODUCT_SLUG=Glotty-Reader \
+PKG_IDENTIFIER=com.ruojunye.glotty.reader \
+    bash scripts/make-pkg-signed.sh >> "$LOG" 2>&1
+BUILD_STATUS=$?
+if [ "$BUILD_STATUS" != "0" ]; then
+    log "ERROR Reader build/sign/notarize failed status=$BUILD_STATUS"
+    gitea_status failure "Reader build/sign/notarize failed"
+    exit 1
+fi
+
+PKG_FILES=("$REPO"/dist/Glotty-*.pkg)
+[ "${#PKG_FILES[@]}" -eq 2 ] || { log "ERROR expected two release packages"; gitea_status error "missing release pkg"; exit 1; }
+for PKG_FILE in "${PKG_FILES[@]}"; do
+    log "Built $(basename "$PKG_FILE") ($(du -h "$PKG_FILE" | cut -f1))"
+done
 
 GITEA_TOKEN=$(cat "$GITEA_TOKEN_FILE")
 curl -sf --ipv4 -X DELETE -H "Authorization: token $GITEA_TOKEN" \
     "$GITEA_API/releases/tags/latest-build" >> "$LOG" 2>&1 || true
 RELEASE_ID=$(curl -sf --ipv4 -X POST -H "Authorization: token $GITEA_TOKEN" -H "Content-Type: application/json" \
-    -d "{\"tag_name\":\"latest-build\",\"name\":\"Latest Build\",\"body\":\"Built from main (${REMOTE_SHA:0:8})\",\"target_commitish\":\"main\"}" \
+    -d "{\"tag_name\":\"latest-build\",\"name\":\"Latest Build\",\"body\":\"Built Glotty and Glotty Reader from main (${REMOTE_SHA:0:8})\",\"target_commitish\":\"main\"}" \
     "$GITEA_API/releases" | python3 -c "import json,sys; print(json.load(sys.stdin)[\"id\"])")
 [ -z "$RELEASE_ID" ] && { log "ERROR failed to create release"; exit 1; }
-curl -sf --ipv4 -X POST -H "Authorization: token $GITEA_TOKEN" -F "attachment=@$PKG_FILE" \
-    "$GITEA_API/releases/$RELEASE_ID/assets?name=$PKG_NAME" >> "$LOG" 2>&1
+for PKG_FILE in "${PKG_FILES[@]}"; do
+    PKG_NAME=$(basename "$PKG_FILE")
+    curl -sf --ipv4 -X POST -H "Authorization: token $GITEA_TOKEN" -F "attachment=@$PKG_FILE" \
+        "$GITEA_API/releases/$RELEASE_ID/assets?name=$PKG_NAME" >> "$LOG" 2>&1
+done
 
-log "==> Published release ${REMOTE_SHA:0:8} $PKG_NAME"
-gitea_status success "Built + published $PKG_NAME"
+log "==> Published release ${REMOTE_SHA:0:8} with Glotty + Reader"
+gitea_status success "Built + published Glotty + Reader"
 echo "$REMOTE_SHA" > "$STATE"

@@ -51,6 +51,8 @@ enum ReaderSelfTest {
         if let e = epubs.first { checkEPUB(e) }
         else { print("  skip EPUB checks — none supplied") }
         checkLibraryStore()
+        checkOwnedPDF(root)
+        checkPersistentMemory()
         checkChatDoesNotWedge()
         checkStartPage()
         checkProvidersOverIPC()
@@ -70,6 +72,81 @@ enum ReaderSelfTest {
     }
 
     // MARK: checks
+
+    private static func checkOwnedPDF(_ root: URL) {
+        print("\nPDF library owns imported files")
+        let source = root.appendingPathComponent("owned.pdf")
+        let doc = PDFDocument()
+        doc.insert(PDFPage(), at: 0)
+        check(doc.write(to: source), "create sandbox PDF")
+        let reader = ReaderState()
+        reader.open(source)
+        guard let path = reader.bookInfo?.path else { return check(false, "PDF imported") }
+        check(path != source.path, "reader uses private copy")
+        try? FileManager.default.removeItem(at: source)
+        let reopened = ReaderState()
+        reopened.open(URL(fileURLWithPath: path))
+        check(reopened.pdf?.pageCount == 1, "PDF reopens after original is deleted")
+        check(ReaderRecents.all().contains(URL(fileURLWithPath: path)), "recents points to private copy")
+        doc.insert(PDFPage(), at: 1)
+        check(doc.write(to: source), "create different same-name PDF")
+        reader.open(source)
+        check(reader.bookInfo?.path != path, "same-name PDF does not overwrite original")
+        eq(PDFDocument(url: URL(fileURLWithPath: path))?.pageCount, 1, "original copy stays intact")
+    }
+
+    private static func checkPersistentMemory() {
+        print("\npersistent Reader memory")
+        let prior = ReaderCore.services
+        defer { ReaderCore.services = prior }
+        final class Service: ReaderServices {
+            var prompts: [String] = []
+            func lookUp(_ text: String) {}
+            func translate(_ text: String) {}
+            func providers() async -> [ReaderProvider] { [] }
+            func selectModel(providerID: String, modelID: String) {}
+            func chatStream(prompt: String) -> AsyncThrowingStream<String, Error>? {
+                prompts.append(prompt)
+                return AsyncThrowingStream { c in
+                    c.yield(prompt.hasPrefix("Summarize") ? "Prefers concrete Swift examples." : "Here is an example.")
+                    c.finish()
+                }
+            }
+        }
+        let service = Service()
+        ReaderCore.services = service
+        let info = ReaderState.BookInfo(id: "selftest:memory", title: "Memory book", path: nil)
+        let chat = ReaderChat()
+        chat.setBook(info)
+        chat.input = "Please use concrete Swift examples."
+        chat.send()
+        let id = chat.currentSessionID
+        eq(BookLibrary.dialogues(bookID: info.id).first?.messages.first?.text,
+           "Please use concrete Swift examples.", "question saved before reply")
+        RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+        let saved = BookLibrary.dialogues(bookID: info.id).first!
+        eq(saved.memory, "Prefers concrete Swift examples.", "extraction saved locally")
+        chat.startNewSession()
+        chat.input = "Continue please"
+        chat.send()
+        check(service.prompts.last?.contains("Prefers concrete Swift examples.") == true,
+              "new session receives extracted memory")
+        chat.stop()
+        let across = BookLibrary.memoryContext(bookID: "another-book", excluding: UUID())
+        check(across.contains("Prefers concrete Swift examples."), "memory available across books")
+        BookLibrary.deleteDialogue(bookID: info.id, id: id)
+        BookLibrary.saveMemory(bookID: info.id, dialogue: saved, memory: "late result")
+        check(!BookLibrary.dialogues(bookID: info.id).contains { $0.id == id }, "late extraction cannot resurrect deleted session")
+        check(!BookLibrary.memoryContext(bookID: info.id, excluding: chat.currentSessionID)
+            .contains("Prefers concrete Swift examples."), "deleting session removes its memory")
+        ReaderCore.services = nil
+        let unanswered = ReaderChat()
+        unanswered.setBook(.init(id: "selftest:unanswered", title: "T", path: nil))
+        unanswered.input = "Keep this even without a model"
+        unanswered.send()
+        eq(BookLibrary.dialogues(bookID: "selftest:unanswered").first?.messages.count, 1,
+           "provider unavailable still preserves question")
+    }
 
     private static func checkReplySelection() {
         print("\nselected reply text can be added to chat")

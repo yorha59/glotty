@@ -50,8 +50,7 @@ struct PermissionsView: View {
     /// close). Standalone window passes a closure here.
     let onClose: (() -> Void)?
 
-    @State private var refreshToken = 0
-    @State private var timer: Timer?
+    @StateObject private var permissionStatus = PermissionStatusModel()
 
     var body: some View {
         // One unified stage that always shows the permission detection
@@ -72,21 +71,20 @@ struct PermissionsView: View {
             maxWidth: onClose == nil ? .infinity : 480,
             maxHeight: onClose == nil ? .infinity : 460
         )
-        .onAppear {
-            // Poll permission state while visible. Refreshes the local
-            // refreshToken (forces PermissionRow re-eval) and reads the
-            // async notifications status into PermissionCheck's cache.
-            PermissionCheck.refreshNotificationsStatus()
-            timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-                Task { @MainActor in
-                    PermissionCheck.refreshNotificationsStatus()
-                    refreshToken &+= 1
-                }
+        .task {
+            // Publish a new snapshot every second while visible. The async
+            // notification result triggers a second refresh when it arrives.
+            while !Task.isCancelled {
+                refreshPermissionStatus()
+                try? await Task.sleep(for: .seconds(1))
             }
         }
-        .onDisappear {
-            timer?.invalidate()
-            timer = nil
+        .onReceive(NotificationCenter.default.publisher(
+            for: NSApplication.didBecomeActiveNotification
+        )) { _ in
+            // Returning from System Settings should update immediately rather
+            // than waiting for the next polling interval.
+            refreshPermissionStatus()
         }
         .localizationAware()
     }
@@ -97,7 +95,8 @@ struct PermissionsView: View {
     // both states with the same live-status layout.
 
     private var permissionsStage: some View {
-        let allGranted = !PermissionCheck.anyMissing()
+        let snapshot = permissionStatus.snapshot
+        let allGranted = !snapshot.anyMissing
         return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Image(systemName: allGranted ? "checkmark.seal.fill" : "lock.open")
@@ -119,13 +118,16 @@ struct PermissionsView: View {
 
             VStack(spacing: 10) {
                 ForEach(Permission.allCases) { permission in
-                    PermissionRow(permission: permission, refreshToken: refreshToken)
+                    PermissionRow(
+                        permission: permission,
+                        granted: snapshot.isGranted(permission)
+                    )
                 }
                 // System dependency check — same shape as the
                 // permission rows. Mirrors the Welcome flow's
                 // permissions step so what the user saw during
                 // onboarding stays reachable here.
-                DictionaryAppRow(refreshToken: refreshToken)
+                DictionaryAppRow(refreshToken: permissionStatus.refreshCount)
             }
 
             // Recovery affordance for the signature-collision case: a
@@ -140,13 +142,13 @@ struct PermissionsView: View {
             Spacer(minLength: 0)
 
             HStack {
-                Image(systemName: PermissionCheck.anyMissing()
+                Image(systemName: snapshot.anyMissing
                       ? "exclamationmark.triangle.fill"
                       : "checkmark.seal.fill")
-                    .foregroundStyle(PermissionCheck.anyMissing() ? .orange : .green)
-                Text(PermissionCheck.anyMissing()
+                    .foregroundStyle(snapshot.anyMissing ? .orange : .green)
+                Text(snapshot.anyMissing
                      ? "Some permissions missing — Fn → T won't work yet."
-                     : "All set. Quit & relaunch if you just granted permissions.")
+                     : "All set. Changes are active.")
                     .font(.callout)
                 Spacer()
                 if let onClose {
@@ -154,6 +156,13 @@ struct PermissionsView: View {
                         .keyboardShortcut(.defaultAction)
                 }
             }
+        }
+    }
+
+    private func refreshPermissionStatus() {
+        permissionStatus.refresh()
+        PermissionCheck.refreshNotificationsStatus { [permissionStatus] in
+            permissionStatus.refresh()
         }
     }
 
@@ -189,12 +198,7 @@ struct PermissionsView: View {
 
 private struct PermissionRow: View {
     let permission: Permission
-    let refreshToken: Int
-
-    private var granted: Bool {
-        _ = refreshToken // dependency to force re-eval
-        return permission.isGranted()
-    }
+    let granted: Bool
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {

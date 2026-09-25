@@ -4,7 +4,7 @@ import SwiftUI
 /// The reader's right-hand tutor panel: a conversations rail, a streaming
 /// message list, and a composer. Reuses `LLMProvider.current()` via `ReaderChat`.
 struct ReaderChatPanel: View {
-    /// Providers as last reported by Glotty; refreshed when the picker opens.
+    /// Providers as last pulled from Glotty; refreshed before the picker opens.
     @State private var providers: [ReaderProvider] = []
     /// Conversation awaiting a delete confirmation; non-nil is "asking".
     @State private var pendingDelete: SavedDialogue?
@@ -289,58 +289,12 @@ struct ReaderChatPanel: View {
         .frame(maxWidth: .infinity, alignment: m.role == .user ? .trailing : .leading)
     }
 
-    /// Provider + model picker, in the composer's bottom-left. Lists every
-    /// configured provider with its models; picking one switches Glotty's
-    /// active provider/model, the same setting the menu bar shows.
+    /// Pull a fresh provider/model snapshot before opening the picker.
     private var modelPicker: some View {
-        Menu {
-            if providers.isEmpty {
-                // The models live in Glotty, so an empty list usually means
-                // Glotty isn't running rather than nothing being configured —
-                // say so, since the fix is different.
-                Text("No models — is Glotty running?")
-                Button("Try again") { Task { providers = await ReaderCore.services?.providers() ?? [] } }
-            }
-            ForEach(providers) { p in
-                if p.models.isEmpty {
-                    // Custom / on-device: nothing to enumerate, so the provider
-                    // itself is the choice.
-                    Button { select(p, "") } label: {
-                        if p.isActive { Label(p.name, systemImage: "checkmark") } else { Text(p.name) }
-                    }
-                } else {
-                    ForEach(p.models) { m in
-                        Button { select(p, m.id) } label: {
-                            let label = "\(p.name) · \(m.name)"
-                            if p.isActive && m.id == p.activeModelID {
-                                Label(label, systemImage: "checkmark")
-                            } else {
-                                Text(label)
-                            }
-                        }
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 3) {
-                Image(systemName: "cpu").font(.system(size: 10))
-                Text(activeLabel).font(.caption2).lineLimit(1)
-            }
-            .foregroundStyle(.secondary)
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
+        PullModelPicker(providers: $providers, onSelect: select)
         .fixedSize()
         .help("Language model used for these answers")
-        .task { providers = await ReaderCore.services?.providers() ?? [] }
-    }
-
-    /// What the picker shows when closed: the model in use, or the provider
-    /// when it has no model list.
-    private var activeLabel: String {
-        guard let p = providers.first(where: \.isActive) else { return String(localized: "Model") }
-        if let m = p.models.first(where: { $0.id == p.activeModelID }) { return m.name }
-        return p.name
+        .task { await refreshProviders() }
     }
 
     private func select(_ p: ReaderProvider, _ modelID: String) {
@@ -353,6 +307,10 @@ struct ReaderChatPanel: View {
             if row.id == p.id, !modelID.isEmpty { r.activeModelID = modelID }
             return r
         }
+    }
+
+    private func refreshProviders() async {
+        providers = await ReaderCore.services?.providers() ?? []
     }
 
     /// One staged passage, shown the way an attached file is: a small token
@@ -416,6 +374,113 @@ struct ReaderChatPanel: View {
         .background(Color.primary.opacity(0.045))
         .overlay(Rectangle().strokeBorder(Color.primary.opacity(0.16)))
         .padding(10)
+    }
+}
+
+/// Pulls over IPC on click, then builds a native Provider → Model menu from
+/// that response. SwiftUI's `Menu` has no reliable will-open callback on macOS.
+private struct PullModelPicker: NSViewRepresentable {
+    @Binding var providers: [ReaderProvider]
+    let onSelect: (ReaderProvider, String) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(providers: $providers, onSelect: onSelect)
+    }
+
+    func makeNSView(context: Context) -> NSButton {
+        let button = NSButton(title: "", target: context.coordinator,
+                              action: #selector(Coordinator.openMenu(_:)))
+        button.isBordered = false
+        button.image = NSImage(systemSymbolName: "cpu", accessibilityDescription: nil)
+        button.imagePosition = .imageLeading
+        button.font = .systemFont(ofSize: 10)
+        button.contentTintColor = .secondaryLabelColor
+        context.coordinator.button = button
+        context.coordinator.updateLabel()
+        return button
+    }
+
+    func updateNSView(_ button: NSButton, context: Context) {
+        context.coordinator.providers = $providers
+        context.coordinator.onSelect = onSelect
+        context.coordinator.updateLabel()
+    }
+
+    @MainActor
+    final class Coordinator: NSObject {
+        var providers: Binding<[ReaderProvider]>
+        var onSelect: (ReaderProvider, String) -> Void
+        weak var button: NSButton?
+
+        init(providers: Binding<[ReaderProvider]>,
+             onSelect: @escaping (ReaderProvider, String) -> Void) {
+            self.providers = providers
+            self.onSelect = onSelect
+        }
+
+        @objc func openMenu(_ sender: NSButton) {
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let latest = await ReaderCore.services?.providers() ?? []
+                providers.wrappedValue = latest
+                updateLabel()
+                showMenu(for: latest, from: sender)
+            }
+        }
+
+        func updateLabel() {
+            guard let button else { return }
+            guard let provider = providers.wrappedValue.first(where: \.isActive) else {
+                button.title = String(localized: "Model")
+                return
+            }
+            button.title = provider.models.first(where: { $0.id == provider.activeModelID })?.name
+                ?? provider.name
+        }
+
+        private func showMenu(for providers: [ReaderProvider], from button: NSButton) {
+            let menu = NSMenu()
+            if providers.isEmpty {
+                let item = NSMenuItem(title: "No models — is Glotty running?",
+                                      action: nil, keyEquivalent: "")
+                item.isEnabled = false
+                menu.addItem(item)
+            }
+            for provider in providers {
+                if provider.models.isEmpty {
+                    menu.addItem(choiceItem(provider: provider, modelID: "",
+                                            title: provider.name, selected: provider.isActive))
+                    continue
+                }
+                let providerItem = NSMenuItem(title: provider.name, action: nil, keyEquivalent: "")
+                let submenu = NSMenu(title: provider.name)
+                for model in provider.models {
+                    submenu.addItem(choiceItem(
+                        provider: provider, modelID: model.id, title: model.name,
+                        selected: provider.isActive && model.id == provider.activeModelID))
+                }
+                providerItem.submenu = submenu
+                menu.addItem(providerItem)
+            }
+            menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.maxY), in: button)
+        }
+
+        private func choiceItem(provider: ReaderProvider, modelID: String,
+                                title: String, selected: Bool) -> NSMenuItem {
+            let item = NSMenuItem(title: title, action: #selector(selectItem(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = [provider.id, modelID]
+            item.state = selected ? .on : .off
+            return item
+        }
+
+        @objc private func selectItem(_ item: NSMenuItem) {
+            guard let choice = item.representedObject as? [String], choice.count == 2,
+                  let provider = providers.wrappedValue.first(where: { $0.id == choice[0] })
+            else { return }
+            onSelect(provider, choice[1])
+            updateLabel()
+        }
     }
 }
 

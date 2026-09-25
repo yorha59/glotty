@@ -166,3 +166,15 @@ struct SettingsFlowHappyPathTests {
         #expect(target != "en")
     }
 }
+
+@Suite("PDF fallback table of contents")
+@MainActor
+struct PDFTOCTests {
+    @Test("Recognizes real Chinese headings and rejects equations and numbered body text")
+    func classifiesExtractedHeadings() {
+        #expect(ReaderState.classifyPDFHeading("第1章 机器学习基础", size: 22, body: 10)?.level == 0)
+        #expect(ReaderState.classifyPDFHeading("Ch 2.4 GAN-王文彬", size: 16, body: 10)?.level == 1)
+        #expect(ReaderState.classifyPDFHeading("2 Q K 𝛼%𝛼.𝑦%𝑦.𝑥%", size: 14, body: 10)?.label == nil)
+        #expect(ReaderState.classifyPDFHeading("3. GAN 可以并行生成数据。", size: 12, body: 10)?.label == nil)
+    }
+}

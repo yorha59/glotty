@@ -89,3 +89,55 @@ struct PermissionSummaryTests {
         #expect(summary.contains("✓") || summary.contains("✗"))
     }
 }
+
+@Suite("Live permission status")
+@MainActor
+struct LivePermissionStatusTests {
+    @Test("Published snapshot changes after first-time grant")
+    func snapshotRefreshes() {
+        var current = PermissionStatusSnapshot(
+            accessibility: false,
+            inputMonitoring: false,
+            notifications: true
+        )
+        let model = PermissionStatusModel(snapshotProvider: { current })
+
+        #expect(model.snapshot.accessibility == false)
+        current.accessibility = true
+        current.inputMonitoring = true
+        model.refresh()
+
+        #expect(model.snapshot.accessibility)
+        #expect(model.snapshot.inputMonitoring)
+        #expect(model.snapshot.anyMissing == false)
+        #expect(model.refreshCount == 1)
+    }
+
+    @Test("Event-tap recovery waits for grant and retries until installed")
+    func eventTapRecovery() {
+        var granted = false
+        var attempts = 0
+        let observer = InputMonitoringGrantObserver(
+            isGranted: { granted },
+            onAvailable: {
+                attempts += 1
+                return attempts == 2
+            }
+        )
+
+        observer.refresh()
+        #expect(attempts == 0)
+
+        granted = true
+        observer.refresh()
+        #expect(attempts == 1)
+        #expect(observer.isFinished == false)
+
+        observer.refresh()
+        #expect(attempts == 2)
+        #expect(observer.isFinished)
+
+        observer.refresh()
+        #expect(attempts == 2)
+    }
+}

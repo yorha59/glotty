@@ -83,20 +83,27 @@ final class IPCReaderServices: NSObject, ReaderServices {
 
     // MARK: providers / model picker
 
-    private var providerWaiters: [CheckedContinuation<[ReaderProvider], Never>] = []
+    private var providerWaiters: [UUID: CheckedContinuation<[ReaderProvider], Never>] = [:]
 
     func providers() async -> [ReaderProvider] {
         await withCheckedContinuation { cont in
-            providerWaiters.append(cont)
+            let id = UUID()
+            providerWaiters[id] = cont
             // Don't bail when Glotty is down — `post` starts it and retries, so
             // opening the picker brings the model list with it. Bailing early
             // is what made a quit Glotty look like "no providers configured".
             post(ReaderIPC.providersRequestName, [:])
-            // Same fire-and-forget hazard as chat: if no reply arrives, resume
-            // with an empty list rather than leaving the menu hanging. Long
-            // enough to cover `post` launching Glotty first.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in
-                self?.resumeProviderWaiters(with: [])
+            // A newly launched Glotty may not have registered its distributed
+            // observer at the first post. Retry only while this pull is pending.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                guard self?.providerWaiters[id] != nil else { return }
+                self?.post(ReaderIPC.providersRequestName, [:])
+            }
+            // Time out only this pull. An older timeout must never empty a newer
+            // click's waiter, which caused the first menu open to return `[]`.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in
+                guard let continuation = self?.providerWaiters.removeValue(forKey: id) else { return }
+                continuation.resume(returning: [])
             }
         }
     }
@@ -108,7 +115,7 @@ final class IPCReaderServices: NSObject, ReaderServices {
     }
 
     private func resumeProviderWaiters(with list: [ReaderProvider]) {
-        let waiting = providerWaiters
+        let waiting = Array(providerWaiters.values)
         providerWaiters.removeAll()
         for c in waiting { c.resume(returning: list) }
     }

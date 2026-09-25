@@ -47,6 +47,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var mascot: MenuBarMascot?
     private var hotkey: FnLeaderHotkey?
+    #if !MAS
+    /// Exists only after the initial event-tap install was denied. It polls
+    /// until Input Monitoring becomes available, installs the tap, then stops.
+    private var inputMonitoringObserver: InputMonitoringGrantObserver?
+    #endif
     #if MAS
     /// MAS global hotkeys (Carbon `RegisterEventHotKey`). Web uses the Fn-leader
     /// event tap instead, so these only exist in the App Store build.
@@ -81,6 +86,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     ///
     ///
     func applicationWillFinishLaunching(_ notification: Notification) {
+        // Direct execution of the app binary doubles as the `glotty` CLI.
+        // It must not terminate the already-running menu-bar instance.
+        if CLITranslationCommand.isInvocation { return }
+
         // Restart-into-regular (see SettingsWindowController): if Settings
         // asked us to come up in regular mode, flip the activation policy
         // HERE — before any window exists — which is the only point an
@@ -122,6 +131,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         dbg("applicationDidFinishLaunching START")
+        // CLI mode uses the same provider registry + Keychain configuration,
+        // but owns no windows, hotkeys, permissions, or status item.
+        if CLITranslationCommand.startIfNeeded() { return }
+
         // The reader talks to the core through this seam; in-process here.
         ReaderCore.services = GlottyReaderServices()
         // Also serve the standalone Glotty Reader app: it posts look-up /
@@ -560,7 +573,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     #if !MAS
-    private func installHotkey() {
+    @discardableResult
+    private func installHotkey() -> Bool {
+        if hotkey != nil { return true }
         let hk = FnLeaderHotkey()
         hk.onFire = { [weak self] in self?.handleFire(mode: .translate) }
         hk.onExplainFire = { [weak self] in self?.handleFire(mode: .explain) }
@@ -573,10 +588,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             try hk.install()
             hotkey = hk
+            inputMonitoringObserver?.stop()
+            inputMonitoringObserver = nil
             dbg("Fn → T / Fn → E / Fn → P hotkey installed")
+            return true
         } catch {
             dbg("hotkey install failed: \(error). Input Monitoring permission likely denied.")
+            observeInputMonitoringGrant()
+            return false
         }
+    }
+
+    private func observeInputMonitoringGrant() {
+        guard inputMonitoringObserver == nil else { return }
+        let observer = InputMonitoringGrantObserver { [weak self] in
+            guard let self else { return true }
+            return self.installHotkey()
+        }
+        inputMonitoringObserver = observer
+        observer.start()
+        dbg("watching for Input Monitoring grant to retry hotkey installation")
     }
     #else
     /// MAS chat trigger: ⌘⌥C. Carbon `RegisterEventHotKey` — system-wide, no

@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Build Glotty signed with Developer ID, notarize with Apple, staple
-# the ticket, and package into a distributable .pkg INSTALLER.
+# Build a Glotty app target signed with Developer ID, notarize with
+# Apple, staple the ticket, and package it into a distributable .pkg.
 #
-# Output: dist/Glotty-<version>.pkg, signed + notarized + stapled.
+# Output defaults to dist/Glotty-<version>.pkg. Set SCHEME, APP_NAME,
+# PRODUCT_SLUG, and PKG_IDENTIFIER to package another app target such
+# as the standalone Glotty Reader.
 #
 # Why a .pkg instead of (or alongside) the .dmg:
 #   A .pkg is a double-click GUI installer (Next -> Install -> Done).
-#   Crucially, Installer.app writes Glotty.app into /Applications
+#   Crucially, Installer.app writes the selected app into /Applications
 #   ITSELF, and files laid down by an installer payload do NOT get the
 #   com.apple.quarantine attribute. So the INSTALLED app is never
 #   quarantined -> no "Glotty is damaged / can't be opened" dialog and
@@ -47,9 +49,10 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
-SCHEME="Glotty"
+SCHEME="${SCHEME:-Glotty}"
 CONFIG="Release"
-APP_NAME="Glotty.app"
+APP_NAME="${APP_NAME:-Glotty.app}"
+PRODUCT_SLUG="${PRODUCT_SLUG:-Glotty}"
 DIST_DIR="$REPO_ROOT/dist"
 BUILD_DIR="$(mktemp -d -t glotty-pkg)"
 trap 'rm -rf "$BUILD_DIR"' EXIT
@@ -117,7 +120,7 @@ fi
 
 ENTITLEMENTS_FILE="$REPO_ROOT/Glotty/Glotty-Release.entitlements"
 
-echo "==> Signing Glotty.app (Developer ID Application)"
+echo "==> Signing $APP_NAME (Developer ID Application)"
 # Single codesign invocation: the bundle has no nested frameworks or
 # XPC services. --force replaces xcodebuild's signature, --timestamp
 # adds Apple's secure timestamp, --options runtime enables the
@@ -160,14 +163,14 @@ NOTARYTOOL_KEYCHAIN_ARGS=()
 # ----------------------------------------------------------------------
 echo "==> Notarizing the app (zip -> notary service)"
 echo "    This usually takes 1-3 minutes; can take 10+ on busy days."
-APP_ZIP="$BUILD_DIR/Glotty-app.zip"
+APP_ZIP="$BUILD_DIR/$PRODUCT_SLUG-app.zip"
 ditto -c -k --keepParent "$APP_SRC" "$APP_ZIP"
 xcrun notarytool submit "$APP_ZIP" \
     --keychain-profile "$NOTARY_PROFILE" \
     ${NOTARYTOOL_KEYCHAIN_ARGS[@]+"${NOTARYTOOL_KEYCHAIN_ARGS[@]}"} \
     --wait
 
-echo "==> Stapling ticket onto Glotty.app (offline-verifiable)"
+echo "==> Stapling ticket onto $APP_NAME (offline-verifiable)"
 xcrun stapler staple "$APP_SRC"
 xcrun stapler validate "$APP_SRC"
 
@@ -175,8 +178,8 @@ xcrun stapler validate "$APP_SRC"
 # Build the installer package.
 #
 # pkgbuild --root maps the contents of a staging dir onto
-# --install-location. We stage just Glotty.app so it installs to
-# /Applications/Glotty.app. The pkg is signed with the Developer ID
+# --install-location. We stage just the selected app so it installs to
+# /Applications. The pkg is signed with the Developer ID
 # INSTALLER cert (distinct from the Application cert above); a pkg
 # signed with anything else can't be notarized.
 #
@@ -189,17 +192,17 @@ xcrun stapler validate "$APP_SRC"
 # non-interactively. (Diagnosed 2026-06-05 on the runner: pkgbuild
 # --sign hung; pkgbuild + productsign --keychain succeeded.)
 # ----------------------------------------------------------------------
-echo "==> Packaging Glotty $VERSION installer (.pkg)"
+echo "==> Packaging $PRODUCT_SLUG $VERSION installer (.pkg)"
 STAGE_DIR="$BUILD_DIR/stage"
 mkdir -p "$STAGE_DIR"
 cp -R "$APP_SRC" "$STAGE_DIR/"
 
 mkdir -p "$DIST_DIR"
-PKG_PATH="$DIST_DIR/Glotty-$VERSION.pkg"
+PKG_PATH="$DIST_DIR/$PRODUCT_SLUG-$VERSION.pkg"
 rm -f "$PKG_PATH"
 
 echo "==> Building unsigned pkg"
-UNSIGNED_PKG="$BUILD_DIR/Glotty-unsigned.pkg"
+UNSIGNED_PKG="$BUILD_DIR/$PRODUCT_SLUG-unsigned.pkg"
 pkgbuild \
     --root "$STAGE_DIR" \
     --identifier "$PKG_IDENTIFIER" \
