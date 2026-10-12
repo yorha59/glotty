@@ -83,6 +83,11 @@ enum BookLibrary {
     /// Own a copy before registering a PDF. Never overwrite a different book
     /// with the same filename, and keep existing filename-based identities.
     static func importPDF(_ source: URL) throws -> URL {
+        try importDocument(source)
+    }
+
+    /// Remote EPUBs also need a durable copy before their download is removed.
+    static func importDocument(_ source: URL) throws -> URL {
         let folder = dir.appendingPathComponent("Documents", isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let source = source.standardizedFileURL
@@ -93,7 +98,7 @@ enum BookLibrary {
             let data = try Data(contentsOf: source, options: .mappedIfSafe)
             let hash = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
             target = folder.appendingPathComponent(source.deletingPathExtension().lastPathComponent
-                + "-" + hash + ".pdf")
+                + "-" + hash + "." + source.pathExtension)
         }
         if !FileManager.default.fileExists(atPath: target.path) {
             let data = try Data(contentsOf: source, options: .mappedIfSafe)

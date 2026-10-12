@@ -272,6 +272,7 @@ struct ReaderView: View {
 
     private func pdfControlBar(_ pdf: PDFDocument) -> some View {
         HStack(spacing: 12) {
+            importLinkButton
             Spacer()
             Button { if state.pdfPage > 0 { state.pdfPage -= 1 } } label: { Image(systemName: "chevron.left") }
                 .disabled(state.pdfPage <= 0)
@@ -436,6 +437,7 @@ struct ReaderView: View {
 
     private func controlBar(_ book: EPUBBook) -> some View {
         HStack(spacing: 12) {
+            importLinkButton
             // Chapter nav centred; every control gathered on the right so the
             // toolbar isn't split across both ends.
             Spacer()
@@ -512,6 +514,12 @@ struct ReaderView: View {
         }
     }
 
+    private var importLinkButton: some View {
+        Button {
+            ReaderWindowController.shared.chooseLink(over: NSApp.keyWindow)
+        } label: { Label("Import from Link", systemImage: "link") }
+    }
+
     private var emptyState: some View {
         VStack(spacing: 14) {
             Image(systemName: "book")
@@ -519,6 +527,7 @@ struct ReaderView: View {
                 .foregroundStyle(.tertiary)
             Text("Open an EPUB or PDF to start reading.")
                 .foregroundStyle(.secondary)
+            importLinkButton
             Button("Open Book…") { ReaderWindowController.shared.openBook() }
                 .buttonStyle(.plain)
                 .padding(.horizontal, 14).frame(height: 30)

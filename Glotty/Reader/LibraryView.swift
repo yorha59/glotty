@@ -69,6 +69,10 @@ struct LibraryView: View {
                 .overlay(Rectangle().strokeBorder(Color.primary.opacity(0.18)))
                 Button(action: openPanel) { Label("Open Book", systemImage: "plus") }
                     .buttonStyle(SquareButtonStyle(emphasized: true))
+                Button {
+                    ReaderWindowController.shared.chooseLink(over: LibraryWindowController.shared.window)
+                } label: { Label("Import from Link", systemImage: "link") }
+                    .buttonStyle(SquareButtonStyle())
             }
             .padding(.horizontal, 18).frame(height: 54)
         }

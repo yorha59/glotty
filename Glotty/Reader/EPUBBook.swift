@@ -28,7 +28,7 @@ struct EPUBBook {
     let chapters: [Chapter]
     let toc: [TOCItem]
 
-    enum OpenError: Error { case notAZip, noRootfile, noOPF, emptySpine }
+    enum OpenError: Error { case notAZip, noRootfile, noOPF, emptySpine, unsafePath }
 
     static func open(_ epubURL: URL) throws -> EPUBBook {
         guard let zip = MiniZip(url: epubURL) else { throw OpenError.notAZip }
@@ -37,12 +37,15 @@ struct EPUBBook {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("GlottyReader", isDirectory: true)
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        var keepRoot = false
+        defer { if !keepRoot { try? FileManager.default.removeItem(at: root) } }
         for entry in zip.entries {
+            let dest = root.appendingPathComponent(entry.name).standardizedFileURL
+            guard dest.path.hasPrefix(root.path + "/") else { throw OpenError.unsafePath }
             guard let data = zip.data(entry.name) else { continue }
-            let dest = root.appendingPathComponent(entry.name)
-            try? FileManager.default.createDirectory(
+            try FileManager.default.createDirectory(
                 at: dest.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try? data.write(to: dest)
+            try data.write(to: dest)
         }
 
         // container.xml → OPF path (relative to the zip root).
@@ -111,6 +114,7 @@ struct EPUBBook {
             }
         }
 
+        keepRoot = true
         return EPUBBook(title: title, author: author, identifier: identifier,
                         rootDir: root, chapters: chapters, toc: toc)
     }

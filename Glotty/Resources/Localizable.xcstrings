@@ -1,6 +1,105 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@'s saved API key needs authorization. Open Settings → Language Model → Unlock saved API keys, then retry.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 已保存的 API 密钥需要授权。请打开设置 → 语言模型 → 解锁已保存的 API 密钥，然后重试。"
+          }
+        }
+      }
+    },
+    "Saved API keys need authorization. Glotty will only show password dialogs when you unlock them here.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已保存的 API 密钥需要授权。只有点击此处解锁时，Glotty 才会显示密码确认窗口。"
+          }
+        }
+      }
+    },
+    "Unlock saved API keys": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解锁已保存的 API 密钥"
+          }
+        }
+      }
+    },
+    "Authorization was not completed. Approved keys are saved; retry to continue.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "授权尚未完成。已授权的密钥已保存，可以重试继续。"
+          }
+        }
+      }
+    },
+    "Import from Link": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从链接导入"
+          }
+        }
+      }
+    },
+    "Paste a direct PDF or EPUB link.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴 PDF 或 EPUB 文件的直接链接。"
+          }
+        }
+      }
+    },
+    "Enter a valid HTTP or HTTPS link.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入有效的 HTTP 或 HTTPS 链接。"
+          }
+        }
+      }
+    },
+    "Download failed (HTTP %lld).": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载失败（HTTP %lld）。"
+          }
+        }
+      }
+    },
+    "This link did not return a readable PDF or EPUB. Use a direct document link.": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此链接未返回可读取的 PDF 或 EPUB，请使用文件的直接链接。"
+          }
+        }
+      }
+    },
     "#RRGGBB": {
       "localizations": {
         "de": {

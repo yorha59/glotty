@@ -301,6 +301,7 @@ struct LanguageModelSettingsSection: View {
     @AppStorage("glotty.deepseek.model") private var deepseekModel: String = ""
     @State private var apiKey: String = ""
     @State private var apiKeyPlaceholder: String = ""
+    @State private var needsKeyAuthorization = false
     @State private var testStatus: TestStatus = .idle
     /// Bumped on CustomProviderStore changes so the picker re-reads the list.
     @State private var customRefreshToken: Int = 0
@@ -341,6 +342,19 @@ struct LanguageModelSettingsSection: View {
         }
 
         providerFields
+        if needsKeyAuthorization {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Saved API keys need authorization. Glotty will only show password dialogs when you unlock them here.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Button("Unlock saved API keys") {
+                    let finished = Keychain.authorizeSavedKeys()
+                    loadKey()
+                    if !finished {
+                        testStatus = .failed(String(localized: "Authorization was not completed. Approved keys are saved; retry to continue."))
+                    }
+                }
+            }
+        }
     }
 
     var body: some View {
@@ -858,6 +872,7 @@ struct LanguageModelSettingsSection: View {
     }
 
     private func loadKey() {
+        defer { needsKeyAuthorization = Keychain.needsAuthorization }
         guard let account = currentKeychainAccount else {
             apiKey = ""
             apiKeyPlaceholder = ""

@@ -15,7 +15,7 @@ enum LLMError: LocalizedError {
         case .missingAPIKey(let name):
             return "\(name) needs an API key. Add it in Settings → Language Model."
         case .keychainLocked(let name):
-            return String(localized: "\(name)'s API key is saved but can't be read — the login keychain is locked. Unlock it (Keychain Access → login → Unlock, or log out and back in) and retry.")
+            return String(localized: "\(name)'s saved API key needs authorization. Open Settings → Language Model → Unlock saved API keys, then retry.")
         case .providerUnavailable(let reason):
             return "Provider unavailable — \(reason)"
         case .networkFailure(let err):

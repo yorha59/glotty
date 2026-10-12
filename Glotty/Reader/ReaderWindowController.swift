@@ -10,6 +10,7 @@ final class ReaderWindowController: NSObject, NSWindowDelegate {
     static let shared = ReaderWindowController()
     let state = ReaderState()
     private var window: NSWindow?
+    private var linkSheet: NSWindow?
 
     func show() {
         ensureWindow()
@@ -44,6 +45,36 @@ final class ReaderWindowController: NSObject, NSWindowDelegate {
         }
         if let host { panel.beginSheetModal(for: host, completionHandler: complete) }
         else { panel.begin(completionHandler: complete) }
+    }
+
+    func chooseLink(over host: NSWindow?) {
+        guard linkSheet == nil else { return }
+        let sheet = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 528, height: 240),
+                             styleMask: [.titled], backing: .buffered, defer: false)
+        sheet.title = String(localized: "Import from Link")
+        sheet.isReleasedWhenClosed = false
+        let dismiss = { [weak self, weak sheet] in
+            guard let sheet else { return }
+            sheet.sheetParent?.endSheet(sheet)
+            sheet.orderOut(nil)
+            self?.linkSheet = nil
+        }
+        sheet.contentView = NSHostingView(rootView: ReaderLinkImportView(cancel: dismiss) { [weak self] url in
+            guard let self else { return }
+            // EPUB's existing open path retains the source URL; give it a
+            // library copy, just as openPDF does, before deleting the download.
+            let stored = try BookLibrary.importDocument(url)
+            self.state.open(stored)
+            if let error = self.state.openError {
+                throw NSError(domain: "GlottyLinkImport", code: 1,
+                              userInfo: [NSLocalizedDescriptionKey: error])
+            }
+            dismiss()
+            self.show()
+        })
+        linkSheet = sheet
+        if let host { host.beginSheet(sheet) }
+        else { sheet.center(); sheet.makeKeyAndOrderFront(nil) }
     }
 
     /// Closing the reader (traffic light or ⌘W) returns to the Library instead

@@ -223,7 +223,7 @@ enum ReaderSelfTest {
         eq(s.queryCapture(term: "x", kind: "explain")?.bookID, id, "look-up capture uses the canonical id")
 
         // Exactly one Library row for this file — the duplicate-row bug.
-        let rows = BookLibrary.all().filter { $0.path == url.path }
+        let rows = BookLibrary.all().filter { $0.path == s.bookInfo?.path }
         eq(rows.count, 1, "one Library row per file")
 
         s.pdfPage = min(3, (s.pdf?.pageCount ?? 1) - 1)
