@@ -1662,13 +1662,17 @@ private struct DictionarySettingsSection: View {
         for activeRef in activeRefs {
             guard let item = catalogByIdentifier[activeRef] else { continue }
             let normalizedName = normalizedDictionaryName(item.name)
-            let resolvedPath = downloadedPathsByName[normalizedName] ?? activeRef
+            let packageName = normalizedDictionaryName(URL(fileURLWithPath: item.reference).lastPathComponent)
+            let resolvedPath = downloadedPathsByName[packageName]
+                ?? downloadedPathsByName[normalizedName] ?? activeRef
             guard !knownIDs.contains(resolvedPath), !knownNames.contains(normalizedName) else { continue }
 
             merged.append(DictionaryLookup.DictionaryInfo(
                 id: resolvedPath,
                 name: item.name,
-                path: resolvedPath
+                path: resolvedPath,
+                metadataKind: item.kind,
+                metadataLanguages: item.languageCodes
             ))
             knownIDs.insert(resolvedPath)
             knownNames.insert(normalizedName)
@@ -1970,10 +1974,7 @@ private struct DictionarySettingsSection: View {
         )
         CFPreferencesAppSynchronize("com.apple.DictionaryServices" as CFString)
         dictionaryImportStatus = "Installed. Reloading..."
-        addInstalledDictionariesToState([dict])
-        loadDictionaries()
-        addInstalledDictionariesToState([dict])
-        loadLibraryDictionaries()
+        refreshDictionariesAfterInstalling([dict])
     }
 
     private func installSelectedDictionaries() {
@@ -2010,10 +2011,15 @@ private struct DictionarySettingsSection: View {
         dictionaryImportStatus = installedCount == 1 ? "Installed 1 dictionary." : "Installed \(installedCount) dictionaries."
         selectedLibraryDictionaryIDs = []
         showingInstallDictionaryDialog = false
-        addInstalledDictionariesToState(installedDictionaries)
-        loadDictionaries()
-        addInstalledDictionariesToState(installedDictionaries)
+        refreshDictionariesAfterInstalling(installedDictionaries)
+    }
+
+    private func refreshDictionariesAfterInstalling(_ dictionaries: [DictionaryLibraryItem]) {
         loadLibraryDictionaries()
+        loadDictionaries()
+        // DictionaryServices may still return its old process-local list. Keep
+        // the new entries visible immediately, with their catalog metadata.
+        addInstalledDictionariesToState(dictionaries)
     }
 
     private func addInstalledDictionariesToState(_ dictionaries: [DictionaryLibraryItem]) {
@@ -2039,11 +2045,15 @@ private struct DictionarySettingsSection: View {
 
     private func installedDictionaryInfo(for dict: DictionaryLibraryItem) -> DictionaryLookup.DictionaryInfo {
         let normalizedName = normalizedDictionaryName(dict.name)
-        let resolvedPath = downloadedDictionaryPathsByName[normalizedName] ?? installReference(for: dict)
+        let packageName = normalizedDictionaryName(URL(fileURLWithPath: dict.reference).lastPathComponent)
+        let resolvedPath = downloadedDictionaryPathsByName[packageName]
+            ?? downloadedDictionaryPathsByName[normalizedName] ?? installReference(for: dict)
         return DictionaryLookup.DictionaryInfo(
             id: resolvedPath,
             name: dict.name,
-            path: resolvedPath
+            path: resolvedPath,
+            metadataKind: dict.kind,
+            metadataLanguages: dict.languageCodes
         )
     }
 
@@ -2379,7 +2389,10 @@ private struct DictionarySettingsSection: View {
         var id: String { reference }
 
         var dictionaryInfo: DictionaryLookup.DictionaryInfo {
-            DictionaryLookup.DictionaryInfo(id: id, name: name, path: reference)
+            DictionaryLookup.DictionaryInfo(
+                id: id, name: name, path: reference,
+                metadataKind: kind, metadataLanguages: languageCodes
+            )
         }
 
         var name: String {

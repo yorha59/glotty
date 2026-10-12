@@ -686,6 +686,19 @@ enum DictionarySelection {
         let filters = dictionaryLanguageFilters(source: source, target: target)
         guard !filters.isEmpty else { return dictionaries }
         return dictionaries.filter { dict in
+            if !dict.metadataLanguages.isEmpty {
+                let languages = Set(dict.metadataLanguages.map(normalizedLanguageCode))
+                let sourceLanguage = normalizedLanguageCode(source)
+                let targetLanguage = normalizedLanguageCode(target)
+                switch dictionaryKind(for: dict) {
+                case .bilingual:
+                    return sourceLanguage != targetLanguage
+                        && languages.contains(sourceLanguage)
+                        && languages.contains(targetLanguage)
+                case .monolingual:
+                    return languages.contains(sourceLanguage) || languages.contains(targetLanguage)
+                }
+            }
             let haystack = "\(dict.name) \(dict.path)".lowercased()
             switch dictionaryKind(for: dict) {
             case .bilingual:

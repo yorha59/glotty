@@ -2,7 +2,57 @@ import Testing
 import Foundation
 @testable import Glotty
 
-@Suite("DictionarySelection.dictionaryKind — classification priority")
+@Suite("DictionarySelection — metadata language matching")
+struct DictionaryLanguageMatchingTests {
+    @Test("Localized Oxford Chinese name matches both translation directions")
+    func localizedBilingualName() {
+        let info = DictionaryLookup.DictionaryInfo(
+            id: "test.localized-oxford", name: "牛津英汉汉英词典",
+            path: "com.apple.dictionary.zh_CN-en.OCD",
+            metadataKind: .bilingual, metadataLanguages: ["zh-Hans", "en"]
+        )
+        for pair in [("en", "zh"), ("zh-Hans", "en")] {
+            #expect(DictionarySelection.matchingDictionaries(
+                source: pair.0, target: pair.1, dictionaries: [info]
+            ) == [info])
+        }
+        #expect(DictionarySelection.matchingDictionaries(
+            source: "en", target: "fr", dictionaries: [info]
+        ).isEmpty)
+        #expect(DictionarySelection.matchingDictionaries(
+            source: "en", target: "en", dictionaries: [info]
+        ).isEmpty)
+    }
+
+    @Test("Metadata takes precedence over misleading English keywords")
+    func metadataWinsOverName() {
+        let info = DictionaryLookup.DictionaryInfo(
+            id: "test.language-metadata", name: "English Reference",
+            path: "/x.dictionary", metadataKind: .monolingual,
+            metadataLanguages: ["fr"]
+        )
+        #expect(DictionarySelection.matchingDictionaries(
+            source: "en", target: "zh", dictionaries: [info]
+        ).isEmpty)
+        #expect(DictionarySelection.matchingDictionaries(
+            source: "en", target: "fr", dictionaries: [info]
+        ) == [info])
+    }
+
+    @Test("Dictionaries without metadata retain name matching")
+    func legacyNameFallback() {
+        let info = DictionaryLookup.DictionaryInfo(
+            id: "test.language-fallback", name: "Chinese English Dictionary",
+            path: "/x.dictionary"
+        )
+        #expect(DictionarySelection.matchingDictionaries(
+            source: "en", target: "zh", dictionaries: [info]
+        ) == [info])
+    }
+}
+
+// Override tests update one shared UserDefaults map, so serialize the suite.
+@Suite("DictionarySelection.dictionaryKind — classification priority", .serialized)
 struct DictionaryKindClassifierTests {
     // Each test uses a unique dict id so override state doesn't bleed between
     // tests. Reset after each just in case.
