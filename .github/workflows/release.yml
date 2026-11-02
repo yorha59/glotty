@@ -45,7 +45,7 @@ jobs:
             CODE_SIGN_IDENTITY='' CODE_SIGN_ENTITLEMENTS='' \
             ENABLE_HARDENED_RUNTIME=YES build | tail -40
           APP="$RUNNER_TEMP/derived/Build/Products/Release/Glotty.app"
-          lipo -verify_arch arm64 x86_64 "$APP/Contents/MacOS/Glotty"
+          lipo "$APP/Contents/MacOS/Glotty" -verify_arch arm64 x86_64
           ditto -c -k --keepParent "$APP" "$RUNNER_TEMP/unsigned-app.zip"
 
       - name: Upload unsigned app
@@ -85,7 +85,7 @@ jobs:
           ditto -x -k "$RUNNER_TEMP/unsigned/unsigned-app.zip" "$RUNNER_TEMP/unsigned"
           APP="$RUNNER_TEMP/unsigned/Glotty.app"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist")" = com.ruojunye.glotty
-          lipo -verify_arch arm64 x86_64 "$APP/Contents/MacOS/Glotty"
+          lipo "$APP/Contents/MacOS/Glotty" -verify_arch arm64 x86_64
 
       - name: Sign, notarize, verify, then remove all signing credentials
         env:
