@@ -43,6 +43,8 @@
 #   TEAM_ID           — 10-char team identifier. Default: 47D8DFFZQ4
 #   NOTARY_PROFILE    — keychain profile from store-credentials.
 #                       Default: glotty-notary
+#   PREBUILT_APP_PATH — sign/package this app without running a build.
+#   CODESIGN_KEYCHAIN — existing unlocked keychain to use for signing.
 
 set -euo pipefail
 
@@ -64,7 +66,37 @@ TEAM_ID="${TEAM_ID:-47D8DFFZQ4}"
 NOTARY_PROFILE="${NOTARY_PROFILE:-glotty-notary}"
 KEYCHAIN_PASS_FILE="${KEYCHAIN_PASS_FILE:-}"
 CI_KEYCHAIN_NAME="${CI_KEYCHAIN_NAME:-glotty-ci.keychain-db}"
-CODESIGN_KEYCHAIN=""
+CODESIGN_KEYCHAIN="${CODESIGN_KEYCHAIN:-}"
+
+if [ -n "${PREBUILT_APP_PATH:-}" ]; then
+    if [ ! -d "$PREBUILT_APP_PATH" ]; then
+        echo "ERROR: prebuilt app not found at $PREBUILT_APP_PATH" >&2
+        exit 1
+    fi
+    # Work on a copy; the unsigned artifact remains unchanged.
+    cp -R "$PREBUILT_APP_PATH" "$BUILD_DIR/$APP_NAME"
+    APP_SRC="$BUILD_DIR/$APP_NAME"
+else
+    echo "==> Building $SCHEME ($CONFIG) unsigned"
+    xcodebuild \
+        -scheme "$SCHEME" \
+        -configuration "$CONFIG" \
+        -destination "platform=macOS" \
+        -derivedDataPath "$BUILD_DIR/derived" \
+        CODE_SIGNING_ALLOWED=NO \
+        CODE_SIGNING_REQUIRED=NO \
+        CODE_SIGN_IDENTITY="" \
+        CODE_SIGN_ENTITLEMENTS="" \
+        ENABLE_HARDENED_RUNTIME=YES \
+        build \
+        | tail -20
+    APP_SRC="$BUILD_DIR/derived/Build/Products/$CONFIG/$APP_NAME"
+fi
+
+if [ ! -d "$APP_SRC" ]; then
+    echo "ERROR: built app not found at $APP_SRC" >&2
+    exit 1
+fi
 
 # CI runs under act_runner which spawns its own session that can't
 # access the user's login keychain even after `unlock-keychain`
@@ -89,33 +121,15 @@ if [ -n "$KEYCHAIN_PASS_FILE" ] && [ -r "$KEYCHAIN_PASS_FILE" ]; then
     # Add the CI keychain to the user search list so pkgbuild --sign and
     # notarytool's keychain-profile lookup also resolve. Existing list
     # is preserved so the system keychain still supplies trust anchors.
-    EXISTING=$(security list-keychains -d user | tr -d '"' | xargs)
-    security list-keychains -d user -s "$CODESIGN_KEYCHAIN" $EXISTING
-fi
-
-echo "==> Building $SCHEME ($CONFIG) unsigned"
-# Build without code signing first; we re-sign manually below with the
-# explicit Developer ID identity and entitlements file. Letting
-# xcodebuild sign merges in com.apple.security.get-task-allow=YES from
-# a hidden internal default even when CODE_SIGN_ENTITLEMENTS is passed,
-# which the notary service rejects. Manual signing gives us one
-# predictable codesign invocation with the entitlements we want.
-xcodebuild \
-    -scheme "$SCHEME" \
-    -configuration "$CONFIG" \
-    -destination "platform=macOS" \
-    -derivedDataPath "$BUILD_DIR/derived" \
-    CODE_SIGNING_REQUIRED=NO \
-    CODE_SIGN_IDENTITY="" \
-    CODE_SIGN_ENTITLEMENTS="" \
-    ENABLE_HARDENED_RUNTIME=YES \
-    build \
-    | tail -20
-
-APP_SRC="$BUILD_DIR/derived/Build/Products/$CONFIG/$APP_NAME"
-if [ ! -d "$APP_SRC" ]; then
-    echo "ERROR: built app not found at $APP_SRC"
-    exit 1
+    EXISTING=()
+    EXISTING_LIST="$(security list-keychains -d user)"
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        line="${line#*\"}"
+        line="${line%\"*}"
+        EXISTING+=("$line")
+    done <<< "$EXISTING_LIST"
+    security list-keychains -d user -s "$CODESIGN_KEYCHAIN" ${EXISTING[@]+"${EXISTING[@]}"}
 fi
 
 ENTITLEMENTS_FILE="$REPO_ROOT/Glotty/Glotty-Release.entitlements"
